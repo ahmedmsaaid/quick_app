@@ -1,3 +1,4 @@
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:base_app/core/localizations/app_strings.g.dart';
@@ -15,14 +16,15 @@ import '../widgets/custom_phone_text_field.dart';
 class RegisterScreen extends StatelessWidget {
   final bool isUser;
 
-  const RegisterScreen({super.key, this.isUser = false});
+  const RegisterScreen({super.key, this.isUser = true});
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors(context);
-    print("object ${isUser}");
+
     return Scaffold(
-      appBar: CustomAppBar(title: AppStrings.loginNow, showTrailing: false),
+      backgroundColor: colors.background,
+      appBar: CustomAppBar(title: AppStrings.registerNow,),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),
@@ -34,47 +36,65 @@ class RegisterScreen extends StatelessWidget {
                 hintText: AppStrings.fullName,
                 prefixIcon: Icon(
                   Icons.person_outline,
-                  color: colors.textPrimary.withValues(alpha: 0.6),
+                  color: colors.primary,
                 ),
               ),
               20.verticalSpace,
               const CustomPhoneTextField(),
               20.verticalSpace,
-              const CountryDropdown(),
+              CustomTextField(
+                hintText: AppStrings.email,
+                prefixIcon: Icon(
+                  Icons.email_outlined,
+                  color: colors.primary,
+                ),
+              ),
+              20.verticalSpace,
+              CustomTextField(
+                hintText: AppStrings.address,
+                prefixIcon: Icon(
+                  Icons.location_on_outlined,
+                  color: colors.primary,
+                ),
+              ),
               20.verticalSpace,
               CustomPasswordTextField(hintText: AppStrings.password),
               20.verticalSpace,
               CustomPasswordTextField(hintText: AppStrings.confirmPassword),
-              if (isUser == false)
-                Column(
-                  children: [
-                    20.verticalSpace,
-                    CustomTextField(
-                      hintText: AppStrings.serviceLocationAddress,
-                      prefixIcon: Icon(
-                        Icons.location_on_outlined,
-                        color: colors.textPrimary.withValues(alpha: 0.6),
-                      ),
-                      maxLines: 3,
-                    ),
-                    20.verticalSpace,
-                    CustomTextField(
-                      hintText: AppStrings.profileBio,
-                      maxLines: 3,
-                    ),
-                  ],
-                ),
-
               40.verticalSpace,
               CustomAppButton(
                 text: AppStrings.completeRegistration,
                 onPressed: () {
-                  if (isUser == true) {
-                    context.pushNamed(AppRoutes.otpScreen, arguments: isUser);
-                  } else {
-                    context.pushNamed(AppRoutes.completeRegisterScreen);
-                  }
+                  context.pushNamed(AppRoutes.otpScreen, arguments: isUser);
                 },
+              ),
+              30.verticalSpace,
+              Row(
+                children: [
+                  Expanded(child: Divider(color: colors.divider)),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 10.w),
+                    child: Text(
+                      AppStrings.orContinueWith,
+                      style: AppTextStyles.text12w400(color: colors.textSecondary),
+                    ),
+                  ),
+                  Expanded(child: Divider(color: colors.divider)),
+                ],
+              ),
+              20.verticalSpace,
+              OutlinedButton.icon(
+                onPressed: () {},
+                icon: Icon(FontAwesomeIcons.google, color: Colors.red, size: 20.sp),
+                label: Text(
+                  AppStrings.registerWithGoogle,
+                  style: AppTextStyles.text14w600(color: colors.textPrimary),
+                ),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: Size(double.infinity, 50.h),
+                  side: BorderSide(color: colors.divider),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+                ),
               ),
               20.verticalSpace,
               const LoginLink(),
@@ -105,7 +125,7 @@ class ProfileImagePicker extends StatelessWidget {
           child: Icon(
             Icons.person,
             size: 80.w,
-            color: colors.textSecondary.withValues(alpha: 0.5),
+            color: colors.textSecondary.withOpacity(0.5),
           ),
         ),
         Positioned(
@@ -126,29 +146,6 @@ class ProfileImagePicker extends StatelessWidget {
   }
 }
 
-class CountryDropdown extends StatelessWidget {
-  const CountryDropdown({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColors(context);
-
-    return CustomTextField(
-      hintText: AppStrings.country,
-      readOnly: true,
-      onTap: () {},
-      prefixIcon: Icon(
-        Icons.location_on_outlined,
-        color: colors.textPrimary.withValues(alpha: 0.6),
-      ),
-      suffixIcon: Icon(
-        Icons.keyboard_arrow_down,
-        color: colors.textPrimary.withValues(alpha: 0.6),
-      ),
-    );
-  }
-}
-
 class LoginLink extends StatelessWidget {
   const LoginLink({super.key});
 
@@ -157,7 +154,7 @@ class LoginLink extends StatelessWidget {
     final colors = AppColors(context);
 
     return InkWell(
-      onTap: () => context.pop(context),
+      onTap: () => context.pop(),
       child: RichText(
         text: TextSpan(
           children: [
@@ -167,7 +164,7 @@ class LoginLink extends StatelessWidget {
             ),
             TextSpan(
               text: ' ${AppStrings.loginNow}',
-              style: AppTextStyles.text14w600(color: colors.primaryVariant),
+              style: AppTextStyles.text14w600(color: colors.primary),
             ),
           ],
         ),

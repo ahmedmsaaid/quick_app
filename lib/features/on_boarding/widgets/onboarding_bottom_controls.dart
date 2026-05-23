@@ -29,12 +29,11 @@ class OnboardingBottomControls extends StatelessWidget {
       child: FadeTransition(
         opacity: fadeAnimation,
         child: Padding(
-          padding: EdgeInsets.fromLTRB(24.w, 16.h, 24.w, 32.h),
+          padding: EdgeInsets.fromLTRB(24.w, 12.h, 24.w, 28.h),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              SizedBox(width: 45.w),
+              SizedBox(width: 48.w),
               OnboardingPageIndicator(
                 currentPage: currentPage,
                 totalPages: totalPages,

@@ -49,6 +49,7 @@ class _CustomChooseServiceProviderTypeState
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors(context);
     return GestureDetector(
       onTapDown: (_) => _controller.forward(),
       onTapUp: (_) {
@@ -68,17 +69,17 @@ class _CustomChooseServiceProviderTypeState
             borderRadius: BorderRadius.circular(12.r),
             border: Border.all(
               color: widget.isSelected
-                  ? AppColors(context).primaryVariant
-                  : AppColors(context).border,
+                  ? colors.primary
+                  : colors.border,
               width: widget.isSelected ? 2 : 1,
             ),
             color: widget.isSelected
-                ? AppColors(context).primaryVariant.withOpacity(0.02)
-                : Colors.transparent,
+                ? colors.primary.withOpacity(0.02)
+                : colors.surface,
             boxShadow: widget.isSelected
                 ? [
                     BoxShadow(
-                      color: AppColors(context).primaryVariant.withOpacity(0.2),
+                      color: colors.shadow,
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -98,15 +99,15 @@ class _CustomChooseServiceProviderTypeState
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: widget.isSelected
-                          ? AppColors(context).primaryVariant.withOpacity(0.15)
-                          : AppColors(context).cardBackground,
+                          ? colors.primary.withOpacity(0.15)
+                          : colors.containerBackground,
                     ),
                     child: Center(
                       child: SvgPicture.asset(
                         widget.img,
                         width: 24.w,
                         colorFilter: ColorFilter.mode(
-                          AppColors(context).primaryVariant,
+                          colors.primary,
                           BlendMode.srcIn,
                         ),
                       ),
@@ -118,10 +119,10 @@ class _CustomChooseServiceProviderTypeState
                   Expanded(
                     child: Text(
                       widget.txt,
-                      style: AppTextStyles.text18w700().copyWith(
+                      style: AppTextStyles.text16w700(
                         color: widget.isSelected
-                            ? AppColors(context).primaryVariant
-                            : null,
+                            ? colors.primary
+                            : colors.textPrimary,
                       ),
                     ),
                   ),
@@ -132,7 +133,7 @@ class _CustomChooseServiceProviderTypeState
                       value: true,
                       groupValue: widget.isSelected ? true : null,
                       onChanged: (_) => widget.onTap(),
-                      activeColor: AppColors(context).primaryVariant,
+                      activeColor: colors.primary,
                     ),
                   ),
                 ],

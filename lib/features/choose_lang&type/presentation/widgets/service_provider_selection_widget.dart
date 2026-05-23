@@ -27,19 +27,19 @@ class ServiceProviderSelection extends StatelessWidget {
         50.verticalSpace,
 
         CustomChooseServiceProviderType(
-          txt: 'سيا ومسباو',
+          txt: AppStrings.categoryHair,
           img: AppIcons.massageIcon,
           isSelected: selectedServiceType == 0,
           onTap: () => onServiceTypeSelected(0),
         ),
         CustomChooseServiceProviderType(
-          txt: 'صالون الحلاقة',
+          txt: AppStrings.categoryMakeup,
           img: AppIcons.cutIcon,
           isSelected: selectedServiceType == 1,
           onTap: () => onServiceTypeSelected(1),
         ),
         CustomChooseServiceProviderType(
-          txt: 'كوافير حريمي',
+          txt: AppStrings.categoryNails,
           img: AppIcons.hairDresserIcon,
           isSelected: selectedServiceType == 2,
           onTap: () => onServiceTypeSelected(2),

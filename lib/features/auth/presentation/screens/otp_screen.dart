@@ -29,7 +29,7 @@ class OtpScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   40.verticalSpace,
-                  Image.asset(AppIcons.styleIcon),
+                  Image.asset(AppIcons.appIcon),
                   16.verticalSpace,
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 40.w),
@@ -70,15 +70,7 @@ class OtpScreen extends StatelessWidget {
                     showFieldAsBox: true,
                     onCodeChanged: (String code) {},
                     onSubmit: (String verificationCode) {
-                      showDialog(
-                        context: context,
-                        builder: (context) {
-                          return AlertDialog(
-                            title: Text("Verification Code"),
-                            content: Text('Code entered is $verificationCode'),
-                          );
-                        },
-                      );
+                      // Final logic will be implemented here
                     }, // end onSubmit
                   ),
                   10.verticalSpace,

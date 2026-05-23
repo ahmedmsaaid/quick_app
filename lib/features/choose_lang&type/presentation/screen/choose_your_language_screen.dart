@@ -6,6 +6,8 @@ import 'package:base_app/core/utils/extensions.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:base_app/core/localizations/localization_provider.dart';
 import 'package:base_app/core/services/cach_helper/cache_helper_keys.dart';
+import 'package:base_app/core/styles/app_colors.dart';
+import 'package:base_app/core/widgets/custom_arrow_back.dart';
 
 import '../../../../core/exports/exports.dart';
 import '../../../../core/services/cach_helper/cache_helper.dart';
@@ -16,47 +18,61 @@ class ChooseYourLanguageScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isFromSettings = (ModalRoute.of(context)?.settings.arguments as bool?) ?? false;
+
     return Scaffold(
+      backgroundColor: AppColors(context).background,
+      appBar: isFromSettings 
+          ? AppBar(
+              backgroundColor: AppColors(context).surface,
+              elevation: 0,
+              leading: const CustomArrowBack(),
+              title: Text(
+                AppStrings.chooseYourLanguage,
+                style: AppTextStyles.text18w700(color: AppColors(context).textPrimary),
+              ),
+            )
+          : null,
       body: SafeArea(
         child: Consumer(
           builder: (context, ref, child) {
             final language = ref.watch(localizationProvider.notifier);
+
             ref.listen(localizationProvider, (previous, next) async {
-              print('previous: $previous');
-              print('next: $next');
               context.setLocale(next);
               await CacheHelper.setBool(CacheKeys.isFirstTime, false);
-              context.pushNamed(AppRoutes.chooseUserTypeScreen);
+
+              if (isFromSettings) {
+                Navigator.of(context).pop();
+              } else {
+                context.pushNamed(AppRoutes.chooseUserTypeScreen);
+              }
             });
 
             return Center(
               child: Column(
                 children: [
-                  29.verticalSpace,
-                  Text(
-                    AppStrings.chooseYourLanguage,
-                    style: AppTextStyles.text20w700(),
-                  ),
-                  16.verticalSpace,
+                  if (!isFromSettings) ...[
+                    40.verticalSpace,
+                    Text(
+                      AppStrings.chooseYourLanguage,
+                      style: AppTextStyles.text20w700(color: AppColors(context).textPrimary),
+                    ),
+                  ],
+
                   CustomChooseCard(
-                    txt: 'عربي',
+                    txt: AppStrings.arabic,
                     img: AppIcons.iraqIcon,
                     onTap: () {
                       language.changeToArabic();
                     },
                   ),
+
                   CustomChooseCard(
                     txt: 'English',
                     img: AppIcons.ukIcon,
                     onTap: () {
                       language.changeToEnglish();
-                    },
-                  ),
-                  CustomChooseCard(
-                    txt: 'Turkish',
-                    img: AppIcons.turkyIcon,
-                    onTap: () {
-                      language.changeToTurkish();
                     },
                   ),
                 ],

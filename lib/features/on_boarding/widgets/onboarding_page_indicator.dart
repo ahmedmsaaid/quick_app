@@ -17,16 +17,18 @@ class OnboardingPageIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors(context);
+
     return AnimatedSmoothIndicator(
       activeIndex: currentPage,
       count: totalPages,
-      effect: JumpingDotEffect(
-        dotHeight: 12.h,
-        dotWidth: 12.w,
-        spacing: 15.w,
-        activeDotColor: AppColors(context).primary,
-        dotColor: AppColors(context).onBoardingIndicator,
-        jumpScale: 1.5,
+      effect: ExpandingDotsEffect(
+        dotHeight: 8.h,
+        dotWidth: 8.w,
+        spacing: 7.w,
+        expansionFactor: 3.2,
+        activeDotColor: colors.primary,
+        dotColor: colors.onBoardingIndicator,
       ),
     );
   }

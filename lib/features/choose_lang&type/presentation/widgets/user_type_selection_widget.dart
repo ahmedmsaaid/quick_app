@@ -3,14 +3,13 @@ import 'package:base_app/core/utils/assets/app_icons.dart';
 
 import '../../../../core/exports/exports.dart';
 import 'custom_user_type_card.dart';
-
 class UserTypeSelection extends StatelessWidget {
-  final VoidCallback onServiceProviderTap;
+  final VoidCallback onDeliveryTap;
   final VoidCallback onUserTap;
 
   const UserTypeSelection({
     super.key,
-    required this.onServiceProviderTap,
+    required this.onDeliveryTap,
     required this.onUserTap,
   });
 
@@ -20,16 +19,18 @@ class UserTypeSelection extends StatelessWidget {
       child: Column(
         key: const ValueKey('userType'),
         children: [
-          16.verticalSpace,
+          30.verticalSpace,
+
           CustomUserTypeCard(
-            txt: AppStrings.user,
+            txt: AppStrings.customer,
             img: AppIcons.userIcon,
             onTap: onUserTap,
           ),
+
           CustomUserTypeCard(
-            txt: AppStrings.serviceProvider,
-            img: AppIcons.cutIcon,
-            onTap: onServiceProviderTap,
+            txt: AppStrings.deliveryCaptain,
+            img: AppIcons.deliveryIcon,
+            onTap: onDeliveryTap,
           ),
         ],
       ),

@@ -12,6 +12,9 @@ class AppRoutes {
   static const String completeRegisterScreen = '/completeRegisterScreen';
   static const String providerNav = '/providerNav';
   static const String userNav = '/userNav';
+  static const String captainNav = '/captainNav';
+  static const String captainRegistrationDetails = '/captainRegistrationDetails';
+  static const String captainOrderDetails = '/captainOrderDetails';
   static const String notifications = '/notifications';
   static const String providerProfile = '/providerProfile';
   static const String offerForm = '/offerForm';
@@ -32,8 +35,16 @@ class AppRoutes {
   static const String orderDetailsScreen = '/orderDetailsScreen';
   static const String addAndUpdateProductScreen = '/addAndUpdateProductScreen';
   static const String profileScreen = '/profileScreen';
+  static const String specialOfferDetails = '/specialOfferDetails';
+  static const String personalInfo = '/personalInfo';
+  static const String wallet = '/wallet';
+  static const String address = '/address';
+  static const String addAddress = '/addAddress';
+  static const String searchResults = '/searchResults';
   static const String chatsScreen = '/chatsScreen';
   static const String chatDetailsScreen = '/chatDetailsScreen';
   static const String storeProductDetailsScreen = '/storeProductDetailsScreen';
   static const String cartScreen = '/cartScreen';
+  static const String products = '/products';
+  static const String changePassword = '/changePassword';
 }

@@ -12,8 +12,8 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool showTrailing;
   final IconData trailingIcon;
   final void Function()? onTrailingTap;
-  final Color buttonBgColor;
-  final Color iconColor;
+  final Color? buttonBgColor;
+  final Color? iconColor;
   final Color? appBarColor;
   final Widget? leadingWidget;
   final VoidCallback? onTitleTap;
@@ -29,8 +29,8 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.showTrailing = true,
     this.trailingIcon = Icons.arrow_forward_ios,
     this.onTrailingTap,
-    this.buttonBgColor = AppColors.white,
-    this.iconColor = AppColors.black,
+    this.buttonBgColor,
+    this.iconColor,
     this.appBarColor,
     this.leadingWidget,
     this.isCircularIcon = false,
@@ -41,37 +41,31 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors(context);
     return AppBar(
-      backgroundColor: appBarColor ?? AppColors(context).background,
+      backgroundColor: appBarColor ?? colors.surface,
       elevation: 0,
       centerTitle: true,
       toolbarHeight: 60.h,
       automaticallyImplyLeading: false,
       scrolledUnderElevation: 0,
       surfaceTintColor: Colors.transparent,
-      leadingWidth: showLeading ? 55.w : 0,
-      actions: [
-        Padding(
-          padding: EdgeInsetsDirectional.symmetric(
-            horizontal: 12.w,
-            vertical: 10.h,
-          ),
-          child: CustomArrowBack(
-            isCircular: isCircularIcon,
-            onTap: onTrailingTap ?? () => Navigator.pop(context),
-            color: AppColors(context).primaryVariant.withAlpha(30),
-          ),
-        ),
-      ],
-
+      leading: showLeading 
+          ? Padding(
+              padding: EdgeInsetsDirectional.only(start: 12.w),
+              child: CustomArrowBack(
+                isCircular: isCircularIcon,
+                onTap: onLeadingTap ?? () => Navigator.pop(context),
+                color: buttonBgColor ?? colors.primary.withOpacity(0.1),
+              ),
+            )
+          : null,
+      actions: const [],
       title: GestureDetector(
         onTap: onTitleTap,
         child: Text(
           title,
-          style: AppTextStyles.text20w500().copyWith(
-            fontWeight: FontWeight.bold,
-            letterSpacing: 0,
-          ),
+          style: AppTextStyles.text18w700(color: colors.textPrimary),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),

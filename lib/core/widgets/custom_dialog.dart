@@ -1,3 +1,4 @@
+import 'package:base_app/core/localizations/app_strings.g.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:base_app/core/styles/old_text_style.dart';
@@ -67,13 +68,13 @@ class CustomDialog extends StatelessWidget {
 
     switch (dialogType) {
       case AlertTypes.success:
-        return 'تم بنجاح';
+        return AppStrings.successDone;
       case AlertTypes.error:
-        return 'حدث خطأ';
+        return AppStrings.errorOccurred;
       case AlertTypes.warning:
-        return 'تنبيه';
+        return AppStrings.toastInfo;
       case AlertTypes.loading:
-        return 'جاري التحميل...';
+        return AppStrings.loading;
       case AlertTypes.normal:
       default:
         return '';
@@ -157,7 +158,7 @@ class CustomDialog extends StatelessWidget {
                     ),
                   ),
                   child: Text(
-                    confirmText ?? 'حسناً',
+                    confirmText ?? AppStrings.ok,
                     style: textStyles.buttonText,
                   ),
                 ),
@@ -208,7 +209,7 @@ class DialogHelper {
       barrierDismissible: false,
       builder: (context) => CustomDialog(
         dialogType: AlertTypes.loading,
-        message: message ?? 'جاري التحميل...',
+        message: message ?? AppStrings.loading,
       ),
     );
   }

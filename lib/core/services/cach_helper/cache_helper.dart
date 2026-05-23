@@ -9,6 +9,9 @@ class CacheHelper {
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
   }
+ Future<void> clear() async {
+    _prefs.clear();
+  }
 
   static Future<void> clearAll() async {
     await _prefs.clear();

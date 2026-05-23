@@ -23,7 +23,9 @@ class OnboardingActionButton extends StatelessWidget {
     final isLastPage = currentPage == totalPages - 1;
 
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 250),
+      switchInCurve: Curves.easeOutBack,
+      switchOutCurve: Curves.easeIn,
       transitionBuilder: (child, animation) {
         return ScaleTransition(
           scale: animation,
@@ -31,8 +33,14 @@ class OnboardingActionButton extends StatelessWidget {
         );
       },
       child: isLastPage
-          ? _StartButton(onNext: onNext)
-          : _NextButton(onNext: onNext),
+          ? _StartButton(
+        key: const ValueKey('start_button'),
+        onNext: onNext,
+      )
+          : _NextButton(
+        key: const ValueKey('next_button'),
+        onNext: onNext,
+      ),
     );
   }
 }
@@ -40,14 +48,17 @@ class OnboardingActionButton extends StatelessWidget {
 class _StartButton extends StatelessWidget {
   final VoidCallback onNext;
 
-  const _StartButton({required this.onNext});
+  const _StartButton({
+    super.key,
+    required this.onNext,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return CustomAppButton(
+    return CustomAppButton(backgroundColor: AppColors(context).secondary,
       text: AppStrings.next,
       onPressed: onNext,
-      width: 120.w,
+      width: 130.w,
       height: 48.h,
     );
   }
@@ -56,36 +67,41 @@ class _StartButton extends StatelessWidget {
 class _NextButton extends StatelessWidget {
   final VoidCallback onNext;
 
-  const _NextButton({required this.onNext});
+  const _NextButton({
+    super.key,
+    required this.onNext,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors(context);
+
     return Container(
-      key: const ValueKey('next_button'),
-      width: 45.w,
-      height: 45.h,
+      width: 48.w,
+      height: 48.w,
       decoration: BoxDecoration(
-        color: AppColors(context).primary,
+        color: colors.secondary,
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: AppColors(context).primary.withValues(alpha: 0.3),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
+            color: colors.shadow,
+            blurRadius: 14,
+            offset: const Offset(0, 7),
           ),
         ],
       ),
       child: Material(
         color: Colors.transparent,
+        shape: const CircleBorder(),
         child: InkWell(
           onTap: onNext,
-          borderRadius: BorderRadius.circular(50.r),
+          customBorder: const CircleBorder(),
           child: Icon(
-            Directionality.of(context) != TextDirection.rtl
-                ? CupertinoIcons.arrow_right
-                : CupertinoIcons.arrow_left,
+            Directionality.of(context) == TextDirection.rtl
+                ? CupertinoIcons.arrow_left
+                : CupertinoIcons.arrow_right,
             color: AppColors.white,
-            size: 24.sp,
+            size: 22.sp,
           ),
         ),
       ),

@@ -23,20 +23,35 @@ class OnboardingSkipButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isLastPage = currentPage == totalPages - 1;
+    final colors = AppColors(context);
+
     return FadeTransition(
       opacity: fadeAnimation,
       child: SlideTransition(
         position: slideAnimation,
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
-          child: TextButton(
-            onPressed: currentPage == totalPages - 1 ? null : onSkip,
-            child: Text(
-              AppStrings.skip,
-              style: AppTextStyles.text18w500(
-                color: currentPage == totalPages - 1
-                    ? AppColors(context).iconSecondary
-                    : AppColors(context).primaryVariant,
+        child: AnimatedOpacity(
+          opacity: isLastPage ? 0.0 : 1.0,
+          duration: const Duration(milliseconds: 200),
+          child: IgnorePointer(
+            ignoring: isLastPage,
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 14.h),
+              child: TextButton(
+                onPressed: onSkip,
+                style: TextButton.styleFrom(
+                  foregroundColor: colors.primary,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 12.w,
+                    vertical: 8.h,
+                  ),
+                ),
+                child: Text(
+                  AppStrings.skip,
+                  style: AppTextStyles.text16w600(
+                    color: colors.secondary,
+                  ),
+                ),
               ),
             ),
           ),

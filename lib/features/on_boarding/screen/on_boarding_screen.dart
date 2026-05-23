@@ -16,54 +16,86 @@ class OnboardingScreen extends StatefulWidget {
 
 class _OnboardingScreenState extends State<OnboardingScreen>
     with TickerProviderStateMixin {
-  final PageController _pageController = PageController(
-    viewportFraction: 0.90,
-    initialPage: 0,
-  );
+  late final List<OnBoardingModel> _pages = onboardingPages();
+
+  final PageController _pageController = PageController();
+
   int _currentPage = 0;
   double _currentPageValue = 0.0;
 
-  late AnimationController _fadeController;
-  late AnimationController _slideController;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
+  late final AnimationController _fadeController;
+  late final AnimationController _slideController;
+  late final Animation<double> _fadeAnimation;
+  late final Animation<Offset> _slideAnimation;
 
   @override
   void initState() {
     super.initState();
-
-    _pageController.addListener(_onPageScroll);
     _initAnimations();
+    _pageController.addListener(_onPageScroll);
   }
 
   void _initAnimations() {
     _fadeController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
-    );
-    _slideController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 700),
     );
 
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeIn));
+    _slideController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+
+    _fadeAnimation = CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeOut,
+    );
+
     _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
+      begin: const Offset(0, 0.12),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOut));
+    ).animate(
+      CurvedAnimation(
+        parent: _slideController,
+        curve: Curves.easeOutCubic,
+      ),
+    );
 
     _fadeController.forward();
     _slideController.forward();
   }
 
   void _onPageScroll() {
+    final page = _pageController.page ?? 0.0;
+    final nextPage = page.round().clamp(0, _pages.length - 1).toInt();
+
+    if (!mounted) return;
+
     setState(() {
-      _currentPageValue = _pageController.page ?? 0.0;
-      _currentPage = _pageController.page?.round() ?? 0;
+      _currentPageValue = page;
+      _currentPage = nextPage;
     });
+  }
+
+  Future<void> _completeOnboarding() async {
+    if (!mounted) return;
+
+    context.pushNamedAndRemoveUntil(AppRoutes.chooseYourLanguageScreen);
+  }
+
+  void _skipOnboarding() {
+    _completeOnboarding();
+  }
+
+  void _nextPage() {
+    if (_currentPage < _pages.length - 1) {
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 450),
+        curve: Curves.easeInOutCubic,
+      );
+    } else {
+      _completeOnboarding();
+    }
   }
 
   @override
@@ -75,31 +107,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     super.dispose();
   }
 
-  Future<void> _completeOnboarding() async {
-    if (mounted) {
-      context.pushNamed(AppRoutes.chooseYourLanguageScreen);
-    }
-  }
-
-  void _skipToEnd() {
-    _pageController.animateToPage(
-      onboardingPages().length - 1,
-      duration: const Duration(milliseconds: 600),
-      curve: Curves.easeInOutCubic,
-    );
-  }
-
-  void _nextPage() {
-    if (_currentPage < onboardingPages().length - 1) {
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 600),
-        curve: Curves.easeInOutCubic,
-      );
-    } else {
-      _completeOnboarding();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -107,11 +114,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         child: Column(
           children: [
             Align(
-              alignment: Alignment.topLeft,
+              alignment: AlignmentDirectional.topStart,
               child: OnboardingSkipButton(
                 currentPage: _currentPage,
-                totalPages: onboardingPages().length,
-                onSkip: _skipToEnd,
+                totalPages: _pages.length,
+                onSkip: _skipOnboarding,
                 fadeAnimation: _fadeAnimation,
                 slideAnimation: _slideAnimation,
               ),
@@ -119,20 +126,20 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
-                itemCount: onboardingPages().length,
+                itemCount: _pages.length,
                 physics: const BouncingScrollPhysics(),
                 itemBuilder: (context, index) {
                   return OnboardingPageItem(
                     index: index,
                     currentPageValue: _currentPageValue,
-                    page: onboardingPages()[index],
+                    page: _pages[index],
                   );
                 },
               ),
             ),
             OnboardingBottomControls(
               currentPage: _currentPage,
-              totalPages: onboardingPages().length,
+              totalPages: _pages.length,
               pageController: _pageController,
               onNext: _nextPage,
               fadeAnimation: _fadeAnimation,

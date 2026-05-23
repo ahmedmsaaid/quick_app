@@ -20,34 +20,22 @@ class CustomArrowBack extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isRtl = Directionality.of(context) == TextDirection.rtl;
-
-    return GestureDetector(
-      onTap: onTap ?? () => context.pop(),
-      child: Container(
-        height: isCircular ? 40.h : 30.h,
-        width: isCircular ? 40.w : 30.w,
-        padding: EdgeInsets.symmetric(
-          horizontal: isCircular ? 2.w : 7.w,
-          vertical: isCircular ? 2.h : 7.h,
-        ),
-        decoration: BoxDecoration(
-          color: color ?? AppColors(context).primaryVariant.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(isCircular ? 60.r : 10.r),
-        ),
-        child: Transform(
-          alignment: Alignment.center,
-          transform:
-              isRtl
-                    ? Matrix4.identity() // في RTL خليه زي ما هو (سهم لليسار)
-                    : Matrix4.identity()
-                ..scale(-1.0, 1.0, 1.0), // في LTR اقلبه
+    return Center(
+      child: GestureDetector(
+        onTap: onTap ?? () => context.pop(),
+        child: Container(
+          height: 35.h,
+          width: 35.w,
+          margin: EdgeInsets.all(8.r),
+          padding: EdgeInsets.all(8.r),
+          decoration: BoxDecoration(
+            color: color ?? AppColors(context).primaryVariant.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(isCircular ? 60.r : 10.r),
+          ),
           child: CustomSVGImage(
-            matchTextDirection: true,
+            matchTextDirection: true, // هذي الخاصية تقلب السهم تلقائياً حسب اتجاه اللغة
             asset: AppIcons.arrowIcon,
             color: AppColors(context).primaryVariant,
-            height: isCircular ? 22.sp : 18.sp,
-            width: isCircular ? 22.sp : 18.sp,
           ),
         ),
       ),

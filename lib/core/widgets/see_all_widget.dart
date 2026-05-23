@@ -9,12 +9,12 @@ class SeeAllWidget extends StatelessWidget {
   const SeeAllWidget({
     super.key,
     required this.title,
-    required this.onTab,
+    required this.onTap,
     this.isReviews,
   });
 
   final String title;
-  final VoidCallback onTab;
+  final VoidCallback onTap;
   final bool? isReviews;
 
   @override
@@ -28,9 +28,9 @@ class SeeAllWidget extends StatelessWidget {
           Text(
             title,
             style: AppTextStyles.text18w600(color: colors.textPrimary),
-          ),
+          ),Spacer(),
           TextButton(
-            onPressed: onTab,
+            onPressed: onTap,
             child: Text(
               isReviews ?? false
                   ? AppStrings.reviewNow.trans

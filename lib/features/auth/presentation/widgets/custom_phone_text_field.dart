@@ -47,6 +47,7 @@ class _CustomPhoneTextFieldState extends State<CustomPhoneTextField> {
   }
 
   void _showCountryPicker() {
+    final colors = AppColors(context);
     showCountryPicker(
       context: context,
       showPhoneCode: true,
@@ -54,17 +55,21 @@ class _CustomPhoneTextFieldState extends State<CustomPhoneTextField> {
       useRootNavigator: true,
       favorite: <String>['EG', 'SA', 'AE', 'US'],
       countryListTheme: CountryListThemeData(
+        backgroundColor: colors.surface,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(20.r),
           topRight: Radius.circular(20.r),
         ),
         inputDecoration: InputDecoration(
-          labelText: 'ابحث عن دولة',
-          hintText: 'ابدأ الكتابة...',
-          prefixIcon: const Icon(Icons.search),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10.r)),
+          labelText: AppStrings.searchForCountry,
+          hintText: AppStrings.startTyping,
+          prefixIcon: Icon(Icons.search, color: colors.primary),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10.r), borderSide: BorderSide(color: colors.border)),
+          labelStyle: TextStyle(color: colors.textSecondary),
+          hintStyle: TextStyle(color: colors.textHint),
         ),
-        searchTextStyle: TextStyle(fontSize: 14.sp, color: AppColors.black),
+        searchTextStyle: TextStyle(fontSize: 14.sp, color: colors.textPrimary),
+        textStyle: TextStyle(fontSize: 14.sp, color: colors.textPrimary),
       ),
       onSelect: (Country country) {
         setState(() {
@@ -77,6 +82,7 @@ class _CustomPhoneTextFieldState extends State<CustomPhoneTextField> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors(context);
     return CustomTextField(
       controller: widget.controller,
       fillColor: Colors.transparent,
@@ -84,7 +90,7 @@ class _CustomPhoneTextFieldState extends State<CustomPhoneTextField> {
       keyboardType: TextInputType.phone,
       prefixIcon: Icon(
         Icons.phone,
-        color: AppColors(context).textPrimary.withValues(alpha: 0.6),
+        color: colors.textSecondary,
       ),
       suffixIcon: InkWell(
         onTap: _showCountryPicker,
@@ -93,14 +99,13 @@ class _CustomPhoneTextFieldState extends State<CustomPhoneTextField> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             textDirection: Directionality.of(context),
-            // mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
                 '${selectedCountry?.phoneCode ?? "20"}+',
                 style: TextStyle(
                   fontSize: 14.sp,
                   fontWeight: FontWeight.w500,
-                  color: AppColors(context).textPrimary,
+                  color: colors.textPrimary,
                 ),
               ),
               4.horizontalSpace,
@@ -112,8 +117,7 @@ class _CustomPhoneTextFieldState extends State<CustomPhoneTextField> {
               Icon(
                 Icons.arrow_drop_down,
                 size: 20.sp,
-
-                color: AppColors(context).textPrimary.withValues(alpha: 0.6),
+                color: colors.textSecondary,
               ),
             ],
           ),

@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.baseApp.base_app"
+    namespace = "com.quick.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -21,7 +21,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.baseApp.base_app"
+        applicationId = "com.quick.app"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

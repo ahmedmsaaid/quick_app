@@ -20,12 +20,14 @@ void main() async {
 
   final cacheHelper = CacheHelper();
   await cacheHelper.init();
+  // await cacheHelper.clear();
 
   runApp(
     EasyLocalization(
+      startLocale: AppLocalizationsConstants().arLocale,
       supportedLocales: AppLocalizationsConstants().supportedLocales,
       path: AppLocalizationsConstants().path,
-      saveLocale: false,
+      saveLocale: true,
       child: const ProviderScope(child: BaseApp()),
     ),
   );

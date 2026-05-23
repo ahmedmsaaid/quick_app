@@ -19,7 +19,7 @@ class AppLocalizationsConstants {
   final String trLanguage = 'tr';
 
   // Regions
-  final String arRegion = 'IQ'; // العراق
+  final String arRegion = 'IQ'; // Iraq
   final String enRegion = 'US';
   final String trRegion = 'TR';
 
