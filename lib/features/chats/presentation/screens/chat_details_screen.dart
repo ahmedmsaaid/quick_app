@@ -60,7 +60,7 @@ class _ChatDetailsScreenState extends State<ChatDetailsScreen> {
                     style: AppTextStyles.text14w700(color: colors.textPrimary),
                   ),
                   Text(
-                    '${AppStrings.onlineNowStatus}',
+                    AppStrings.onlineNowStatus,
                     style: AppTextStyles.text10w400(color: colors.success),
                   ),
                 ],

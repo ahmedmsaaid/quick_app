@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import 'lading_button.dart';
 import '../styles/app_colors.dart';
 import '../styles/app_text_style.dart';
 
@@ -145,13 +146,9 @@ class CustomAppButton extends StatelessWidget {
 
   Widget _buildButtonChild(BuildContext context, Color defaultTextColor) {
     if (isLoading) {
-      return SizedBox(
-        height: 20.h,
-        width: 20.w,
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-          valueColor: AlwaysStoppedAnimation<Color>(defaultTextColor),
-        ),
+      return LoadingButton(
+        size: 20.h,
+        color: defaultTextColor,
       );
     }
 

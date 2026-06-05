@@ -1,7 +1,10 @@
+import 'package:base_app/core/services/cach_helper/cache_helper.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:base_app/core/localizations/app_strings.g.dart';
+import 'package:base_app/core/widgets/custom_toast.dart';
 import 'package:base_app/core/utils/assets/app_icons.dart';
 import 'package:base_app/core/utils/extensions.dart';
 
@@ -9,17 +12,86 @@ import '../../../../core/routes/app_routes.dart';
 import '../../../../core/styles/app_colors.dart';
 import '../../../../core/styles/app_text_style.dart';
 import '../../../../core/widgets/custom_button.dart';
+import '../../../../core/widgets/lading_button.dart';
 import '../widgets/custom_password_text_field.dart';
 import '../widgets/custom_phone_text_field.dart';
+import '../riverpod/auth_provider.dart';
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key, this.isUser = false});
 
   final bool isUser;
 
   @override
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends ConsumerState<LoginScreen> {
+  late final TextEditingController _phoneController;
+  late final TextEditingController _passwordController;
+  final _formKey = GlobalKey<FormState>();
+  
+  String _countryCode = "20"; // Default to Egypt phone code
+
+  @override
+  void initState() {
+    super.initState();
+    _phoneController = TextEditingController();
+    _passwordController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _phoneController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  void _handleLogin() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    // Prepend the country code to the phone number
+    final rawPhone = _phoneController.text.trim();
+    final phone = "+$_countryCode$rawPhone";
+    final password = _passwordController.text;
+
+    final success = await ref.read(authProvider.notifier).login(
+      phone: phone,
+      password: password,
+      isUser: widget.isUser,
+    );
+
+    if (success) {
+      if (mounted) {
+        if (widget.isUser) {
+          context.pushNamedAndRemoveUntil(AppRoutes.userNav);
+        } else {
+          context.pushNamedAndRemoveUntil(AppRoutes.captainNav);
+        }
+      }
+    } else {
+      if (mounted) {
+        final state = ref.read(authProvider);
+        if (state.statusCode == 330) {
+          // Save temporary phone for OTP verification
+          await CacheHelper.setString('temp_phone', phone);
+          if (mounted) {
+            context.pushNamed(
+              AppRoutes.otpScreen,
+              arguments: widget.isUser,
+            );
+          }
+        } else {
+          CustomToast.error(context, state.errorMessage ?? AppStrings.errorOccurred);
+        }
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colors = AppColors(context);
+    final authState = ref.watch(authProvider);
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -27,7 +99,8 @@ class LoginScreen extends StatelessWidget {
         child: SingleChildScrollView(
           child: Padding(
             padding: EdgeInsets.symmetric(horizontal: 20.w),
-            child: Center(
+            child: Form(
+              key: _formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -66,10 +139,28 @@ class LoginScreen extends StatelessWidget {
                     ),
                   ),
                   60.verticalSpace,
-                  const CustomPhoneTextField(),
+                  CustomPhoneTextField(
+                    controller: _phoneController,
+                    onCountryChanged: (country) {
+                      _countryCode = country.phoneCode;
+                    },
+                    validator: (val) {
+                      if (val == null || val.trim().isEmpty) {
+                        return AppStrings.pleaseEnterPhone;
+                      }
+                      return null;
+                    },
+                  ),
                   20.verticalSpace,
                   CustomPasswordTextField(
+                    controller: _passwordController,
                     hintText: AppStrings.password,
+                    validator: (val) {
+                      if (val == null || val.isEmpty) {
+                        return AppStrings.pleaseEnterPassword;
+                      }
+                      return null;
+                    },
                   ),
                   Align(
                     alignment: AlignmentDirectional.bottomEnd,
@@ -77,7 +168,7 @@ class LoginScreen extends StatelessWidget {
                       onPressed: () {
                         context.pushNamedAndRemoveUntil(
                           AppRoutes.forgetPasswordScreen,
-                          arguments: isUser,
+                          arguments: widget.isUser,
                         );
                       },
                       child: Text(
@@ -89,16 +180,13 @@ class LoginScreen extends StatelessWidget {
                     ),
                   ),
                   40.verticalSpace,
-                  CustomAppButton(
-                    text: AppStrings.login,
-                    onPressed: () {
-                      if (isUser) {
-                        context.pushNamedAndRemoveUntil(AppRoutes.userNav);
-                      } else {
-                        context.pushNamedAndRemoveUntil(AppRoutes.captainNav);
-                      }
-                    },
-                  ),
+                  if (authState.status == AuthStatus.loading)
+                    const LoadingButton()
+                  else
+                    CustomAppButton(
+                      text: AppStrings.login,
+                      onPressed: _handleLogin,
+                    ),
                   30.verticalSpace,
                   Row(
                     children: [
@@ -128,7 +216,7 @@ class LoginScreen extends StatelessWidget {
                     ),
                   ),
                   20.verticalSpace,
-                  if (isUser)
+                  if (widget.isUser)
                     RichText(
                       text: TextSpan(
                         children: [
@@ -143,7 +231,7 @@ class LoginScreen extends StatelessWidget {
                                   onTap: () {
                                     context.pushNamed(
                                       AppRoutes.registerScreen,
-                                      arguments: isUser,
+                                      arguments: widget.isUser,
                                     );
                                   },
                                   child: Text(

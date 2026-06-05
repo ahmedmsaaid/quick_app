@@ -4,7 +4,6 @@ import 'package:base_app/features/wallet/presentation/screens/captain_wallet_scr
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:base_app/core/styles/app_colors.dart';
-import 'package:base_app/core/styles/app_text_style.dart';
 import 'captain_home_screen.dart';
 import 'captain_orders_screen.dart';
 

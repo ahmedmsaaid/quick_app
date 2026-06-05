@@ -1,6 +1,7 @@
 import 'package:base_app/core/localizations/app_strings.g.dart';
 import 'package:base_app/core/widgets/custom_button.dart';
 import 'package:base_app/core/widgets/custom_text_field.dart';
+import 'package:base_app/core/widgets/custom_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:base_app/core/styles/app_colors.dart';
@@ -211,22 +212,7 @@ class WalletScreen extends StatelessWidget {
                   text: AppStrings.confirmCharge,
                   onPressed: () {
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Row(
-                          children: [
-                            const Icon(Icons.check_circle, color: Colors.white),
-                            10.horizontalSpace,
-                            Text(AppStrings.chargeSuccessMsg),
-                          ],
-                        ),
-                        backgroundColor: colors.success,
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10.r)),
-                        margin: EdgeInsets.all(20.w),
-                      ),
-                    );
+                    CustomToast.success(context, AppStrings.chargeSuccessMsg);
                   },
                 ),
               ],

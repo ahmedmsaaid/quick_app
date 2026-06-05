@@ -5,6 +5,7 @@ import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/styles/app_text_style.dart';
 import 'package:base_app/core/widgets/custom_arrow_back.dart';
 import 'package:base_app/core/widgets/custom_button.dart';
+import 'package:base_app/core/widgets/custom_toast.dart';
 import 'package:base_app/core/widgets/custom_text_field.dart';
 
 class AddAddressScreen extends StatelessWidget {
@@ -89,9 +90,7 @@ class AddAddressScreen extends StatelessWidget {
                   CustomAppButton(
                     text: AppStrings.saveAddressBtn,
                     onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(AppStrings.addressSavedSuccessMsg)),
-                      );
+                      CustomToast.success(context, AppStrings.addressSavedSuccessMsg);
                       Navigator.pop(context);
                     },
                   ),

@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import '../../core/error/error_handler.dart';
 import '../../core/network/api_result.dart';
 

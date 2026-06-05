@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:base_app/core/styles/old_text_style.dart';
-
+import 'package:base_app/core/styles/app_text_style.dart';
 import '../styles/app_colors.dart';
 
 enum ToastType { success, error, warning, info }
@@ -22,20 +21,19 @@ class CustomToast {
     }
 
     final colors = AppColors(context);
-    final textStyles = OldTextStyle(context);
 
     _overlayEntry = OverlayEntry(
       builder: (context) => _ToastWidget(
         message: message,
         type: type,
         colors: colors,
-        textStyles: textStyles,
         showCloseButton: showCloseButton,
         onClose: hide,
       ),
     );
 
-    Overlay.of(context).insert(_overlayEntry!);
+    final overlay = Overlay.of(context);
+    overlay.insert(_overlayEntry!);
     _isVisible = true;
 
     Future.delayed(duration, () {
@@ -112,7 +110,6 @@ class _ToastWidget extends StatefulWidget {
   final String message;
   final ToastType type;
   final AppColors colors;
-  final OldTextStyle textStyles;
   final bool showCloseButton;
   final VoidCallback onClose;
 
@@ -120,7 +117,6 @@ class _ToastWidget extends StatefulWidget {
     required this.message,
     required this.type,
     required this.colors,
-    required this.textStyles,
     required this.showCloseButton,
     required this.onClose,
   });
@@ -139,14 +135,14 @@ class _ToastWidgetState extends State<_ToastWidget>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 500),
       vsync: this,
     );
 
     _offsetAnimation = Tween<Offset>(
-      begin: const Offset(0, -1),
+      begin: const Offset(0, -1.5),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.elasticOut));
 
     _opacityAnimation = Tween<double>(
       begin: 0.0,
@@ -171,29 +167,29 @@ class _ToastWidgetState extends State<_ToastWidget>
       case ToastType.warning:
         return widget.colors.warning;
       case ToastType.info:
-        return widget.colors.primary;
+        return AppColors.brandTeal;
     }
   }
 
   IconData _getIcon() {
     switch (widget.type) {
       case ToastType.success:
-        return Icons.check_circle_rounded;
+        return Icons.check_circle_outline_rounded;
       case ToastType.error:
-        return Icons.error_rounded;
+        return Icons.error_outline_rounded;
       case ToastType.warning:
-        return Icons.warning_rounded;
+        return Icons.warning_amber_rounded;
       case ToastType.info:
-        return Icons.info_rounded;
+        return Icons.info_outline_rounded;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Positioned(
-      top: MediaQuery.of(context).padding.top + 16.h,
-      left: 16.w,
-      right: 16.w,
+      top: MediaQuery.of(context).padding.top + 10.h,
+      left: 20.w,
+      right: 20.w,
       child: SlideTransition(
         position: _offsetAnimation,
         child: FadeTransition(
@@ -204,38 +200,44 @@ class _ToastWidgetState extends State<_ToastWidget>
               padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
               decoration: BoxDecoration(
                 color: _getBackgroundColor(),
-                borderRadius: BorderRadius.circular(12.r),
+                borderRadius: BorderRadius.circular(15.r),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 15,
+                    offset: const Offset(0, 8),
                   ),
                 ],
               ),
               child: Row(
                 children: [
-                  Icon(_getIcon(), color: Colors.white, size: 24.sp),
-                  SizedBox(width: 12.w),
+                  Container(
+                    padding: EdgeInsets.all(6.r),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(_getIcon(), color: Colors.white, size: 20.sp),
+                  ),
+                  12.horizontalSpace,
                   Expanded(
                     child: Text(
                       widget.message,
-                      style: widget.textStyles.body.copyWith(
-                        color: Colors.white,
-                        fontSize: 14.sp,
-                      ),
+                      style: AppTextStyles.text14w600(color: Colors.white),
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   if (widget.showCloseButton) ...[
-                    SizedBox(width: 8.w),
-                    GestureDetector(
-                      onTap: widget.onClose,
+                    8.horizontalSpace,
+                    InkWell(
+                      onTap: () {
+                        _controller.reverse().then((_) => widget.onClose());
+                      },
                       child: Icon(
                         Icons.close_rounded,
-                        color: Colors.white,
-                        size: 20.sp,
+                        color: Colors.white70,
+                        size: 18.sp,
                       ),
                     ),
                   ],

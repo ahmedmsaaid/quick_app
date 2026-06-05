@@ -32,18 +32,8 @@ class _CustomPhoneTextFieldState extends State<CustomPhoneTextField> {
   }
 
   void _setDefaultCountry() {
-    try {
-      final locale = WidgetsBinding.instance.platformDispatcher.locale;
-      if (locale.countryCode != null) {
-        selectedCountry = CountryParser.parseCountryCode(locale.countryCode!);
-      } else {
-        selectedCountry = CountryParser.parseCountryCode('EG');
-      }
-      setState(() {});
-    } catch (e) {
-      selectedCountry = CountryParser.parseCountryCode('EG');
-      setState(() {});
-    }
+    selectedCountry = CountryParser.parseCountryCode('EG');
+    setState(() {});
   }
 
   void _showCountryPicker() {
@@ -64,7 +54,10 @@ class _CustomPhoneTextFieldState extends State<CustomPhoneTextField> {
           labelText: AppStrings.searchForCountry,
           hintText: AppStrings.startTyping,
           prefixIcon: Icon(Icons.search, color: colors.primary),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10.r), borderSide: BorderSide(color: colors.border)),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10.r),
+            borderSide: BorderSide(color: colors.border),
+          ),
           labelStyle: TextStyle(color: colors.textSecondary),
           hintStyle: TextStyle(color: colors.textHint),
         ),
@@ -85,13 +78,11 @@ class _CustomPhoneTextFieldState extends State<CustomPhoneTextField> {
     final colors = AppColors(context);
     return CustomTextField(
       controller: widget.controller,
+      validator: widget.validator,
       fillColor: Colors.transparent,
       hintText: AppStrings.phoneNumber,
       keyboardType: TextInputType.phone,
-      prefixIcon: Icon(
-        Icons.phone,
-        color: colors.textSecondary,
-      ),
+      prefixIcon: Icon(Icons.phone, color: colors.textSecondary),
       suffixIcon: InkWell(
         onTap: _showCountryPicker,
         borderRadius: BorderRadius.circular(8.r),

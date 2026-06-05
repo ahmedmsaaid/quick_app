@@ -4,8 +4,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/styles/app_text_style.dart';
 import 'package:base_app/core/widgets/custom_arrow_back.dart';
-import 'package:base_app/core/widgets/custome_svg_image.dart';
-import 'package:base_app/core/utils/assets/app_icons.dart';
 import 'package:base_app/core/utils/extensions.dart';
 import '../../../../core/routes/app_routes.dart';
 

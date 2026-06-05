@@ -5,6 +5,7 @@ import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/styles/app_text_style.dart';
 import 'package:base_app/core/widgets/custom_arrow_back.dart';
 import 'package:base_app/core/widgets/custom_button.dart';
+import 'package:base_app/core/widgets/custom_toast.dart';
 import 'package:base_app/core/widgets/custom_text_field.dart';
 
 class RateOrderScreen extends StatefulWidget {
@@ -66,7 +67,7 @@ class _RateOrderScreenState extends State<RateOrderScreen> {
             CustomAppButton(
               text: AppStrings.sendRatingBtn,
               onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppStrings.thanksForRatingMsg)));
+                CustomToast.success(context, AppStrings.thanksForRatingMsg);
                 Navigator.pop(context);
               },
             ),

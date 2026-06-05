@@ -1,0 +1,214 @@
+// lib/features/auth/data/auth_api_service.dart
+
+import 'package:dio/dio.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:base_app/core/network/dio_factory.dart';
+import 'package:base_app/core/network/api_constants.dart';
+import 'package:base_app/core/network/api_result.dart';
+import 'package:base_app/core/error/error_handler.dart';
+import 'package:base_app/core/error/app_error.dart';
+import 'models/auth_models.dart';
+
+part 'auth_api_service.g.dart';
+
+@riverpod
+AuthApiService authApiService(Ref ref) {
+  final dio = ref.watch(dioProvider);
+  return AuthApiService(dio);
+}
+
+class AuthApiService {
+  final Dio _dio;
+
+  AuthApiService(this._dio);
+
+  /// Authenticate a user with phone and password.
+  Future<ApiResult<ApiResponse<TokenDto>>> login({
+    required String phone,
+    required String password,
+  }) async {
+    try {
+      final response = await _dio.post(
+        ApiConstants.login,
+        data: {'identifier': phone, 'password': password},
+      );
+
+      final apiResponse = ApiResponse<TokenDto>.fromJson(
+        response.data,
+        (json) => TokenDto.fromJson(json as Map<String, dynamic>),
+      );
+
+      return ApiResult.success(apiResponse);
+    } catch (e) {
+      return ApiResult.failure(handleError(e));
+    }
+  }
+
+  /// Register a new user account (Customer or Driver).
+  Future<ApiResult<ApiResponse<TokenDto>>> signup({
+    required String phone,
+    required String name,
+    required String password,
+    required String confirmedPassword,
+    required int role, // 0: customer, 1: driver
+    String? email,
+    String? photo,
+    String? address,
+    LocationModel? location,
+    String? description,
+  }) async {
+    try {
+      final response = await _dio.post(
+        ApiConstants.signup,
+        data: {
+          'phone': phone,
+          'name': name,
+          'password': password,
+          'confirmedPassword': confirmedPassword,
+          'role': role,
+          'email': email,
+          'photo': photo,
+          'address': address,
+          if (location != null) 'location': location.toJson(),
+          'description': description,
+        },
+      );
+
+      final apiResponse = ApiResponse<TokenDto>.fromJson(
+        response.data,
+        (json) => TokenDto.fromJson(json as Map<String, dynamic>),
+      );
+
+      return ApiResult.success(apiResponse);
+    } catch (e) {
+      return ApiResult.failure(handleError(e));
+    }
+  }
+
+  /// Upload a public profile image for registration
+  Future<ApiResult<String>> uploadProfileImage(MultipartFile file) async {
+    try {
+      final formData = FormData.fromMap({
+        'file': file,
+        'type': 0, // FormPart matching curl -F 'type=0'
+      });
+      final response = await _dio.post(
+        ApiConstants.streamPublic,
+        data: formData,
+      );
+      final success = response.data['success'] as bool? ?? false;
+      final result = response.data['result'] as String?;
+      if (success && result != null) {
+        return ApiResult.success("${ApiConstants.streamUrl}$result");
+      } else {
+        return ApiResult.failure(
+          GenericError(
+            message: response.data['message'] ?? "فشل رفع الصورة الشخصية",
+          ),
+        );
+      }
+    } catch (e) {
+      return ApiResult.failure(handleError(e));
+    }
+  }
+
+  /// Sends a verification OTP code to the user's phone.
+  Future<ApiResult<ApiResponse<SendOTPResult>>> sendOtp({
+    required String phone,
+    required int type, // 0, 1, 2
+  }) async {
+    try {
+      final response = await _dio.post(
+        ApiConstants.sendOtp,
+        data: {'phone': phone, 'type': type},
+      );
+
+      final apiResponse = ApiResponse<SendOTPResult>.fromJson(
+        response.data,
+        (json) => SendOTPResult.fromJson(json as Map<String, dynamic>),
+      );
+
+      return ApiResult.success(apiResponse);
+    } catch (e) {
+      return ApiResult.failure(handleError(e));
+    }
+  }
+
+  /// Verifies the OTP code received on the user's phone.
+  Future<ApiResult<ApiResponse<Map<String, dynamic>>>> verifyOtp({
+    required String phone,
+    required String code,
+  }) async {
+    try {
+      final response = await _dio.patch(
+        ApiConstants.verifyOtp,
+        data: {'phone': phone, 'code': code},
+      );
+
+      final apiResponse = ApiResponse<Map<String, dynamic>>.fromJson(
+        response.data,
+        (json) => json as Map<String, dynamic>,
+      );
+
+      return ApiResult.success(apiResponse);
+    } catch (e) {
+      return ApiResult.failure(handleError(e));
+    }
+  }
+
+  /// Fetch authenticated user's profile details.
+  Future<ApiResult<ApiResponse<UserDto>>> getProfile() async {
+    try {
+      final response = await _dio.get(ApiConstants.profile);
+
+      final apiResponse = ApiResponse<UserDto>.fromJson(
+        response.data,
+        (json) => UserDto.fromJson(json as Map<String, dynamic>),
+      );
+
+      return ApiResult.success(apiResponse);
+    } catch (e) {
+      return ApiResult.failure(handleError(e));
+    }
+  }
+
+  /// Changes the user's password (used in forgot password flow).
+  Future<ApiResult<ApiResponse<Map<String, dynamic>>>> changePassword({
+    required String token,
+    required String newPassword,
+    required String confirmedNewPassword,
+  }) async {
+    try {
+      final response = await _dio.patch(
+        ApiConstants.resetPassword,
+        data: {
+          'token': token,
+          'newPassword': newPassword,
+          'confirmedNewPassword': confirmedNewPassword,
+        },
+      );
+
+      final apiResponse = ApiResponse<Map<String, dynamic>>.fromJson(
+        response.data,
+        (json) => json as Map<String, dynamic>,
+      );
+
+      return ApiResult.success(apiResponse);
+    } catch (e) {
+      return ApiResult.failure(handleError(e));
+    }
+  }
+
+  /// Logs out the user and invalidates the session on the backend.
+  Future<ApiResult<ApiResponse<void>>> logout() async {
+    try {
+      final response = await _dio.delete(ApiConstants.logout);
+
+      final apiResponse = ApiResponse<void>.fromJson(response.data, (_) {});
+
+      return ApiResult.success(apiResponse);
+    } catch (e) {
+      return ApiResult.failure(handleError(e));
+    }
+  }
+}

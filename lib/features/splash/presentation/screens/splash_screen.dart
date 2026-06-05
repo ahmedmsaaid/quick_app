@@ -100,7 +100,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
       debugPrint('✅ isFirstTime: $isFirstTime');
 
       final String? token = CacheHelper.getString(CacheKeys.token);
-      debugPrint('✅ token: ${token?.substring(0, token!.length > 10 ? 10 : token.length)}...');
+      debugPrint('✅ token: ${token?.substring(0, token.length > 10 ? 10 : token.length)}...');
 
       if (!mounted) return;
 
@@ -109,19 +109,24 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
         context.pushNamedAndRemoveUntil(AppRoutes.onBoarding);
       } else {
         if (token != null && token.isNotEmpty) {
-          debugPrint('🚀 Navigating to UserNav');
-          context.pushNamedAndRemoveUntil(AppRoutes.onBoarding);
+          final int role = CacheHelper.getInt('userRole') ?? 0;
+          if (role == 0) {
+            debugPrint('🚀 Navigating to UserNav');
+            context.pushNamedAndRemoveUntil(AppRoutes.userNav);
+          } else {
+            debugPrint('🚀 Navigating to CaptainNav');
+            context.pushNamedAndRemoveUntil(AppRoutes.captainNav);
+          }
         } else {
-          debugPrint('🚀 Navigating to Login');
-          context.pushNamedAndRemoveUntil(AppRoutes.onBoarding);
+          debugPrint('🚀 Navigating to ChooseUserTypeScreen');
+          context.pushNamedAndRemoveUntil(AppRoutes.chooseUserTypeScreen);
         }
       }
     } catch (e, stackTrace) {
       debugPrint('❌ Error in navigation logic: $e');
       debugPrint('Stack: $stackTrace');
-      // Fallback: اذهب لـ login screen
       if (mounted) {
-        context.pushNamedAndRemoveUntil(AppRoutes.onBoarding);
+        context.pushNamedAndRemoveUntil(AppRoutes.chooseUserTypeScreen);
       }
     }
   }
@@ -132,7 +137,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
     final parts = savedLang.split('_');
     final locale = parts.length > 1 ? Locale(parts[0], parts[1]) : Locale(parts.first);
     ref.read(localizationProvider.notifier).changeLocale(locale);
-    await context.setLocale(locale);
+    
+    // Defer setLocale until post-initState build phase completes
+    await Future.delayed(Duration.zero);
+    if (mounted) {
+      await context.setLocale(locale);
+    }
   }
 
   @override

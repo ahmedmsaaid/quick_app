@@ -1,6 +1,4 @@
 import 'package:base_app/core/localizations/app_strings.g.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:base_app/core/styles/old_text_style.dart';
 
 import '../../core/exports/exports.dart';

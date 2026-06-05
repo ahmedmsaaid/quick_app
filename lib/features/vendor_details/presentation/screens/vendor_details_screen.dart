@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:base_app/core/localizations/app_strings.g.dart';
-import 'package:base_app/core/utils/assets/app_icons.dart';
 import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/styles/app_text_style.dart';
-import 'package:base_app/core/widgets/custome_svg_image.dart';
 import 'package:base_app/core/widgets/custom_arrow_back.dart';
 import 'package:base_app/core/utils/extensions.dart';
 import '../../../../core/routes/app_routes.dart';
@@ -20,14 +18,14 @@ class VendorDetailsScreen extends StatefulWidget {
 
 class _VendorDetailsScreenState extends State<VendorDetailsScreen> {
   int _selectedCategory = 0;
-  
+
   final List<String> _restaurantCategories = [
     AppStrings.mostOrderedLabel,
     AppStrings.savingOffersLabel,
     AppStrings.beefBurgerLabel,
     AppStrings.chickenBurgerLabel,
     AppStrings.appetizersLabel,
-    AppStrings.beveragesLabel
+    AppStrings.beveragesLabel,
   ];
   final List<String> _marketCategories = [
     AppStrings.dairyLabel,
@@ -35,12 +33,14 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen> {
     AppStrings.cannedFoodLabel,
     AppStrings.detergentsLabel,
     AppStrings.beveragesLabel,
-    AppStrings.bakeryLabel
+    AppStrings.bakeryLabel,
   ];
 
   @override
   Widget build(BuildContext context) {
-    final categories = widget.isMarket ? _marketCategories : _restaurantCategories;
+    final categories = widget.isMarket
+        ? _marketCategories
+        : _restaurantCategories;
 
     return Scaffold(
       backgroundColor: AppColors(context).background,
@@ -49,8 +49,12 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen> {
         elevation: 0,
         leading: const CustomArrowBack(),
         title: Text(
-          widget.isMarket ? AppStrings.browseCategoriesLabel : AppStrings.restaurantDetailsLabel,
-          style: AppTextStyles.text18w700(color: AppColors(context).textPrimary),
+          widget.isMarket
+              ? AppStrings.browseCategoriesLabel
+              : AppStrings.restaurantDetailsLabel,
+          style: AppTextStyles.text18w700(
+            color: AppColors(context).textPrimary,
+          ),
         ),
         centerTitle: true,
       ),
@@ -60,8 +64,8 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen> {
           _buildCategoriesFilter(categories),
           15.verticalSpace,
           Expanded(
-            child: widget.isMarket 
-                ? _buildMarketProductGrid(context) 
+            child: widget.isMarket
+                ? _buildMarketProductGrid(context)
                 : _buildRestaurantProductList(context),
           ),
         ],
@@ -86,14 +90,22 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen> {
               padding: EdgeInsets.symmetric(horizontal: 20.w),
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: isSelected ? AppColors(context).primary : AppColors(context).surface,
+                color: isSelected
+                    ? AppColors(context).primary
+                    : AppColors(context).surface,
                 borderRadius: BorderRadius.circular(25.r),
-                border: Border.all(color: isSelected ? Colors.transparent : AppColors(context).border),
+                border: Border.all(
+                  color: isSelected
+                      ? Colors.transparent
+                      : AppColors(context).border,
+                ),
               ),
               child: Text(
                 categories[index],
                 style: AppTextStyles.text14w600(
-                  color: isSelected ? Colors.white : AppColors(context).textPrimary,
+                  color: isSelected
+                      ? Colors.white
+                      : AppColors(context).textPrimary,
                 ),
               ),
             ),
@@ -125,18 +137,24 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen> {
                   children: [
                     Text(
                       '${AppStrings.classicBurgerDoubleTitle} #${index + 1}',
-                      style: AppTextStyles.text14w600(color: AppColors(context).textPrimary),
+                      style: AppTextStyles.text14w600(
+                        color: AppColors(context).textPrimary,
+                      ),
                     ),
                     5.verticalSpace,
                     Text(
                       AppStrings.burgerDescriptionMsg,
-                      style: AppTextStyles.text12w400(color: AppColors(context).textSecondary),
+                      style: AppTextStyles.text12w400(
+                        color: AppColors(context).textSecondary,
+                      ),
                       maxLines: 2,
                     ),
                     12.verticalSpace,
                     Text(
                       '8,500 ${AppStrings.currency}',
-                      style: AppTextStyles.text14w700(color: AppColors(context).primary),
+                      style: AppTextStyles.text14w700(
+                        color: AppColors(context).primary,
+                      ),
                     ),
                   ],
                 ),
@@ -171,7 +189,9 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(child: _buildProductImageWithAdd(context, isFullWidth: true)),
+              Expanded(
+                child: _buildProductImageWithAdd(context, isFullWidth: true),
+              ),
               Padding(
                 padding: EdgeInsets.all(10.r),
                 child: Column(
@@ -179,14 +199,18 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen> {
                   children: [
                     Text(
                       '${AppStrings.foodProductLabel} #${index + 1}',
-                      style: AppTextStyles.text14w600(color: AppColors(context).textPrimary),
+                      style: AppTextStyles.text14w600(
+                        color: AppColors(context).textPrimary,
+                      ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                     8.verticalSpace,
                     Text(
                       '3,500 ${AppStrings.currency}',
-                      style: AppTextStyles.text14w700(color: AppColors(context).primary),
+                      style: AppTextStyles.text14w700(
+                        color: AppColors(context).primary,
+                      ),
                     ),
                   ],
                 ),
@@ -198,7 +222,10 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen> {
     );
   }
 
-  Widget _buildProductImageWithAdd(BuildContext context, {bool isFullWidth = false}) {
+  Widget _buildProductImageWithAdd(
+    BuildContext context, {
+    bool isFullWidth = false,
+  }) {
     return Stack(
       alignment: Alignment.bottomRight,
       children: [
@@ -226,7 +253,9 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen> {
             decoration: BoxDecoration(
               color: AppColors(context).primary,
               shape: BoxShape.circle,
-              boxShadow: [BoxShadow(color: AppColors(context).shadow, blurRadius: 4)],
+              boxShadow: [
+                BoxShadow(color: AppColors(context).shadow, blurRadius: 4),
+              ],
             ),
             child: Icon(Icons.add, color: Colors.white, size: 18.sp),
           ),
@@ -242,7 +271,11 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen> {
       decoration: BoxDecoration(
         color: colors.surface,
         boxShadow: [
-          BoxShadow(color: colors.shadow, blurRadius: 10, offset: const Offset(0, -5)),
+          BoxShadow(
+            color: colors.shadow,
+            blurRadius: 10,
+            offset: const Offset(0, -5),
+          ),
         ],
       ),
       child: ElevatedButton(
@@ -250,18 +283,32 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen> {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors(context).primary,
           minimumSize: Size(double.infinity, 55.h),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15.r)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15.r),
+          ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Container(
               padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
-              decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(8.r)),
-              child: Text('2', style: AppTextStyles.text14w700(color: Colors.white)),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+              child: Text(
+                '2',
+                style: AppTextStyles.text14w700(color: Colors.white),
+              ),
             ),
-            Text(AppStrings.viewCartBtn, style: AppTextStyles.text16w700(color: Colors.white)),
-            Text('17,000 ${AppStrings.currency}', style: AppTextStyles.text14w700(color: Colors.white)),
+            Text(
+              AppStrings.viewCartBtn,
+              style: AppTextStyles.text16w700(color: Colors.white),
+            ),
+            Text(
+              '17,000 ${AppStrings.currency}',
+              style: AppTextStyles.text14w700(color: Colors.white),
+            ),
           ],
         ),
       ),

@@ -5,6 +5,7 @@ import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/styles/app_text_style.dart';
 import 'package:base_app/core/widgets/custom_app_bar.dart';
 import 'package:base_app/core/widgets/custom_button.dart';
+import 'package:base_app/core/widgets/custom_toast.dart';
 import 'package:base_app/core/widgets/custom_text_field.dart';
 import 'package:base_app/core/routes/app_routes.dart';
 
@@ -39,9 +40,7 @@ class CaptainRegistrationDetailsScreen extends StatelessWidget {
               text: AppStrings.submitForReviewBtn,
               onPressed: () {
                 // Show success and go to dashboard for prototype
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(AppStrings.dataSentSuccessMsg)),
-                );
+                CustomToast.success(context, AppStrings.dataSentSuccessMsg);
                 Navigator.pushNamedAndRemoveUntil(context, AppRoutes.captainNav, (route) => false);
               },
             ),

@@ -4,9 +4,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cached_network_svg_image/cached_network_svg_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:lottie/lottie.dart';
 import 'package:base_app/core/styles/app_colors.dart';
-import 'package:base_app/core/utils/assets/app_assets.dart';
+import 'lading_button.dart';
 
 class CustomNetworkImage extends StatelessWidget {
   final String? imageUrl;
@@ -203,6 +202,6 @@ class CustomLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(child: Lottie.asset(AppAssets.loadingLottie));
+    return LoadingButton(size: 40);
   }
 }

@@ -6,6 +6,7 @@ import 'package:base_app/core/extintions/navigation_extension.dart';
 import '../../../../../core/localizations/app_strings.g.dart';
 import '../../../../../core/styles/app_colors.dart';
 import '../../../../../core/styles/app_text_style.dart';
+import '../../../../../core/widgets/lading_button.dart';
 import '../../riverpod/about_type_provider.dart';
 
 class ServiceImagePicker extends ConsumerWidget {
@@ -77,13 +78,9 @@ class ServiceImagePicker extends ConsumerWidget {
         child: Row(
           children: [
             if (isPickingImage)
-              SizedBox(
-                width: 40.w,
-                height: 40.w,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: colors.primaryVariant,
-                ),
+              LoadingButton(
+                size: 40.w,
+                color: colors.primaryVariant,
               )
             else if (currentImage != null)
               Container(

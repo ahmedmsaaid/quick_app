@@ -83,7 +83,7 @@ class _CaptainHomeScreenState extends State<CaptainHomeScreen> {
               Switch(
                 value: _isOnline,
                 onChanged: _toggleStatus,
-                activeColor: AppColors(context).success,
+                activeThumbColor: AppColors(context).success,
                 inactiveThumbColor: AppColors(context).warning,
                 inactiveTrackColor: AppColors(context).warning.withOpacity(0.3),
               ),

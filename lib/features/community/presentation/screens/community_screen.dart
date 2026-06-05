@@ -3,8 +3,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:base_app/core/localizations/app_strings.g.dart';
 import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/styles/app_text_style.dart';
-import 'package:base_app/core/widgets/custome_svg_image.dart';
-import 'package:base_app/core/utils/assets/app_icons.dart';
 
 class CommunityScreen extends StatelessWidget {
   const CommunityScreen({super.key});

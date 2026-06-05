@@ -16,6 +16,7 @@ import '../../features/auth/presentation/screens/about_type_screen.dart';
 import '../../features/auth/presentation/screens/create_new_password_screen.dart';
 import '../../features/auth/presentation/screens/forget_password_screen.dart';
 import '../../features/auth/presentation/screens/otp_screen.dart';
+
 import '../../features/auth/presentation/screens/register_screen.dart';
 
 import '../../features/main_nav/presentation/screens/user_nav_screen.dart';
@@ -61,8 +62,20 @@ abstract class AppRouter {
           settings,
         );
       case AppRoutes.otpScreen:
-        final bool isUser = (settings.arguments as bool?) ?? false;
-        return _buildAnimatedRoute(OtpScreen(isUser: isUser), settings);
+        final args = settings.arguments;
+        OtpArgs otpArgs;
+        if (args is OtpArgs) {
+          otpArgs = args;
+        } else if (args is bool) {
+          // Legacy: bool argument from old code
+          otpArgs = OtpArgs(isUser: args);
+        } else {
+          otpArgs = const OtpArgs();
+        }
+        return _buildAnimatedRoute(
+          OtpScreen(isUser: otpArgs.isUser, mode: otpArgs.mode),
+          settings,
+        );
       case AppRoutes.createNewPasswordScreen:
         final bool isUser = (settings.arguments as bool?) ?? false;
         return MaterialPageRoute(

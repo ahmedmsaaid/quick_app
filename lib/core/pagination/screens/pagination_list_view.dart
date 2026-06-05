@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import 'package:base_app/core/widgets/lading_button.dart';
 import '../riverpod/pagination_state.dart';
 
 enum PaginationViewType { list, grid }
@@ -162,7 +163,7 @@ class _PaginationListViewState<T> extends ConsumerState<PaginationListView<T>> {
           return widget.loadMoreWidget ??
               Padding(
                 padding: EdgeInsets.all(16.w),
-                child: const Center(child: CircularProgressIndicator()),
+                child: LoadingButton(size: 30.r),
               );
         },
       ),
@@ -208,7 +209,7 @@ class _PaginationListViewState<T> extends ConsumerState<PaginationListView<T>> {
           return widget.loadMoreWidget ??
               Padding(
                 padding: EdgeInsets.all(16.w),
-                child: const Center(child: CircularProgressIndicator()),
+                child: LoadingButton(size: 30.r),
               );
         },
       ),
@@ -230,7 +231,7 @@ class _CenterLoader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(child: CircularProgressIndicator());
+    return const Center(child: LoadingButton());
   }
 }
 

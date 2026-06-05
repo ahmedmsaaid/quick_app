@@ -5,6 +5,7 @@ import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/styles/app_text_style.dart';
 import 'package:base_app/core/widgets/custom_arrow_back.dart';
 import 'package:base_app/core/widgets/custom_button.dart';
+import 'package:base_app/core/widgets/custom_toast.dart';
 import 'package:base_app/features/auth/presentation/widgets/custom_password_text_field.dart';
 
 class ChangePasswordScreen extends StatelessWidget {
@@ -57,12 +58,7 @@ class ChangePasswordScreen extends StatelessWidget {
             CustomAppButton(
               text: AppStrings.updatePasswordBtn,
               onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(AppStrings.passwordUpdatedSuccessMsg),
-                    backgroundColor: Colors.green,
-                  ),
-                );
+                CustomToast.success(context, AppStrings.passwordUpdatedSuccessMsg);
                 Navigator.pop(context);
               },
             ),
