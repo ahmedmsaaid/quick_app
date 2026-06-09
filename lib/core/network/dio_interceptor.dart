@@ -12,7 +12,10 @@ class DioInterceptor extends Interceptor {
     RequestInterceptorHandler handler,
   ) async {
     final lang = CacheHelper.currentLang;
-    final token = CacheHelper.getString(CacheKeys.token);
+    String? token = CacheHelper.getString(CacheKeys.token);
+    if (token == null || token.isEmpty) {
+      token = CacheHelper.getString('tempToken');
+    }
 
     options.headers[HttpHeaders.acceptLanguageHeader] = lang;
     if (token != null && token.isNotEmpty) {

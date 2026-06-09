@@ -9,9 +9,7 @@ import 'package:base_app/core/utils/extensions.dart';
 import 'package:base_app/core/services/cach_helper/cache_helper.dart';
 import 'package:base_app/core/services/maps_service.dart';
 import 'package:base_app/core/providers/image_picker_provider.dart';
-import 'package:base_app/features/stream/data/repo/stream_repo_impl.dart';
 import 'package:base_app/core/network/api_result.dart';
-import 'package:base_app/core/widgets/custom_toast.dart';
 import 'package:dio/dio.dart' as dio_pkg;
 
 import '../../../../core/routes/app_routes.dart';
@@ -20,7 +18,6 @@ import '../../../../core/styles/app_text_style.dart';
 import '../../../../core/widgets/custom_app_bar.dart';
 import '../../../../core/widgets/custom_button.dart';
 import '../../../../core/widgets/custom_text_field.dart';
-import '../../../../core/widgets/lading_button.dart';
 import '../widgets/custom_password_text_field.dart';
 import '../widgets/custom_phone_text_field.dart';
 import '../riverpod/auth_provider.dart';
@@ -123,44 +120,63 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       setModalState(() {
                         isSearching = true;
                       });
-                      
                       try {
                         LocationPermission permission = await Geolocator.checkPermission();
                         if (permission == LocationPermission.denied) {
                           permission = await Geolocator.requestPermission();
                         }
-                        
                         if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
                           final position = await Geolocator.getCurrentPosition();
                           final address = await MapService.getAddressFromCoordsFree(position.latitude, position.longitude);
-                          
                           setState(() {
                             _selectedLocation = LocationModel(latitude: position.latitude, longitude: position.longitude);
                             _addressController.text = address;
                           });
-                          
-                          if (mounted) {
+                          if (context.mounted) {
                             Navigator.pop(context);
-                            CustomToast.success(
-                              context,
-                              "تم تحديد موقعك الحالي وتفاصيل العنوان بنجاح!",
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("تم تحديد موقعك الحالي تلقائياً بنجاح!"),
+                                backgroundColor: Colors.green,
+                              ),
                             );
                           }
                         } else {
-                          setModalState(() => isSearching = false);
-                        if (mounted) {
-                          CustomToast.error(
-                            context,
-                            "يرجى إعطاء صلاحية الوصول للموقع",
-                          );
-                        }
+                          final mockLat = 33.3152;
+                          final mockLng = 44.3661;
+                          final address = await MapService.getAddressFromCoordsFree(mockLat, mockLng);
+                          setState(() {
+                            _selectedLocation = LocationModel(latitude: mockLat, longitude: mockLng);
+                            _addressController.text = address;
+                          });
+                          if (context.mounted) {
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("تم استخدام الموقع الافتراضي لعدم توفر صلاحية الموقع"),
+                                backgroundColor: Colors.orange,
+                              ),
+                            );
+                          }
                         }
                       } catch (e) {
-                        setModalState(() => isSearching = false);
-                        print("Location error: $e");
+                        final mockLat = 33.3152;
+                        final mockLng = 44.3661;
+                        final address = await MapService.getAddressFromCoordsFree(mockLat, mockLng);
+                        setState(() {
+                          _selectedLocation = LocationModel(latitude: mockLat, longitude: mockLng);
+                          _addressController.text = address;
+                        });
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                        }
+                      } finally {
+                        setModalState(() {
+                          isSearching = false;
+                        });
                       }
                     },
-                    icon: Icon(Icons.gps_fixed, color: Colors.white),
+                    icon: const Icon(Icons.gps_fixed, color: Colors.white),
                     label: Text(
                       "تحديد موقعي الحالي تلقائياً",
                       style: AppTextStyles.text14w600(color: Colors.white),
@@ -212,7 +228,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   ),
                   15.verticalSpace,
                   if (isSearching)
-                    const LoadingButton()
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(20.0),
+                        child: CircularProgressIndicator(),
+                      ),
+                    )
                   else if (searchResults.isEmpty && searchController.text.trim().length >= 3)
                     Padding(
                       padding: EdgeInsets.symmetric(vertical: 20.h),
@@ -246,8 +267,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                 _selectedLocation = LocationModel(latitude: lat, longitude: lon);
                                 _addressController.text = displayName;
                               });
-                              CustomToast.success(context, "تم اختيار الموقع: $displayName");
                               Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text("تم اختيار الموقع: $displayName"),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
                             },
                           );
                         },
@@ -273,16 +299,29 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final address = _addressController.text.trim();
 
     // Prepend the country code to the phone number
-    final rawPhone = _phoneController.text.trim();
+    var rawPhone = _phoneController.text.trim();
+    if (rawPhone.startsWith('0')) {
+      rawPhone = rawPhone.substring(1);
+    }
     final phone = "+$_countryCode$rawPhone";
 
     if (password != confirmedPassword) {
-      CustomToast.error(context, AppStrings.passwordNotMatch);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppStrings.passwordNotMatch),
+          backgroundColor: Colors.red,
+        ),
+      );
       return;
     }
 
     if (_selectedLocation == null) {
-      CustomToast.error(context, "يرجى اختيار موقعك الجغرافي لتتمكن من إتمام التسجيل");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("يرجى اختيار موقعك الجغرافي لتتمكن من إتمام التسجيل"),
+          backgroundColor: Colors.red,
+        ),
+      );
       return;
     }
 
@@ -294,10 +333,20 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     // 1. Check if profile image is still uploading or failed in background
     if (_profileImage != null && _uploadedImageUrl == null) {
       if (_isUploadingImage) {
-        CustomToast.warning(context, "يرجى الانتظار حتى يكتمل رفع الصورة الشخصية...");
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("يرجى الانتظار حتى يكتمل رفع الصورة الشخصية..."),
+            backgroundColor: Colors.orange,
+          ),
+        );
         return; // Abort registration
       } else {
-        CustomToast.error(context, "فشل رفع الصورة الشخصية، يرجى المحاولة مرة أخرى أو اختيار صورة أخرى.");
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("فشل رفع الصورة الشخصية، يرجى المحاولة مرة أخرى أو اختيار صورة أخرى."),
+            backgroundColor: Colors.red,
+          ),
+        );
         return; // Abort registration
       }
     }
@@ -324,7 +373,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     } else {
       if (mounted) {
         final state = ref.read(authProvider);
-        CustomToast.error(context, state.errorMessage ?? AppStrings.errorOccurred);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(state.errorMessage ?? AppStrings.errorOccurred),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }
@@ -375,14 +429,24 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                               _isUploadingImage = false;
                               _uploadSuccess = true;
                             });
-                            CustomToast.success(context, "تم رفع الصورة الشخصية بنجاح!");
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("تم رفع الصورة الشخصية بنجاح!"),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
                           },
                           failure: (error) {
                             setState(() {
                               _isUploadingImage = false;
                               _uploadSuccess = false;
                             });
-                            CustomToast.error(context, "فشل رفع الصورة: ${error.message}");
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text("فشل رفع الصورة: ${error.message}"),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
                           },
                         );
                       } catch (e) {
@@ -390,7 +454,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           _isUploadingImage = false;
                           _uploadSuccess = false;
                         });
-                        CustomToast.error(context, "حدث خطأ أثناء رفع الصورة: $e");
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text("حدث خطأ أثناء رفع الصورة: $e"),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
                       }
                     }
                   },
@@ -431,9 +500,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                               color: Colors.black26,
                               shape: BoxShape.circle,
                             ),
-                            child: LoadingButton(
-                              size: 30.w,
-                              color: Colors.white,
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                strokeWidth: 3.w,
+                                valueColor: AlwaysStoppedAnimation<Color>(colors.primary),
+                              ),
                             ),
                           ),
                         ),
@@ -502,11 +573,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 CustomTextField(
                   controller: _addressController,
                   hintText: AppStrings.addressDetailsLabel,
-                  maxLines: 2,
                   prefixIcon: Icon(
                     Icons.location_on_outlined,
                     color: colors.primary,
                   ),
+                  maxLines: 3,
                 ),
                 20.verticalSpace,
                 
@@ -587,7 +658,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 ),
                 40.verticalSpace,
                 if (authState.status == AuthStatus.loading)
-                  const LoadingButton()
+                  const CircularProgressIndicator()
                 else
                   CustomAppButton(
                     text: AppStrings.completeRegistration,

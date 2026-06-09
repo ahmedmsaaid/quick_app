@@ -92,4 +92,29 @@ class ProfileApiService {
       return ApiResult.failure(handleError(e));
     }
   }
+
+  /// Change the authenticated user's password.
+  Future<ApiResult<ApiResponse<void>>> changePassword({
+    required String oldPassword,
+    required String newPassword,
+    required String confirmedNewPassword,
+  }) async {
+    try {
+      final response = await _dio.patch(
+        ApiConstants.changePassword,
+        data: {
+          'oldPassword': oldPassword,
+          'newPassword': newPassword,
+          'confirmedNewPassword': confirmedNewPassword,
+        },
+      );
+      final apiResponse = ApiResponse<void>.fromJson(
+        response.data,
+        (_) {},
+      );
+      return ApiResult.success(apiResponse);
+    } catch (e) {
+      return ApiResult.failure(handleError(e));
+    }
+  }
 }

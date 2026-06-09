@@ -77,7 +77,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     if (phone.isNotEmpty) {
       ref.read(authApiServiceProvider).sendOtp(
             phone: phone,
-            type: _isForgotPasswordMode ? 1 : 0,
+            type: _isForgotPasswordMode ? 0 : 1,
           );
     }
   }
@@ -286,7 +286,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                                     CacheHelper.getString('temp_phone') ?? '';
                                 ref.read(authApiServiceProvider).sendOtp(
                                       phone: phone,
-                                      type: _isForgotPasswordMode ? 1 : 0,
+                                      type: _isForgotPasswordMode ? 0 : 1,
                                     );
                                 _startTimer();
                               },

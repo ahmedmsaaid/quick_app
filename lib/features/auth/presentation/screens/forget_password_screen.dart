@@ -46,7 +46,10 @@ class _ForgetPasswordScreenState extends ConsumerState<ForgetPasswordScreen> {
 
     setState(() => _isLoading = true);
 
-    final rawPhone = _phoneController.text.trim();
+    var rawPhone = _phoneController.text.trim();
+    if (rawPhone.startsWith('0')) {
+      rawPhone = rawPhone.substring(1);
+    }
     final phone = '+$_countryCode$rawPhone';
 
     // Save phone for OTP screen
@@ -54,7 +57,7 @@ class _ForgetPasswordScreenState extends ConsumerState<ForgetPasswordScreen> {
 
     final result = await ref.read(authApiServiceProvider).sendOtp(
           phone: phone,
-          type: 1, // type 1 = forgot password
+          type: 0, // 0 = ResetPassword
         );
 
     if (!mounted) return;

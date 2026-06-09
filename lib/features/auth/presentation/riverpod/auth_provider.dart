@@ -93,7 +93,23 @@ class Auth extends _$Auth {
           return false;
         }
       },
-      failure: (error) {
+      failure: (error) async {
+        if (error.statusCode == 330 && error.data is Map<String, dynamic>) {
+          final dataMap = error.data as Map<String, dynamic>;
+          final result = dataMap['result'];
+          String? tempToken;
+          if (result is Map<String, dynamic>) {
+            tempToken = result['accessToken'] as String? ?? result['token'] as String?;
+          } else if (result is String) {
+            tempToken = result;
+          }
+          if (tempToken == null || tempToken.isEmpty) {
+            tempToken = dataMap['accessToken'] as String? ?? dataMap['token'] as String?;
+          }
+          if (tempToken != null && tempToken.isNotEmpty) {
+            await CacheHelper.setString('tempToken', tempToken);
+          }
+        }
         state = AuthState.error(error.message, statusCode: error.statusCode);
         return false;
       },

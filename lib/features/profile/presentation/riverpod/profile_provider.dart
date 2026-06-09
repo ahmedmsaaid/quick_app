@@ -130,4 +130,39 @@ class ProfileNotifier extends _$ProfileNotifier {
       },
     );
   }
+
+  /// Change the user's password.
+  Future<bool> changePassword({
+    required String oldPassword,
+    required String newPassword,
+    required String confirmedNewPassword,
+  }) async {
+    state = state.copyWith(status: ProfileStatus.updating);
+    final result = await ref.read(profileApiServiceProvider).changePassword(
+          oldPassword: oldPassword,
+          newPassword: newPassword,
+          confirmedNewPassword: confirmedNewPassword,
+        );
+    return result.when(
+      success: (response) {
+        if (response.success) {
+          state = state.copyWith(status: ProfileStatus.loaded);
+          return true;
+        } else {
+          state = state.copyWith(
+            status: ProfileStatus.error,
+            errorMessage: response.message,
+          );
+          return false;
+        }
+      },
+      failure: (error) {
+        state = state.copyWith(
+          status: ProfileStatus.error,
+          errorMessage: error.message,
+        );
+        return false;
+      },
+    );
+  }
 }

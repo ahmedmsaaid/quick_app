@@ -51,7 +51,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     // Prepend the country code to the phone number
-    final rawPhone = _phoneController.text.trim();
+    var rawPhone = _phoneController.text.trim();
+    if (rawPhone.startsWith('0')) {
+      rawPhone = rawPhone.substring(1);
+    }
     final phone = "+$_countryCode$rawPhone";
     final password = _passwordController.text;
 

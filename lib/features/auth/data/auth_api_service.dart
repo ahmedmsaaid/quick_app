@@ -113,9 +113,10 @@ class AuthApiService {
   }
 
   /// Sends a verification OTP code to the user's phone.
+  /// type: 0 = ResetPassword, 1 = Register, 2 = Recover
   Future<ApiResult<ApiResponse<SendOTPResult>>> sendOtp({
     required String phone,
-    required int type, // 0, 1, 2
+    required int type,
   }) async {
     try {
       final response = await _dio.post(
