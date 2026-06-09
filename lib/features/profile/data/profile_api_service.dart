@@ -117,4 +117,102 @@ class ProfileApiService {
       return ApiResult.failure(handleError(e));
     }
   }
+
+  /// Add a new location for the authenticated user.
+  Future<ApiResult<ApiResponse<LocationDto>>> addLocation({
+    required String address,
+    required double latitude,
+    required double longitude,
+    required bool base,
+  }) async {
+    try {
+      final response = await _dio.post(
+        ApiConstants.locations,
+        data: {
+          'address': address,
+          'latitude': latitude,
+          'longitude': longitude,
+          'base': base,
+        },
+      );
+      final apiResponse = ApiResponse<LocationDto>.fromJson(
+        response.data,
+        (json) => LocationDto.fromJson(json as Map<String, dynamic>),
+      );
+      return ApiResult.success(apiResponse);
+    } catch (e) {
+      return ApiResult.failure(handleError(e));
+    }
+  }
+
+  /// Get user locations.
+  Future<ApiResult<ApiResponse<List<LocationDto>>>> getLocations() async {
+    try {
+      final response = await _dio.patch(
+        ApiConstants.locations,
+        data: {
+          'pageNumber': 1,
+          'pageSize': 100,
+          'enablePagination': true,
+        },
+      );
+      final apiResponse = ApiResponse<List<LocationDto>>.fromJson(
+        response.data,
+        (json) {
+          if (json is List) {
+            return json.map((e) => LocationDto.fromJson(e as Map<String, dynamic>)).toList();
+          }
+          return [];
+        },
+      );
+      return ApiResult.success(apiResponse);
+    } catch (e) {
+      return ApiResult.failure(handleError(e));
+    }
+  }
+
+  /// Update user location information.
+  Future<ApiResult<ApiResponse<LocationDto>>> updateLocation({
+    required int id,
+    required String address,
+    required double latitude,
+    required double longitude,
+    required bool base,
+  }) async {
+    try {
+      final response = await _dio.put(
+        ApiConstants.locations,
+        data: {
+          'id': id,
+          'address': address,
+          'latitude': latitude,
+          'longitude': longitude,
+          'base': base,
+        },
+      );
+      final apiResponse = ApiResponse<LocationDto>.fromJson(
+        response.data,
+        (json) => LocationDto.fromJson(json as Map<String, dynamic>),
+      );
+      return ApiResult.success(apiResponse);
+    } catch (e) {
+      return ApiResult.failure(handleError(e));
+    }
+  }
+
+  /// Delete a location by ID.
+  Future<ApiResult<ApiResponse<void>>> deleteLocation(int id) async {
+    try {
+      final response = await _dio.delete(
+        '${ApiConstants.locations}/$id',
+      );
+      final apiResponse = ApiResponse<void>.fromJson(
+        response.data,
+        (_) {},
+      );
+      return ApiResult.success(apiResponse);
+    } catch (e) {
+      return ApiResult.failure(handleError(e));
+    }
+  }
 }

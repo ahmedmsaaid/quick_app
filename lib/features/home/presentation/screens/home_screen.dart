@@ -1,23 +1,25 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:base_app/core/localizations/app_strings.g.dart';
 import 'package:base_app/core/utils/assets/app_icons.dart';
 import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/styles/app_text_style.dart';
 import 'package:base_app/core/widgets/see_all_widget.dart';
 import 'package:base_app/core/utils/extensions.dart';
+import 'package:base_app/features/profile/presentation/riverpod/profile_provider.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../widgets/location_bottom_sheet.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen> {
   final PageController _bannerController = PageController();
   int _currentBannerPage = 0;
   Timer? _bannerTimer;
@@ -71,6 +73,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildCustomHeader(BuildContext context) {
     final colors = AppColors(context);
+    final profileState = ref.watch(profileProvider);
+    final user = profileState.user;
+
+    String addressName = AppStrings.homeLocation;
+    if (profileState.locations.isNotEmpty) {
+      // Find base/default location, or fallback to first
+      final baseLoc = profileState.locations.firstWhere(
+        (loc) => loc.base,
+        orElse: () => profileState.locations.first,
+      );
+      addressName = baseLoc.address ?? AppStrings.homeLocation;
+    } else if (user?.address != null && user!.address!.isNotEmpty) {
+      addressName = user.address!;
+    }
 
     return Container(
       width: double.infinity,
@@ -92,20 +108,28 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  InkWell(
-                    onTap: () => _showLocationSheet(context),
-                    child: Row(
-                      children: [
-                        Icon(Icons.location_on, color: Colors.white, size: 18.sp),
-                        6.horizontalSpace,
-                        Text(
-                          AppStrings.homeLocation,
-                          style: AppTextStyles.text18w500(color: Colors.white),
-                        ),
-                        Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 18.sp),
-                      ],
+                  Flexible(
+                    child: InkWell(
+                      onTap: () => _showLocationSheet(context),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.location_on, color: Colors.white, size: 18.sp),
+                          6.horizontalSpace,
+                          Flexible(
+                            child: Text(
+                              addressName,
+                              style: AppTextStyles.text18w500(color: Colors.white),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 18.sp),
+                        ],
+                      ),
                     ),
                   ),
+                  10.horizontalSpace,
                   InkWell(
                     onTap: () => context.pushNamed(AppRoutes.notifications),
                     child: Icon(Icons.notifications_none_rounded, color: Colors.white, size: 28.sp),

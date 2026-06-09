@@ -2,15 +2,56 @@ import 'package:base_app/core/localizations/app_strings.g.dart';
 import 'package:base_app/core/routes/app_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:base_app/core/services/maps_service.dart';
 import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/styles/app_text_style.dart';
+import 'package:base_app/features/profile/presentation/riverpod/profile_provider.dart';
+import 'package:base_app/features/auth/data/models/auth_models.dart';
+import 'package:base_app/core/widgets/custom_toast.dart';
 
-class LocationBottomSheet extends StatelessWidget {
+class LocationBottomSheet extends ConsumerWidget {
   const LocationBottomSheet({super.key});
 
+  Future<void> _useCurrentLocation(BuildContext context, WidgetRef ref) async {
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        // ignore: check_permission_before_requesting
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
+        final position = await Geolocator.getCurrentPosition();
+        final address = await MapService.getAddressFromCoordsFree(position.latitude, position.longitude);
+        
+        final success = await ref.read(profileProvider.notifier).saveAddress(
+          address: address,
+          latitude: position.latitude,
+          longitude: position.longitude,
+        );
+        if (success && context.mounted) {
+          Navigator.pop(context);
+        }
+      } else {
+        if (context.mounted) {
+          CustomToast.error(context, "يرجى تفعيل صلاحية الوصول للموقع");
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        CustomToast.error(context, "فشل تحديد الموقع الحالي");
+      }
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColors(context);
+    final profileState = ref.watch(profileProvider);
+    final locations = profileState.locations;
+    final isUpdating = profileState.status == ProfileStatus.updating;
+
     return Container(
       padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
@@ -40,28 +81,42 @@ class LocationBottomSheet extends StatelessWidget {
             style: AppTextStyles.text18w700(color: colors.textPrimary),
           ),
           20.verticalSpace,
-          _buildCurrentLocationItem(context),
+          _buildCurrentLocationItem(context, ref, isUpdating),
           20.verticalSpace,
           Text(
             AppStrings.savedAddressesTitle,
             style: AppTextStyles.text14w600(color: colors.textSecondary),
           ),
           10.verticalSpace,
-          _buildSavedLocationItem(
-            context,
-            title: AppStrings.homeLabel,
-            address: AppStrings.mansourAddressMsg,
-            icon: Icons.home_outlined,
-            isSelected: true,
-          ),
-          10.verticalSpace,
-          _buildSavedLocationItem(
-            context,
-            title: AppStrings.workLabel,
-            address: AppStrings.universityAddressMsg,
-            icon: Icons.work_outline,
-            isSelected: false,
-          ),
+          if (locations.isEmpty)
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: 20.h),
+              child: Center(
+                child: Text(
+                  "لا توجد عناوين محفوظة بعد",
+                  style: AppTextStyles.text14w400(color: colors.textHint),
+                ),
+              ),
+            )
+          else
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: locations.length,
+                separatorBuilder: (context, index) => 10.verticalSpace,
+                itemBuilder: (context, index) {
+                  final loc = locations[index];
+                  return _buildSavedLocationItem(
+                    context,
+                    ref: ref,
+                    loc: loc,
+                    isSelected: loc.base,
+                    isUpdating: isUpdating,
+                  );
+                },
+              ),
+            ),
           20.verticalSpace,
           _buildAddNewAddress(context),
           20.verticalSpace,
@@ -70,10 +125,10 @@ class LocationBottomSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildCurrentLocationItem(BuildContext context) {
+  Widget _buildCurrentLocationItem(BuildContext context, WidgetRef ref, bool isUpdating) {
     final colors = AppColors(context);
     return InkWell(
-      onTap: () => Navigator.pop(context),
+      onTap: isUpdating ? null : () => _useCurrentLocation(context, ref),
       child: Container(
         padding: EdgeInsets.all(15.r),
         decoration: BoxDecoration(
@@ -83,7 +138,13 @@ class LocationBottomSheet extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(Icons.my_location, color: colors.primary),
+            isUpdating 
+              ? SizedBox(
+                  width: 24.w,
+                  height: 24.w,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: colors.primary),
+                )
+              : Icon(Icons.my_location, color: colors.primary),
             15.horizontalSpace,
             Expanded(
               child: Column(
@@ -108,14 +169,21 @@ class LocationBottomSheet extends StatelessWidget {
 
   Widget _buildSavedLocationItem(
     BuildContext context, {
-    required String title,
-    required String address,
-    required IconData icon,
+    required WidgetRef ref,
+    required LocationDto loc,
     required bool isSelected,
+    required bool isUpdating,
   }) {
     final colors = AppColors(context);
     return InkWell(
-      onTap: () => Navigator.pop(context),
+      onTap: (isSelected || isUpdating)
+          ? null
+          : () async {
+              final success = await ref.read(profileProvider.notifier).setBaseAddress(loc);
+              if (success && context.mounted) {
+                Navigator.pop(context);
+              }
+            },
       child: Container(
         padding: EdgeInsets.all(12.r),
         decoration: BoxDecoration(
@@ -127,16 +195,22 @@ class LocationBottomSheet extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(icon, color: isSelected ? colors.primary : colors.textHint),
+            Icon(
+              loc.base ? Icons.home_outlined : Icons.location_on_outlined,
+              color: isSelected ? colors.primary : colors.textHint,
+            ),
             15.horizontalSpace,
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: AppTextStyles.text14w600(color: colors.textPrimary)),
                   Text(
-                    address,
-                    style: AppTextStyles.text12w400(color: colors.textSecondary),
+                    loc.base ? "العنوان الافتراضي" : "عنوان محفوظ",
+                    style: AppTextStyles.text12w400(color: isSelected ? colors.primary : colors.textSecondary),
+                  ),
+                  Text(
+                    loc.address ?? '',
+                    style: AppTextStyles.text14w600(color: colors.textPrimary),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),

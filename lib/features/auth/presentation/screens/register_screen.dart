@@ -359,7 +359,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       name: name,
       password: password,
       confirmedPassword: confirmedPassword,
-      role: widget.isUser ? 0 : 1, // 0: customer, 1: captain/driver
+      role: widget.isUser ? 2 : 3, // 2: customer, 3: delivery/captain
       email: email.isNotEmpty ? email : null,
       address: address.isNotEmpty ? address : null,
       location: _selectedLocation,

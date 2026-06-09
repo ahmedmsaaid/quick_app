@@ -74,18 +74,18 @@ class UserDto {
         : (data.containsKey('data') && data['data'] is Map ? data['data'] as Map<String, dynamic> : data);
 
     // 3. Robust role parsing
-    int parsedRole = 0;
+    int parsedRole = 2; // Default to Customer (2)
     final dynamic rawRole = userMap['role'];
     if (rawRole is int) {
       parsedRole = rawRole;
     } else if (rawRole != null) {
       final roleStr = rawRole.toString().toLowerCase();
-      if (roleStr == 'captain' || roleStr == 'driver' || roleStr == '1') {
-        parsedRole = 1;
-      } else if (roleStr == 'customer' || roleStr == 'user' || roleStr == '0') {
-        parsedRole = 0;
+      if (roleStr == 'captain' || roleStr == 'driver' || roleStr == '1' || roleStr == '3') {
+        parsedRole = 3;
+      } else if (roleStr == 'customer' || roleStr == 'user' || roleStr == '0' || roleStr == '2') {
+        parsedRole = 2;
       } else {
-        parsedRole = int.tryParse(roleStr) ?? 0;
+        parsedRole = int.tryParse(roleStr) ?? 2;
       }
     }
 
@@ -156,3 +156,44 @@ class SendOTPResult {
     'expiredIn': expiredIn,
   };
 }
+
+class LocationDto {
+  final int id;
+  final String? address;
+  final double longitude;
+  final double latitude;
+  final bool base;
+  final int? creatorId;
+  final String? createdOn;
+
+  LocationDto({
+    required this.id,
+    this.address,
+    required this.longitude,
+    required this.latitude,
+    required this.base,
+    this.creatorId,
+    this.createdOn,
+  });
+
+  factory LocationDto.fromJson(Map<String, dynamic> json) => LocationDto(
+    id: json['id'] is int ? json['id'] as int : int.tryParse(json['id']?.toString() ?? '0') ?? 0,
+    address: json['address']?.toString(),
+    longitude: (json['longitude'] as num?)?.toDouble() ?? 0.0,
+    latitude: (json['latitude'] as num?)?.toDouble() ?? 0.0,
+    base: json['base'] as bool? ?? false,
+    creatorId: json['creatorId'] as int?,
+    createdOn: json['createdOn']?.toString(),
+  );
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'address': address,
+    'longitude': longitude,
+    'latitude': latitude,
+    'base': base,
+    'creatorId': creatorId,
+    'createdOn': createdOn,
+  };
+}
+

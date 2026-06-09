@@ -51,7 +51,7 @@ class Auth extends _$Auth {
   AuthState build() {
     final token = CacheHelper.getString(CacheKeys.token);
     if (token != null && token.isNotEmpty) {
-      final role = CacheHelper.getInt('userRole') ?? 0;
+      final role = CacheHelper.getInt('userRole') ?? 2;
       return AuthState.authenticated(UserDto(id: 0, role: role, status: 0));
     }
     return AuthState.initial();
@@ -59,7 +59,7 @@ class Auth extends _$Auth {
 
   /// Sets the authentication state to authenticated directly (e.g. after OTP)
   void setAuthenticated() {
-    final role = CacheHelper.getInt('userRole') ?? 0;
+    final role = CacheHelper.getInt('userRole') ?? 2;
     state = AuthState.authenticated(UserDto(id: 0, role: role, status: 0));
   }
 
@@ -84,9 +84,9 @@ class Auth extends _$Auth {
           }
           
           // Cache the user role!
-          await CacheHelper.setInt('userRole', isUser ? 0 : 1);
+          await CacheHelper.setInt('userRole', isUser ? 2 : 3);
           
-          state = AuthState.authenticated(UserDto(id: 0, role: isUser ? 0 : 1, status: 0));
+          state = AuthState.authenticated(UserDto(id: 0, role: isUser ? 2 : 3, status: 0));
           return true;
         } else {
           state = AuthState.error(response.message ?? "Authentication failed", statusCode: response.statusCode);

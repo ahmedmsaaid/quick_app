@@ -109,8 +109,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
         context.pushNamedAndRemoveUntil(AppRoutes.onBoarding);
       } else {
         if (token != null && token.isNotEmpty) {
-          final int role = CacheHelper.getInt('userRole') ?? 0;
-          if (role == 0) {
+          final int role = CacheHelper.getInt('userRole') ?? 2;
+          if (role == 2 || role == 0) {
             debugPrint('🚀 Navigating to UserNav');
             context.pushNamedAndRemoveUntil(AppRoutes.userNav);
           } else {

@@ -2,22 +2,31 @@ import 'package:base_app/features/home/presentation/screens/home_screen.dart';
 import 'package:base_app/features/profile/presentation/screens/wallet_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:base_app/core/localizations/app_strings.g.dart';
 import 'package:base_app/core/utils/assets/app_icons.dart';
 import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/widgets/custome_svg_image.dart';
 import 'package:base_app/features/orders/presentation/screens/orders_screen.dart';
 import 'package:base_app/features/profile/presentation/screens/profile_screen.dart';
+import 'package:base_app/features/profile/presentation/riverpod/profile_provider.dart';
 
-class UserNavScreen extends StatefulWidget {
+class UserNavScreen extends ConsumerStatefulWidget {
   const UserNavScreen({super.key});
 
   @override
-  State<UserNavScreen> createState() => _UserNavScreenState();
+  ConsumerState<UserNavScreen> createState() => _UserNavScreenState();
 }
 
-class _UserNavScreenState extends State<UserNavScreen> {
+class _UserNavScreenState extends ConsumerState<UserNavScreen> {
   int _selectedIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() => ref.read(profileProvider.notifier).loadProfile());
+  }
+
 
   final List<Widget> _pages = [
     const HomeScreen(),
