@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:riverpod/legacy.dart';
 import 'package:base_app/core/constans/app_localizations_constants.dart';
 
-import '../services/cach_helper/cache_helper.dart';
-import '../services/cach_helper/cache_helper_keys.dart';
+import 'package:base_app/core/services/cach_helper/cache_helper.dart';
+import 'package:base_app/core/services/cach_helper/cache_helper_keys.dart';
 
 // ===== Localization Notifier =====
 class LocalizationNotifier extends StateNotifier<Locale> {

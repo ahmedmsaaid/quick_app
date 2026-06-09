@@ -3,8 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:base_app/core/styles/old_text_style.dart';
 
-import '../../core/styles/app_colors.dart';
-import '../styles/app_text_style.dart';
+import 'package:base_app/core/styles/app_colors.dart';
+import 'package:base_app/core/styles/app_text_style.dart';
 
 class CustomTextField extends StatefulWidget {
   const CustomTextField({

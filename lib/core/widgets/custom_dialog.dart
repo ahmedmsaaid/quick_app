@@ -1,8 +1,8 @@
 import 'package:base_app/core/localizations/app_strings.g.dart';
 import 'package:base_app/core/styles/old_text_style.dart';
 
-import '../../core/exports/exports.dart';
-import '../../core/styles/app_colors.dart';
+import 'package:base_app/core/exports/exports.dart';
+import 'package:base_app/core/styles/app_colors.dart';
 
 enum AlertTypes { success, error, warning, loading, normal }
 

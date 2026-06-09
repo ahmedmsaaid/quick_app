@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/legacy.dart';
-import '../../network/api_result.dart';
-import '../models/pagination_params.dart';
-import '../models/pagination_response.dart';
+import 'package:base_app/core/network/api_result.dart';
+import 'package:base_app/core/pagination/models/pagination_params.dart';
+import 'package:base_app/core/pagination/models/pagination_response.dart';
 import 'pagination_state.dart';
 
 abstract class PaginationNotifier<T> extends StateNotifier<PaginationState<T>> {

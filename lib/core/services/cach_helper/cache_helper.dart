@@ -1,6 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../exports/exports.dart';
+import 'package:base_app/core/exports/exports.dart';
 import 'cache_helper_keys.dart';
 
 class CacheHelper {

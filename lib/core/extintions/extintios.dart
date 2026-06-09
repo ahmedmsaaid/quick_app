@@ -1,6 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 
- import '../exports/exports.dart';
+import 'package:base_app/core/exports/exports.dart';
 
 GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 

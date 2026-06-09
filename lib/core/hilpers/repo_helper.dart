@@ -1,5 +1,5 @@
-import '../../core/error/error_handler.dart';
-import '../../core/network/api_result.dart';
+import 'package:base_app/core/error/error_handler.dart';
+import 'package:base_app/core/network/api_result.dart';
 
 /// Extension على Future<T> لتبسيط معالجة الأخطاء في الـ Repository
 extension RepositoryExecutor<T> on Future<T> {

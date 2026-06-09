@@ -1,6 +1,6 @@
 import 'package:base_app/core/styles/app_colors.dart';
 
-import '../exports/exports.dart';
+import 'package:base_app/core/exports/exports.dart';
 
 class ImageAvatarWidget extends StatelessWidget {
   final double size;

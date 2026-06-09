@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:base_app/core/network/api_constants.dart';
-import '../services/api_service_module.dart';
+import 'package:base_app/core/services/api_service_module.dart';
 
 part 'dio_factory.g.dart';
 

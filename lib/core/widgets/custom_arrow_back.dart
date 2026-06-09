@@ -4,7 +4,7 @@ import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/utils/assets/app_icons.dart';
 import 'package:base_app/core/widgets/custome_svg_image.dart';
 
-import '../extintions/navigation_extension.dart';
+import 'package:base_app/core/extintions/navigation_extension.dart';
 
 class CustomArrowBack extends StatelessWidget {
   const CustomArrowBack({

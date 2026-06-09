@@ -3,7 +3,7 @@ import 'package:base_app/core/localizations/app_strings.g.dart';
 import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/styles/app_text_style.dart';
 
-import '../exports/exports.dart';
+import 'package:base_app/core/exports/exports.dart';
 
 class SeeAllWidget extends StatelessWidget {
   const SeeAllWidget({

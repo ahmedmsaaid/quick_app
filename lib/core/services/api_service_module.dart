@@ -1,7 +1,7 @@
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../network/dio_interceptor.dart';
+import 'package:base_app/core/network/dio_interceptor.dart';
 
 part 'api_service_module.g.dart';
 

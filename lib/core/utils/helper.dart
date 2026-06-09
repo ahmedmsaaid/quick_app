@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../styles/app_colors.dart';
+import 'package:base_app/core/styles/app_colors.dart';
 
 class CustomSnackBar {
   static void show(

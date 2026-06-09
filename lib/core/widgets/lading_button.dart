@@ -1,7 +1,7 @@
 import 'package:lottie/lottie.dart';
 import 'package:base_app/core/utils/assets/app_assets.dart';
 
-import '../exports/exports.dart';
+import 'package:base_app/core/exports/exports.dart';
 
 class LoadingButton extends StatelessWidget {
   final Color? color;

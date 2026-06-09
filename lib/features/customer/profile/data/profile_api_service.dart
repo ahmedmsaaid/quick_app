@@ -1,0 +1,218 @@
+// lib/features/profile/data/profile_api_service.dart
+
+import 'package:dio/dio.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:base_app/core/network/dio_factory.dart';
+import 'package:base_app/core/network/api_constants.dart';
+import 'package:base_app/core/network/api_result.dart';
+import 'package:base_app/core/error/error_handler.dart';
+import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
+
+part 'profile_api_service.g.dart';
+
+@riverpod
+ProfileApiService profileApiService(Ref ref) {
+  final dio = ref.watch(dioProvider);
+  return ProfileApiService(dio);
+}
+
+class ProfileApiService {
+  final Dio _dio;
+
+  ProfileApiService(this._dio);
+
+  /// Fetch the authenticated user's profile.
+  Future<ApiResult<ApiResponse<UserDto>>> getProfile() async {
+    try {
+      final response = await _dio.get(ApiConstants.profile);
+      final apiResponse = ApiResponse<UserDto>.fromJson(
+        response.data,
+        (json) => UserDto.fromJson(json as Map<String, dynamic>),
+      );
+      return ApiResult.success(apiResponse);
+    } catch (e) {
+      return ApiResult.failure(handleError(e));
+    }
+  }
+
+  /// Update the authenticated user's profile.
+  Future<ApiResult<ApiResponse<UserDto>>> updateProfile({
+    String? name,
+    String? email,
+    String? address,
+    String? photo,
+    String? description,
+    LocationModel? location,
+  }) async {
+    try {
+      final Map<String, dynamic> data = {
+        'name': name,
+        'email': email,
+        'address': address,
+        'photo': photo,
+        'description': description,
+        'location': location?.toJson() ?? {},
+      };
+
+      final response = await _dio.put(
+        ApiConstants.updateProfile,
+        data: data,
+      );
+      final apiResponse = ApiResponse<UserDto>.fromJson(
+        response.data,
+        (json) => UserDto.fromJson(json as Map<String, dynamic>),
+      );
+      return ApiResult.success(apiResponse);
+    } catch (e) {
+      return ApiResult.failure(handleError(e));
+    }
+  }
+
+  /// Upload a profile photo and return the public URL.
+  Future<ApiResult<String>> uploadProfilePhoto(MultipartFile file) async {
+    try {
+      final formData = FormData.fromMap({
+        'file': file,
+        'type': 0,
+      });
+      final response = await _dio.post(
+        ApiConstants.streamPublic,
+        data: formData,
+      );
+      final success = response.data['success'] as bool? ?? false;
+      final result = response.data['result'] as String?;
+      if (success && result != null) {
+        return ApiResult.success('${ApiConstants.streamUrl}$result');
+      } else {
+        return ApiResult.failure(handleError(
+          Exception(response.data['message'] ?? 'فشل رفع الصورة'),
+        ));
+      }
+    } catch (e) {
+      return ApiResult.failure(handleError(e));
+    }
+  }
+
+  /// Change the authenticated user's password.
+  Future<ApiResult<ApiResponse<void>>> changePassword({
+    required String oldPassword,
+    required String newPassword,
+    required String confirmedNewPassword,
+  }) async {
+    try {
+      final response = await _dio.patch(
+        ApiConstants.changePassword,
+        data: {
+          'oldPassword': oldPassword,
+          'newPassword': newPassword,
+          'confirmedNewPassword': confirmedNewPassword,
+        },
+      );
+      final apiResponse = ApiResponse<void>.fromJson(
+        response.data,
+        (_) {},
+      );
+      return ApiResult.success(apiResponse);
+    } catch (e) {
+      return ApiResult.failure(handleError(e));
+    }
+  }
+
+  /// Add a new location for the authenticated user.
+  Future<ApiResult<ApiResponse<LocationDto>>> addLocation({
+    required String address,
+    required double latitude,
+    required double longitude,
+    required bool base,
+  }) async {
+    try {
+      final response = await _dio.post(
+        ApiConstants.locations,
+        data: {
+          'address': address,
+          'latitude': latitude,
+          'longitude': longitude,
+          'base': base,
+        },
+      );
+      final apiResponse = ApiResponse<LocationDto>.fromJson(
+        response.data,
+        (json) => LocationDto.fromJson(json as Map<String, dynamic>),
+      );
+      return ApiResult.success(apiResponse);
+    } catch (e) {
+      return ApiResult.failure(handleError(e));
+    }
+  }
+
+  /// Get user locations.
+  Future<ApiResult<ApiResponse<List<LocationDto>>>> getLocations() async {
+    try {
+      final response = await _dio.patch(
+        ApiConstants.locations,
+        data: {
+          'pageNumber': 1,
+          'pageSize': 100,
+          'enablePagination': true,
+        },
+      );
+      final apiResponse = ApiResponse<List<LocationDto>>.fromJson(
+        response.data,
+        (json) {
+          if (json is List) {
+            return json.map((e) => LocationDto.fromJson(e as Map<String, dynamic>)).toList();
+          }
+          return [];
+        },
+      );
+      return ApiResult.success(apiResponse);
+    } catch (e) {
+      return ApiResult.failure(handleError(e));
+    }
+  }
+
+  /// Update user location information.
+  Future<ApiResult<ApiResponse<LocationDto>>> updateLocation({
+    required int id,
+    required String address,
+    required double latitude,
+    required double longitude,
+    required bool base,
+  }) async {
+    try {
+      final response = await _dio.put(
+        ApiConstants.locations,
+        data: {
+          'id': id,
+          'address': address,
+          'latitude': latitude,
+          'longitude': longitude,
+          'base': base,
+        },
+      );
+      final apiResponse = ApiResponse<LocationDto>.fromJson(
+        response.data,
+        (json) => LocationDto.fromJson(json as Map<String, dynamic>),
+      );
+      return ApiResult.success(apiResponse);
+    } catch (e) {
+      return ApiResult.failure(handleError(e));
+    }
+  }
+
+  /// Delete a location by ID.
+  Future<ApiResult<ApiResponse<void>>> deleteLocation(int id) async {
+    try {
+      final response = await _dio.delete(
+        '${ApiConstants.locations}/$id',
+      );
+      final apiResponse = ApiResponse<void>.fromJson(
+        response.data,
+        (_) {},
+      );
+      return ApiResult.success(apiResponse);
+    } catch (e) {
+      return ApiResult.failure(handleError(e));
+    }
+  }
+}

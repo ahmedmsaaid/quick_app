@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'package:base_app/core/widgets/lading_button.dart';
-import '../riverpod/pagination_state.dart';
+import 'package:base_app/core/pagination/riverpod/pagination_state.dart';
 
 enum PaginationViewType { list, grid }
 

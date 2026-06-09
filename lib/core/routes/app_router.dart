@@ -1,45 +1,44 @@
 // lib/core/routes/app_router.dart
 import 'package:base_app/core/localizations/app_strings.g.dart';
-import 'package:base_app/features/cart/presentation/screens/cart_screen.dart';
-import 'package:base_app/features/on_boarding/screen/on_boarding_screen.dart';
-import 'package:base_app/features/splash/presentation/screens/splash_screen.dart';
-import 'package:base_app/features/vendor_details/presentation/screens/vendor_details_screen.dart';
+import 'package:base_app/features/customer/cart/presentation/screens/cart_screen.dart';
+import 'package:base_app/features/shared/on_boarding/screens/on_boarding_screen.dart';
+import 'package:base_app/features/shared/splash/presentation/screens/splash_screen.dart';
+import 'package:base_app/features/customer/vendor_details/presentation/screens/vendor_details_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:base_app/core/routes/app_routes.dart';
-import 'package:base_app/features/auth/presentation/screens/login_screen.dart';
-import 'package:base_app/features/choose_lang&type/presentation/screen/choose_user_type_screen.dart';
-import 'package:base_app/features/choose_lang&type/presentation/screen/choose_your_language_screen.dart';
-import 'package:base_app/features/notifications/presentation/screens/notifications_screen.dart';
+import 'package:base_app/features/shared/auth/presentation/screens/login_screen.dart';
+import 'package:base_app/features/shared/choose_lang_and_type/presentation/screens/choose_user_type_screen.dart';
+import 'package:base_app/features/shared/choose_lang_and_type/presentation/screens/choose_your_language_screen.dart';
+import 'package:base_app/features/shared/notifications/presentation/screens/notifications_screen.dart';
 
-import '../../features/auth/domain/business_type.dart';
-import '../../features/auth/presentation/screens/about_type_screen.dart';
-import '../../features/auth/presentation/screens/create_new_password_screen.dart';
-import '../../features/auth/presentation/screens/forget_password_screen.dart';
-import '../../features/auth/presentation/screens/otp_screen.dart';
+import 'package:base_app/features/shared/auth/domain/business_type.dart';
+import 'package:base_app/features/shared/auth/presentation/screens/about_type_screen.dart';
+import 'package:base_app/features/shared/auth/presentation/screens/create_new_password_screen.dart';
+import 'package:base_app/features/shared/auth/presentation/screens/forget_password_screen.dart';
+import 'package:base_app/features/shared/auth/presentation/screens/otp_screen.dart';
 
-import '../../features/auth/presentation/screens/register_screen.dart';
+import 'package:base_app/features/shared/auth/presentation/screens/register_screen.dart';
 
-import '../../features/main_nav/presentation/screens/user_nav_screen.dart';
-import '../../features/main_nav/presentation/screens/provider_nav_screen.dart';
+import 'package:base_app/features/customer/main_nav/presentation/screens/user_nav_screen.dart';
 
-import '../../features/checkout/presentation/screens/checkout_screen.dart';
-import '../../features/orders/presentation/screens/order_tracking_screen.dart';
-import '../../features/vendor_list/presentation/screens/vendor_list_screen.dart';
-import '../../features/home/presentation/screens/search_results_screen.dart';
-import '../../features/profile/presentation/screens/personal_info_screen.dart';
-import '../../features/profile/presentation/screens/address_screen.dart';
-import '../../features/profile/presentation/screens/add_address_screen.dart';
-import '../../features/profile/presentation/screens/wallet_screen.dart';
-import '../../features/profile/presentation/screens/settings_screen.dart';
-import '../../features/profile/presentation/screens/privacy_policy_screen.dart';
-import '../../features/profile/presentation/screens/contact_us_screen.dart';
-import '../../features/profile/presentation/screens/change_password_screen.dart';
-import '../../features/chats/presentation/screens/chat_details_screen.dart';
-import '../../features/captain/presentation/screens/captain_nav_screen.dart';
-import '../../features/captain/presentation/screens/captain_order_details_screen.dart';
-import '../../features/captain/presentation/screens/captain_registration_details_screen.dart';
+import 'package:base_app/features/customer/checkout/presentation/screens/checkout_screen.dart';
+import 'package:base_app/features/customer/orders/presentation/screens/order_tracking_screen.dart';
+import 'package:base_app/features/customer/vendor_list/presentation/screens/vendor_list_screen.dart';
+import 'package:base_app/features/customer/home/presentation/screens/search_results_screen.dart';
+import 'package:base_app/features/customer/profile/presentation/screens/personal_info_screen.dart';
+import 'package:base_app/features/customer/profile/presentation/screens/address_screen.dart';
+import 'package:base_app/features/customer/profile/presentation/screens/add_address_screen.dart';
+import 'package:base_app/features/customer/profile/presentation/screens/wallet_screen.dart';
+import 'package:base_app/features/customer/profile/presentation/screens/settings_screen.dart';
+import 'package:base_app/features/customer/profile/presentation/screens/privacy_policy_screen.dart';
+import 'package:base_app/features/customer/profile/presentation/screens/contact_us_screen.dart';
+import 'package:base_app/features/customer/profile/presentation/screens/change_password_screen.dart';
+import 'package:base_app/features/shared/chats/presentation/screens/chat_details_screen.dart';
+import 'package:base_app/features/delivery/captain/presentation/screens/captain_nav_screen.dart';
+import 'package:base_app/features/delivery/captain/presentation/screens/captain_order_details_screen.dart';
+import 'package:base_app/features/delivery/captain/presentation/screens/captain_registration_details_screen.dart';
 
-import '../../features/home/presentation/screens/special_offer_details_screen.dart';
+import 'package:base_app/features/customer/home/presentation/screens/special_offer_details_screen.dart';
 
 abstract class AppRouter {
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
@@ -100,7 +99,10 @@ abstract class AppRouter {
       case AppRoutes.captainOrderDetails:
         return _buildAnimatedRoute(const CaptainOrderDetailsScreen(), settings);
       case AppRoutes.providerNav:
-        return _buildAnimatedRoute(const ProviderNavScreen(), settings);
+        return _buildAnimatedRoute(
+          const Scaffold(body: Center(child: Text('Page not found'))),
+          settings,
+        );
       case AppRoutes.providerProductDetailsScreen:
         final bool isMarket = (settings.arguments as bool?) ?? false;
         return _buildAnimatedRoute(VendorDetailsScreen(isMarket: isMarket), settings);
