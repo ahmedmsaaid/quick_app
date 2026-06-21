@@ -1,4 +1,6 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:base_app/core/localizations/app_strings.g.dart';
 import 'package:base_app/core/styles/app_colors.dart';
@@ -7,20 +9,67 @@ import 'package:base_app/core/widgets/custom_arrow_back.dart';
 import 'package:base_app/core/widgets/custom_button.dart';
 import 'package:base_app/core/widgets/custom_toast.dart';
 import 'package:base_app/core/widgets/custom_text_field.dart';
+import 'package:base_app/core/widgets/lading_button.dart';
+import 'package:base_app/core/network/api_constants.dart';
+import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
+import 'package:base_app/features/customer/home/presentation/riverpod/rating_provider.dart';
 
-class RateOrderScreen extends StatefulWidget {
-  const RateOrderScreen({super.key});
+class RateOrderScreen extends ConsumerStatefulWidget {
+  final UserDto? vendor;
+
+  const RateOrderScreen({super.key, this.vendor});
 
   @override
-  State<RateOrderScreen> createState() => _RateOrderScreenState();
+  ConsumerState<RateOrderScreen> createState() => _RateOrderScreenState();
 }
 
-class _RateOrderScreenState extends State<RateOrderScreen> {
-  int _rating = 0;
+class _RateOrderScreenState extends ConsumerState<RateOrderScreen> {
+  int _rating = 5;
+  final _commentController = TextEditingController();
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submitRating() async {
+    if (_rating == 0) {
+      CustomToast.error(context, "يرجى تحديد التقييم بالنجوم أولاً");
+      return;
+    }
+
+    final vendorId = widget.vendor?.id ?? 1;
+    final note = _commentController.text.trim();
+
+    final success = await ref.read(ratingProvider.notifier).submitUserRating(
+          userId: vendorId,
+          value: _rating,
+          note: note.isEmpty ? "تقييم ممتاز" : note,
+        );
+
+    if (!mounted) return;
+
+    if (success) {
+      CustomToast.success(context, AppStrings.thanksForRatingMsg);
+      Navigator.pop(context);
+    } else {
+      final errorMsg = ref.read(ratingProvider).errorMessage;
+      CustomToast.error(context, errorMsg ?? AppStrings.errorOccurred);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors(context);
+    final ratingState = ref.watch(ratingProvider);
+    final isLoading = ratingState.status == RatingStatus.loading;
+
+    // Resolve vendor image URL
+    final String? photo = widget.vendor?.photo ?? widget.vendor?.avatar;
+    final String imageUrl = (photo != null && photo.isNotEmpty)
+        ? (photo.startsWith('http') ? photo : '${ApiConstants.streamUrl}$photo')
+        : '';
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -28,49 +77,85 @@ class _RateOrderScreenState extends State<RateOrderScreen> {
         backgroundColor: colors.surface,
         elevation: 0,
         leading: const CustomArrowBack(),
-        title: Text(AppStrings.rateOrderTitle, style: AppTextStyles.text18w700(color: colors.textPrimary)),
+        title: Text(
+          AppStrings.rateOrderTitle,
+          style: AppTextStyles.text18w700(color: colors.textPrimary),
+        ),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(20.w),
         child: Column(
           children: [
-            CircleAvatar(
-              radius: 40.r,
-              backgroundImage: const AssetImage('assets/image/logo.png'),
+            30.verticalSpace,
+            // Vendor Image
+            Container(
+              width: 90.w,
+              height: 90.w,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: colors.border, width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: colors.shadow,
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: ClipOval(
+                child: imageUrl.isNotEmpty
+                    ? CachedNetworkImage(
+                        imageUrl: imageUrl,
+                        fit: BoxFit.cover,
+                        placeholder: (_, __) => Container(color: colors.shimmerBase),
+                        errorWidget: (_, __, ___) => Image.asset('assets/image/logo.png', fit: BoxFit.cover),
+                      )
+                    : Image.asset('assets/image/logo.png', fit: BoxFit.cover),
+              ),
             ),
             20.verticalSpace,
             Text(
-              AppStrings.howWasExperienceMsg, 
-              style: AppTextStyles.text16w600(color: colors.textPrimary),
+              widget.vendor?.name ?? "كويك برجر",
+              style: AppTextStyles.text18w700(color: colors.textPrimary),
             ),
-            20.verticalSpace,
+            10.verticalSpace,
+            Text(
+              AppStrings.howWasExperienceMsg,
+              style: AppTextStyles.text14w400(color: colors.textSecondary),
+              textAlign: TextAlign.center,
+            ),
+            30.verticalSpace,
+            // Star rating row
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(5, (index) {
+                final starIndex = index + 1;
+                final bool isSelected = starIndex <= _rating;
                 return IconButton(
                   icon: Icon(
-                    index < _rating ? Icons.star : Icons.star_border,
+                    isSelected ? Icons.star_rounded : Icons.star_border_rounded,
                     color: Colors.amber,
-                    size: 40.sp,
+                    size: 44.sp,
                   ),
-                  onPressed: () => setState(() => _rating = index + 1),
+                  onPressed: isLoading ? null : () => setState(() => _rating = starIndex),
                 );
               }),
             ),
             30.verticalSpace,
             CustomTextField(
+              controller: _commentController,
               hintText: AppStrings.writeOpinionHintMsg,
               maxLines: 4,
+              enabled: !isLoading,
             ),
             40.verticalSpace,
-            CustomAppButton(
-              text: AppStrings.sendRatingBtn,
-              onPressed: () {
-                CustomToast.success(context, AppStrings.thanksForRatingMsg);
-                Navigator.pop(context);
-              },
-            ),
+            isLoading
+                ? const LoadingButton()
+                : CustomAppButton(
+                    text: AppStrings.sendRatingBtn,
+                    onPressed: _submitRating,
+                  ),
           ],
         ),
       ),

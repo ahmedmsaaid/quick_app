@@ -1,34 +1,98 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:base_app/core/localizations/app_strings.g.dart';
 import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/styles/app_text_style.dart';
 import 'package:base_app/core/widgets/custom_arrow_back.dart';
 import 'package:base_app/core/widgets/custom_button.dart';
+import 'package:base_app/core/widgets/lading_button.dart';
 import 'package:base_app/core/utils/extensions.dart';
 import 'package:base_app/core/routes/app_routes.dart';
+import 'package:base_app/features/customer/home/data/models/offer_model.dart';
+import 'package:base_app/features/customer/cart/presentation/riverpod/cart_provider.dart';
+import 'package:base_app/features/customer/profile/presentation/riverpod/profile_provider.dart';
+import 'package:base_app/features/customer/checkout/presentation/riverpod/checkout_provider.dart';
+import 'package:base_app/features/customer/checkout/data/models/order_models.dart';
+import 'package:base_app/features/customer/checkout/presentation/screens/order_success_screen.dart';
+import 'package:base_app/core/widgets/custom_toast.dart';
+import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
 
-class CheckoutScreen extends StatefulWidget {
-  const CheckoutScreen({super.key});
+class CheckoutScreen extends ConsumerStatefulWidget {
+  final OfferDto? offer;
+  const CheckoutScreen({super.key, this.offer});
 
   @override
-  State<CheckoutScreen> createState() => _CheckoutScreenState();
+  ConsumerState<CheckoutScreen> createState() => _CheckoutScreenState();
 }
 
-class _CheckoutScreenState extends State<CheckoutScreen> {
+class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   int _selectedPayment = 0; // 0 for Cash, 1 for Online
 
   @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      ref.read(profileProvider.notifier).loadProfile();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final colors = AppColors(context);
+    final profileState = ref.watch(profileProvider);
+    final user = profileState.user;
+
+    // Find default/base location
+    LocationDto? selectedLocation;
+    if (profileState.locations.isNotEmpty) {
+      selectedLocation = profileState.locations.firstWhere(
+        (loc) => loc.base,
+        orElse: () => profileState.locations.first,
+      );
+    }
+
+    final String addressName = selectedLocation?.address ?? user?.address ?? AppStrings.homeLocation;
+
+    // Calculate Prices dynamically
+    final double productsPrice;
+    final int? offerId;
+    final List<CreateOrderProductRequest>? products;
+    final int type;
+
+    if (widget.offer != null) {
+      productsPrice = widget.offer!.price;
+      offerId = widget.offer!.id;
+      products = null;
+      type = widget.offer!.type;
+    } else {
+      final cart = ref.watch(cartProvider);
+      productsPrice = cart.subtotal;
+      offerId = null;
+      products = cart.items.map((item) => CreateOrderProductRequest(
+        productId: item.product.id,
+        price: item.effectivePrice,
+        quantity: item.quantity,
+      )).toList();
+      type = cart.items.isNotEmpty ? cart.items.first.product.type : 0;
+    }
+
+    const double deliveryFee = 2500;
+    const double serviceFee = 500;
+    final double totalRequired = productsPrice + deliveryFee + serviceFee;
+
+    final checkoutState = ref.watch(checkoutProvider);
+    final isLoading = checkoutState.status == CheckoutStatus.loading;
+
     return Scaffold(
-      backgroundColor: AppColors(context).background,
+      backgroundColor: colors.background,
       appBar: AppBar(
-        backgroundColor: AppColors(context).surface,
+        backgroundColor: colors.surface,
         elevation: 0,
         leading: const CustomArrowBack(),
         title: Text(
           AppStrings.confirmBooking,
-          style: AppTextStyles.text18w700(color: AppColors(context).textPrimary),
+          style: AppTextStyles.text18w700(color: colors.textPrimary),
         ),
         centerTitle: true,
       ),
@@ -39,7 +103,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           children: [
             _buildSectionTitle(context, AppStrings.whereToDeliverLabel),
             10.verticalSpace,
-            _buildAddressCard(context),
+            _buildAddressCard(context, addressName),
             25.verticalSpace,
             _buildSectionTitle(context, AppStrings.howToPayLabel),
             10.verticalSpace,
@@ -47,12 +111,24 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             25.verticalSpace,
             _buildSectionTitle(context, AppStrings.billSummaryLabel),
             10.verticalSpace,
-            _buildOrderSummary(context),
+            _buildOrderSummary(context, productsPrice, deliveryFee, serviceFee, totalRequired),
             30.verticalSpace,
           ],
         ),
       ),
-      bottomNavigationBar: _buildConfirmButton(context),
+      bottomNavigationBar: _buildConfirmButton(
+        context,
+        isLoading,
+        addressName,
+        selectedLocation,
+        user,
+        totalRequired,
+        deliveryFee,
+        serviceFee,
+        type,
+        offerId,
+        products,
+      ),
     );
   }
 
@@ -63,24 +139,25 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  Widget _buildAddressCard(BuildContext context) {
+  Widget _buildAddressCard(BuildContext context, String addressName) {
+    final colors = AppColors(context);
     return Container(
       padding: EdgeInsets.all(15.r),
       decoration: BoxDecoration(
-        color: AppColors(context).surface,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(15.r),
-        border: Border.all(color: AppColors(context).border),
+        border: Border.all(color: colors.border),
       ),
       child: Row(
         children: [
-          Icon(Icons.location_on, color: AppColors(context).primary, size: 24.sp),
+          Icon(Icons.location_on, color: colors.primary, size: 24.sp),
           15.horizontalSpace,
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(AppStrings.homeLabel, style: AppTextStyles.text14w600(color: AppColors(context).textPrimary)),
-                Text(AppStrings.mansourAddressMsg, style: AppTextStyles.text12w400(color: AppColors(context).textSecondary)),
+                Text(AppStrings.homeLabel, style: AppTextStyles.text14w600(color: colors.textPrimary)),
+                Text(addressName, style: AppTextStyles.text12w400(color: colors.textSecondary)),
               ],
             ),
           ),
@@ -88,7 +165,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             onPressed: () {
               Navigator.of(context).pushNamed(AppRoutes.address);
             },
-            child: Text(AppStrings.changeBtn, style: AppTextStyles.text12w600(color: AppColors(context).primary)),
+            child: Text(AppStrings.changeBtn, style: AppTextStyles.text12w600(color: colors.primary)),
           ),
         ],
       ),
@@ -106,77 +183,139 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   Widget _buildPaymentItem(BuildContext context, int index, IconData icon, String title) {
+    final colors = AppColors(context);
     bool isSelected = _selectedPayment == index;
     return InkWell(
       onTap: () => setState(() => _selectedPayment = index),
       child: Container(
         padding: EdgeInsets.all(15.r),
         decoration: BoxDecoration(
-          color: AppColors(context).surface,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(12.r),
           border: Border.all(
-            color: isSelected ? AppColors(context).primary : AppColors(context).border,
+            color: isSelected ? colors.primary : colors.border,
             width: 1.5,
           ),
         ),
         child: Row(
           children: [
-            Icon(icon, color: isSelected ? AppColors(context).primary : AppColors(context).textHint),
+            Icon(icon, color: isSelected ? colors.primary : colors.textHint),
             15.horizontalSpace,
-            Text(title, style: AppTextStyles.text14w500(color: AppColors(context).textPrimary)),
+            Text(title, style: AppTextStyles.text14w500(color: colors.textPrimary)),
             const Spacer(),
             if (isSelected)
-              Icon(Icons.check_circle, color: AppColors(context).primary, size: 20.sp),
+              Icon(Icons.check_circle, color: colors.primary, size: 20.sp),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildOrderSummary(BuildContext context) {
+  Widget _buildOrderSummary(
+    BuildContext context,
+    double productsPrice,
+    double deliveryFee,
+    double serviceFee,
+    double totalRequired,
+  ) {
+    final colors = AppColors(context);
     return Container(
       padding: EdgeInsets.all(15.r),
       decoration: BoxDecoration(
-        color: AppColors(context).surface,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(15.r),
-        border: Border.all(color: AppColors(context).border),
+        border: Border.all(color: colors.border),
       ),
       child: Column(
         children: [
-          _buildSummaryRow(context, AppStrings.productsPriceLabel, '17,000 ${AppStrings.currency}'),
+          _buildSummaryRow(context, AppStrings.productsPriceLabel, '${productsPrice.toStringAsFixed(0)} جنيه مصري'),
           10.verticalSpace,
-          _buildSummaryRow(context, AppStrings.deliveryFeesLabelMsg, '2,500 ${AppStrings.currency}'),
+          _buildSummaryRow(context, AppStrings.deliveryFeesLabelMsg, '${deliveryFee.toStringAsFixed(0)} جنيه مصري'),
           10.verticalSpace,
-          _buildSummaryRow(context, AppStrings.serviceFeesLabel, '500 ${AppStrings.iqdCurrency}'),
+          _buildSummaryRow(context, AppStrings.serviceFeesLabel, '${serviceFee.toStringAsFixed(0)} جنيه مصري'),
           10.verticalSpace,
           const Divider(),
           10.verticalSpace,
-          _buildSummaryRow(context, AppStrings.totalRequiredLabel, '20,000 ${AppStrings.currency}', isTotal: true),
+          _buildSummaryRow(context, AppStrings.totalRequiredLabel, '${totalRequired.toStringAsFixed(0)} جنيه مصري', isTotal: true),
         ],
       ),
     );
   }
 
   Widget _buildSummaryRow(BuildContext context, String title, String value, {bool isTotal = false}) {
+    final colors = AppColors(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(title, style: isTotal ? AppTextStyles.text16w700(color: AppColors(context).textPrimary) : AppTextStyles.text14w400(color: AppColors(context).textSecondary)),
-        Text(value, style: isTotal ? AppTextStyles.text16w700(color: AppColors(context).primary) : AppTextStyles.text14w600(color: AppColors(context).textPrimary)),
+        Text(title, style: isTotal ? AppTextStyles.text16w700(color: colors.textPrimary) : AppTextStyles.text14w400(color: colors.textSecondary)),
+        Text(value, style: isTotal ? AppTextStyles.text16w700(color: colors.primary) : AppTextStyles.text14w600(color: colors.textPrimary)),
       ],
     );
   }
 
-  Widget _buildConfirmButton(BuildContext context) {
+  Widget _buildConfirmButton(
+    BuildContext context,
+    bool isLoading,
+    String addressName,
+    LocationDto? selectedLocation,
+    UserDto? user,
+    double totalRequired,
+    double deliveryFee,
+    double serviceFee,
+    int type,
+    int? offerId,
+    List<CreateOrderProductRequest>? products,
+  ) {
+    final colors = AppColors(context);
     return Container(
       padding: EdgeInsets.all(20.w),
-      color: AppColors(context).surface,
-      child: CustomAppButton(
-        text: AppStrings.confirmBooking,
-        onPressed: () {
-           context.pushNamed(AppRoutes.orderDetailsScreen);
-        },
-      ),
+      color: colors.surface,
+      child: isLoading
+          ? const LoadingButton()
+          : CustomAppButton(
+              text: AppStrings.confirmBooking,
+              onPressed: () async {
+                if (user == null) {
+                  CustomToast.error(context, "الرجاء تسجيل الدخول أولاً");
+                  return;
+                }
+
+                final request = CreateOrderRequest(
+                  address: addressName,
+                  longitude: selectedLocation?.longitude ?? user.location?.longitude ?? 44.4,
+                  latitude: selectedLocation?.latitude ?? user.location?.latitude ?? 33.3,
+                  paymentMethod: _selectedPayment,
+                  totalPrice: totalRequired,
+                  deliveryFee: deliveryFee,
+                  orderFee: serviceFee,
+                  type: type,
+                  userId: user.id,
+                  offerId: offerId,
+                  products: products,
+                );
+
+                final success = await ref.read(checkoutProvider.notifier).submitOrder(request);
+
+                if (context.mounted) {
+                  if (success) {
+                    // Clear cart if this was a normal products order
+                    if (offerId == null) {
+                      ref.read(cartProvider.notifier).clearCart();
+                    }
+                    
+                    // Show order success screen
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(
+                        builder: (_) => const OrderSuccessScreen(),
+                      ),
+                    );
+                  } else {
+                    final errorMsg = ref.read(checkoutProvider).errorMessage ?? "حدث خطأ أثناء تقديم الطلب";
+                    CustomToast.error(context, errorMsg);
+                  }
+                }
+              },
+            ),
     );
   }
 }

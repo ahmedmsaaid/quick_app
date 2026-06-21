@@ -6,7 +6,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:base_app/core/localizations/app_strings.g.dart';
 import 'package:base_app/core/utils/extensions.dart';
-import 'package:base_app/core/services/cach_helper/cache_helper.dart';
 import 'package:base_app/core/services/maps_service.dart';
 import 'package:base_app/core/providers/image_picker_provider.dart';
 import 'package:base_app/core/network/api_result.dart';
@@ -18,6 +17,7 @@ import 'package:base_app/core/styles/app_text_style.dart';
 import 'package:base_app/core/widgets/custom_app_bar.dart';
 import 'package:base_app/core/widgets/custom_button.dart';
 import 'package:base_app/core/widgets/custom_text_field.dart';
+import 'package:base_app/core/widgets/lading_button.dart';
 import 'package:base_app/features/shared/auth/presentation/widgets/custom_password_text_field.dart';
 import 'package:base_app/features/shared/auth/presentation/widgets/custom_phone_text_field.dart';
 import 'package:base_app/features/shared/auth/presentation/riverpod/auth_provider.dart';
@@ -228,12 +228,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   ),
                   15.verticalSpace,
                   if (isSearching)
-                    const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(20.0),
-                        child: CircularProgressIndicator(),
-                      ),
-                    )
+                    const LoadingButton()
                   else if (searchResults.isEmpty && searchController.text.trim().length >= 3)
                     Padding(
                       padding: EdgeInsets.symmetric(vertical: 20.h),
@@ -485,11 +480,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                               color: Colors.black26,
                               shape: BoxShape.circle,
                             ),
-                            child: Center(
-                              child: CircularProgressIndicator(
-                                strokeWidth: 3.w,
-                                valueColor: AlwaysStoppedAnimation<Color>(colors.primary),
-                              ),
+                            child: LoadingButton(
+                              size: 40.w,
+                              color: colors.primary,
                             ),
                           ),
                         ),
@@ -643,7 +636,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 ),
                 40.verticalSpace,
                 if (authState.status == AuthStatus.loading)
-                  const CircularProgressIndicator()
+                  const LoadingButton()
                 else
                   CustomAppButton(
                     text: AppStrings.completeRegistration,

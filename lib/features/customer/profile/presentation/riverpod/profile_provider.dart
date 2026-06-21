@@ -47,7 +47,6 @@ class ProfileNotifier extends _$ProfileNotifier {
     state = state.copyWith(status: ProfileStatus.loading);
     
     final profileResult = await ref.read(profileApiServiceProvider).getProfile();
-    final locationsResult = await ref.read(profileApiServiceProvider).getLocations();
     
     UserDto? user;
     List<LocationDto> locations = [];
@@ -66,17 +65,20 @@ class ProfileNotifier extends _$ProfileNotifier {
       },
     );
 
-    locationsResult.when(
-      success: (response) {
-        if (response.success && response.result != null) {
-          locations = response.result!;
-        }
-      },
-      failure: (error) {
-        // locations loading failure shouldn't block profile loading entirely,
-        // but we can log or keep locations as empty
-      },
-    );
+    if (user != null) {
+      final locationsResult = await ref.read(profileApiServiceProvider).getLocations(creatorId: user!.id);
+      locationsResult.when(
+        success: (response) {
+          if (response.success && response.result != null) {
+            locations = response.result!;
+          }
+        },
+        failure: (error) {
+          // locations loading failure shouldn't block profile loading entirely,
+          // but we can log or keep locations as empty
+        },
+      );
+    }
 
     if (user != null) {
       state = ProfileState(

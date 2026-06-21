@@ -73,7 +73,7 @@ class ProfileApiService {
     try {
       final formData = FormData.fromMap({
         'file': file,
-        'type': 0,
+        'type': 1,
       });
       final response = await _dio.post(
         ApiConstants.streamPublic,
@@ -146,15 +146,20 @@ class ProfileApiService {
   }
 
   /// Get user locations.
-  Future<ApiResult<ApiResponse<List<LocationDto>>>> getLocations() async {
+  Future<ApiResult<ApiResponse<List<LocationDto>>>> getLocations({int? creatorId}) async {
     try {
+      final Map<String, dynamic> requestData = {
+        'pageNumber': 1,
+        'pageSize': 100,
+        'enablePagination': true,
+      };
+      if (creatorId != null) {
+        requestData['filters'] = {"creatorId":creatorId};
+      }
+
       final response = await _dio.patch(
         ApiConstants.locations,
-        data: {
-          'pageNumber': 1,
-          'pageSize': 100,
-          'enablePagination': true,
-        },
+        data: requestData,
       );
       final apiResponse = ApiResponse<List<LocationDto>>.fromJson(
         response.data,

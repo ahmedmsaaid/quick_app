@@ -36,6 +36,20 @@ class AppTextStyles {
 
   static TextStyle text15w500({Color? color, double? height}) =>
       _buildTextStyle(fontSize: 15.sp, color: color, height: height);
+  static TextStyle text11w400({Color? color, double? height}) =>
+      _buildTextStyle(fontSize: 11.sp, color: color, height: height,fontWeight: FontWeight.w400);
+  static TextStyle text11w700({Color? color, double? height}) =>
+      _buildTextStyle(fontSize: 11.sp, color: color, height: height,fontWeight: FontWeight.w700);
+  static TextStyle text10w700({Color? color, double? height}) =>
+      _buildTextStyle(fontSize: 10.sp, color: color, height: height,fontWeight: FontWeight.w700);
+  static TextStyle text11w600({Color? color, double? height}) =>
+      _buildTextStyle(fontSize: 11.sp, color: color, height: height,fontWeight: FontWeight.w600);
+
+  static TextStyle text11w500({Color? color, double? height}) =>
+      _buildTextStyle(fontSize: 11.sp, color: color, height: height, fontWeight: FontWeight.w500);
+
+  static TextStyle text13w600({Color? color, double? height}) =>
+      _buildTextStyle(fontSize: 13.sp, color: color, height: height, fontWeight: FontWeight.w600);
 
   static TextStyle text16w500({Color? color, double? height}) =>
       _buildTextStyle(fontSize: 16.sp, color: color, height: height);

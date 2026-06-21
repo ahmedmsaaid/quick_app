@@ -47,4 +47,7 @@ class AppRoutes {
   static const String cartScreen = '/cartScreen';
   static const String products = '/products';
   static const String changePassword = '/changePassword';
+  static const String favorites = '/favorites';
+  static const String allCategoriesScreen = '/allCategoriesScreen';
+  static const String captainRegisterScreen = '/captainRegisterScreen';
 }

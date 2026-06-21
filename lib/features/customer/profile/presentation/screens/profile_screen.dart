@@ -137,6 +137,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           _buildMenuItem(context, ref, Icons.location_on_outlined, AppStrings.address),
           _buildMenuItem(context, ref, Icons.account_balance_wallet_outlined, AppStrings.wallet),
           _buildMenuItem(context, ref, Icons.notifications_none, AppStrings.notifications),
+          _buildMenuItem(context, ref, Icons.star_border, AppStrings.favorites),
           _buildMenuItem(context, ref, Icons.settings_outlined, AppStrings.settings),
           _buildMenuItem(context, ref, Icons.privacy_tip_outlined, AppStrings.privacyPolicy),
           _buildMenuItem(context, ref, Icons.help_outline, AppStrings.contactUs),
@@ -188,6 +189,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           Navigator.of(context).pushNamed(AppRoutes.wallet);
         } else if (title == AppStrings.notifications) {
           Navigator.of(context).pushNamed(AppRoutes.notifications);
+        } else if (title == AppStrings.favorites) {
+          Navigator.of(context).pushNamed(AppRoutes.favorites);
         } else if (title == AppStrings.settings) {
           Navigator.of(context).pushNamed(AppRoutes.settings);
         } else if (title == AppStrings.privacyPolicy) {

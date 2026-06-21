@@ -1,22 +1,37 @@
 import 'dart:async';
 import 'package:base_app/core/localizations/app_strings.g.dart';
+import 'package:base_app/core/widgets/lading_button.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/styles/app_text_style.dart';
 import 'package:base_app/core/routes/app_routes.dart';
+import 'package:base_app/features/customer/checkout/data/models/order_models.dart';
+import 'package:base_app/features/customer/profile/presentation/riverpod/profile_provider.dart';
+import 'package:base_app/features/shared/auth/presentation/riverpod/auth_provider.dart';
+import 'package:base_app/features/delivery/captain/presentation/riverpod/captain_orders_provider.dart';
 
-class CaptainHomeScreen extends StatefulWidget {
+class CaptainHomeScreen extends ConsumerStatefulWidget {
   const CaptainHomeScreen({super.key});
 
   @override
-  State<CaptainHomeScreen> createState() => _CaptainHomeScreenState();
+  ConsumerState<CaptainHomeScreen> createState() => _CaptainHomeScreenState();
 }
 
-class _CaptainHomeScreenState extends State<CaptainHomeScreen> {
+class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> {
   bool _isOnline = true;
   Timer? _breakTimer;
   int _breakSecondsRemaining = 1800; // 30 minutes
+
+  @override
+  void initState() {
+    super.initState();
+    // Load the user profile to check activation status
+    Future.microtask(() {
+      ref.read(profileProvider.notifier).loadProfile();
+    });
+  }
 
   void _toggleStatus(bool val) {
     setState(() {
@@ -62,7 +77,29 @@ class _CaptainHomeScreenState extends State<CaptainHomeScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors(context);
+    final profileState = ref.watch(profileProvider);
+    final ordersState = ref.watch(captainOrdersProvider);
 
+    // Show loading while profile is being fetched
+    if (profileState.status == ProfileStatus.loading ||
+        profileState.status == ProfileStatus.initial) {
+      return Scaffold(
+        backgroundColor: colors.background,
+        body: Center(
+          child: LoadingButton(color: colors.primary),
+        ),
+      );
+    }
+
+    // Check user activation status (status == 0 means pending, status == 2 means rejected/blocked)
+    final userStatus = profileState.user?.status ?? 0;
+    if (userStatus == 0) {
+      return _buildPendingApprovalScreen(colors);
+    } else if (userStatus == 2) {
+      return _buildRejectedScreen(colors);
+    }
+
+    // Normal home screen
     return Scaffold(
       backgroundColor: colors.background,
       appBar: AppBar(
@@ -92,22 +129,328 @@ class _CaptainHomeScreenState extends State<CaptainHomeScreen> {
           10.horizontalSpace,
         ],
       ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(20.w),
-        child: Column(
-          children: [
-            _buildStatusCard(context),
-            20.verticalSpace,
-            _buildStatsGrid(context),
-            20.verticalSpace,
-            _buildSectionHeader(context, AppStrings.availableOrdersNow),
-            10.verticalSpace,
-            if (_isOnline) _buildAvailableOrdersList(context) else _buildBreakMessage(context),
-          ],
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await ref.read(captainOrdersProvider.notifier).loadAll();
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.all(20.w),
+          child: Column(
+            children: [
+              _buildStatusCard(context),
+              20.verticalSpace,
+              _buildStatsGrid(context, ordersState),
+              20.verticalSpace,
+              _buildSectionHeader(context, AppStrings.availableOrdersNow, ref),
+              10.verticalSpace,
+              if (_isOnline) ...[
+                if (ordersState.status == CaptainOrdersStatus.loading)
+                  Padding(
+                    padding: EdgeInsets.symmetric(vertical: 40.h),
+                    child: Center(child: LoadingButton(color: colors.primary)),
+                  )
+                else if (ordersState.status == CaptainOrdersStatus.error)
+                  Padding(
+                    padding: EdgeInsets.symmetric(vertical: 40.h),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Text(
+                            ordersState.errorMessage ?? 'حدث خطأ ما',
+                            style: AppTextStyles.text14w600(color: colors.error),
+                          ),
+                          10.verticalSpace,
+                          ElevatedButton(
+                            onPressed: () => ref.read(captainOrdersProvider.notifier).loadAll(),
+                            style: ElevatedButton.styleFrom(backgroundColor: colors.primary),
+                            child: Text('إعادة المحاولة', style: AppTextStyles.text12w600(color: Colors.white)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  _buildAvailableOrdersList(context, ordersState.availableOrders)
+              ] else
+                _buildBreakMessage(context),
+            ],
+          ),
         ),
       ),
     );
   }
+
+  // ─── Pending Approval Screen ──────────────────────────────────────────────
+
+  Widget _buildPendingApprovalScreen(AppColors colors) {
+    return Scaffold(
+      backgroundColor: colors.background,
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 32.w),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Animated icon container
+                Container(
+                  width: 120.w,
+                  height: 120.w,
+                  decoration: BoxDecoration(
+                    color: colors.warning.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: colors.warning.withOpacity(0.3),
+                      width: 2,
+                    ),
+                  ),
+                  child: Icon(
+                    Icons.hourglass_top_rounded,
+                    size: 56.sp,
+                    color: colors.warning,
+                  ),
+                ),
+                32.verticalSpace,
+
+                Text(
+                  'في انتظار الموافقة',
+                  style: AppTextStyles.text22w700(color: colors.textPrimary),
+                  textAlign: TextAlign.center,
+                ),
+                12.verticalSpace,
+
+                Text(
+                  'تم إنشاء حسابك بنجاح!\nحسابك قيد المراجعة حالياً من قبل الإدارة.\nسيتم تفعيل حسابك في أقرب وقت.',
+                  style: AppTextStyles.text14w400(color: colors.textSecondary),
+                  textAlign: TextAlign.center,
+                ),
+                32.verticalSpace,
+
+                // Status info card
+                Container(
+                  padding: EdgeInsets.all(16.r),
+                  decoration: BoxDecoration(
+                    color: colors.warning.withOpacity(0.06),
+                    borderRadius: BorderRadius.circular(14.r),
+                    border: Border.all(
+                      color: colors.warning.withOpacity(0.2),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(8.r),
+                        decoration: BoxDecoration(
+                          color: colors.warning.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(10.r),
+                        ),
+                        child: Icon(
+                          Icons.info_outline_rounded,
+                          color: colors.warning,
+                          size: 22.sp,
+                        ),
+                      ),
+                      12.horizontalSpace,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'حالة الحساب',
+                              style: AppTextStyles.text12w600(color: colors.textPrimary),
+                            ),
+                            4.verticalSpace,
+                            Text(
+                              'غير مفعّل — في انتظار موافقة الأدمن',
+                              style: AppTextStyles.text12w400(color: colors.warning),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                40.verticalSpace,
+
+                // Refresh button
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      ref.read(profileProvider.notifier).loadProfile();
+                    },
+                    icon: Icon(Icons.refresh_rounded, color: colors.primary),
+                    label: Text(
+                      'تحقق من حالة الحساب',
+                      style: AppTextStyles.text14w600(color: colors.primary),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(vertical: 14.h),
+                      side: BorderSide(color: colors.primary),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRejectedScreen(AppColors colors) {
+    return Scaffold(
+      backgroundColor: colors.background,
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 32.w),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Error/Blocked icon container
+                Container(
+                  width: 120.w,
+                  height: 120.w,
+                  decoration: BoxDecoration(
+                    color: colors.error.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: colors.error.withValues(alpha: 0.3),
+                      width: 2,
+                    ),
+                  ),
+                  child: Icon(
+                    Icons.block_flipped,
+                    size: 56.sp,
+                    color: colors.error,
+                  ),
+                ),
+                32.verticalSpace,
+
+                Text(
+                  'تم رفض الحساب',
+                  style: AppTextStyles.text22w700(color: colors.textPrimary),
+                  textAlign: TextAlign.center,
+                ),
+                12.verticalSpace,
+
+                Text(
+                  'لقد تم رفض طلب انضمامك أو حظر حسابك من قبل الإدارة.\nيرجى التواصل مع الدعم الفني لمزيد من التفاصيل.',
+                  style: AppTextStyles.text14w400(color: colors.textSecondary),
+                  textAlign: TextAlign.center,
+                ),
+                32.verticalSpace,
+
+                // Status info card
+                Container(
+                  padding: EdgeInsets.all(16.r),
+                  decoration: BoxDecoration(
+                    color: colors.error.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(14.r),
+                    border: Border.all(
+                      color: colors.error.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(8.r),
+                        decoration: BoxDecoration(
+                          color: colors.error.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(10.r),
+                        ),
+                        child: Icon(
+                          Icons.info_outline_rounded,
+                          color: colors.error,
+                          size: 22.sp,
+                        ),
+                      ),
+                      12.horizontalSpace,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'حالة الحساب',
+                              style: AppTextStyles.text12w600(color: colors.textPrimary),
+                            ),
+                            4.verticalSpace,
+                            Text(
+                              'مرفوض / محظور — تواصل مع الدعم الفني',
+                              style: AppTextStyles.text12w400(color: colors.error),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                40.verticalSpace,
+
+                // Support button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pushNamed(context, AppRoutes.contactUs);
+                    },
+                    icon: const Icon(Icons.support_agent_rounded, color: Colors.white),
+                    label: Text(
+                      'تواصل مع الدعم الفني',
+                      style: AppTextStyles.text14w600(color: Colors.white),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: colors.primary,
+                      padding: EdgeInsets.symmetric(vertical: 14.h),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                    ),
+                  ),
+                ),
+                16.verticalSpace,
+
+                // Logout button
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      await ref.read(authProvider.notifier).logout();
+                      if (context.mounted) {
+                        Navigator.of(context).pushNamedAndRemoveUntil(
+                          AppRoutes.chooseUserTypeScreen,
+                          (route) => false,
+                        );
+                      }
+                    },
+                    icon: Icon(Icons.logout_rounded, color: colors.error),
+                    label: Text(
+                      'تسجيل الخروج',
+                      style: AppTextStyles.text14w600(color: colors.error),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(vertical: 14.h),
+                      side: BorderSide(color: colors.error),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ─── Normal Home Widgets ──────────────────────────────────────────────────
 
   Widget _buildStatusCard(BuildContext context) {
     final colors = AppColors(context);
@@ -151,12 +494,12 @@ class _CaptainHomeScreenState extends State<CaptainHomeScreen> {
     );
   }
 
-  Widget _buildStatsGrid(BuildContext context) {
+  Widget _buildStatsGrid(BuildContext context, CaptainOrdersState state) {
     return Row(
       children: [
-        _buildStatItem(context, AppStrings.todayOrders, '12', Icons.shopping_bag_outlined, Colors.blue),
+        _buildStatItem(context, AppStrings.todayOrders, '${state.todayOrdersCount}', Icons.shopping_bag_outlined, Colors.blue),
         15.horizontalSpace,
-        _buildStatItem(context, AppStrings.todayEarnings, '45,000 ${AppStrings.currency}', Icons.account_balance_wallet_outlined, Colors.orange),
+        _buildStatItem(context, AppStrings.todayEarnings, '${state.todayEarnings.toStringAsFixed(0)} ${AppStrings.currency}', Icons.account_balance_wallet_outlined, Colors.orange),
       ],
     );
   }
@@ -185,31 +528,51 @@ class _CaptainHomeScreenState extends State<CaptainHomeScreen> {
     );
   }
 
-  Widget _buildSectionHeader(BuildContext context, String title) {
+  Widget _buildSectionHeader(BuildContext context, String title, WidgetRef ref) {
     final colors = AppColors(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(title, style: AppTextStyles.text16w700(color: colors.textPrimary)),
-        TextButton(onPressed: () {}, child: Text(AppStrings.refresh, style: TextStyle(color: colors.primary))),
+        TextButton(
+          onPressed: () => ref.read(captainOrdersProvider.notifier).loadAll(),
+          child: Text(AppStrings.refresh, style: TextStyle(color: colors.primary)),
+        ),
       ],
     );
   }
 
-  Widget _buildAvailableOrdersList(BuildContext context) {
+  Widget _buildAvailableOrdersList(BuildContext context, List<OrderDto> orders) {
+    if (orders.isEmpty) {
+      final colors = AppColors(context);
+      return Padding(
+        padding: EdgeInsets.symmetric(vertical: 40.h),
+        child: Center(
+          child: Text(
+            'لا توجد طلبات متاحة حالياً',
+            style: AppTextStyles.text14w600(color: colors.textHint),
+          ),
+        ),
+      );
+    }
+
     return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: 3,
+      itemCount: orders.length,
       separatorBuilder: (context, index) => 15.verticalSpace,
       itemBuilder: (context, index) {
-        return _buildOrderCard(context, index);
+        return _buildOrderCard(context, orders[index]);
       },
     );
   }
 
-  Widget _buildOrderCard(BuildContext context, int index) {
+  Widget _buildOrderCard(BuildContext context, OrderDto order) {
     final colors = AppColors(context);
+    final storeName = order.creator?.name ?? 'متجر غير معروف';
+    final storeAddress = order.creator?.address ?? 'عنوان غير متوفر';
+    final earnings = order.deliveryFee;
+
     return Container(
       padding: EdgeInsets.all(15.r),
       decoration: BoxDecoration(
@@ -221,18 +584,28 @@ class _CaptainHomeScreenState extends State<CaptainHomeScreen> {
         children: [
           Row(
             children: [
-              CircleAvatar(backgroundColor: colors.primary.withOpacity(0.1), child: Icon(Icons.restaurant, color: colors.primary, size: 20.sp)),
+              CircleAvatar(
+                backgroundColor: colors.primary.withOpacity(0.1),
+                child: Icon(
+                  order.type == 0 ? Icons.restaurant : Icons.shopping_bag,
+                  color: colors.primary,
+                  size: 20.sp,
+                ),
+              ),
               15.horizontalSpace,
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(AppStrings.quickBurgerRestaurant, style: AppTextStyles.text14w700(color: colors.textPrimary)),
-                    Text(AppStrings.mansourAddressMsg, style: AppTextStyles.text12w400(color: colors.textSecondary)),
+                    Text(storeName, style: AppTextStyles.text14w700(color: colors.textPrimary)),
+                    Text(storeAddress, style: AppTextStyles.text12w400(color: colors.textSecondary)),
                   ],
                 ),
               ),
-              Text('5,000 ${AppStrings.currency}', style: AppTextStyles.text14w700(color: colors.primary)),
+              Text(
+                '${earnings.toStringAsFixed(0)} ${AppStrings.currency}',
+                style: AppTextStyles.text14w700(color: colors.primary),
+              ),
             ],
           ),
           20.verticalSpace,
@@ -240,10 +613,21 @@ class _CaptainHomeScreenState extends State<CaptainHomeScreen> {
             children: [
               Icon(Icons.location_on, color: colors.error, size: 18.sp),
               10.horizontalSpace,
-              Text('${AppStrings.distanceAwayMsg} 1.5 ${AppStrings.kmAway}', style: AppTextStyles.text12w400(color: colors.textSecondary)),
-              const Spacer(),
+              Expanded(
+                child: Text(
+                  'العنوان: ${order.address ?? 'عنوان الزبون غير متوفر'}',
+                  style: AppTextStyles.text12w400(color: colors.textSecondary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              10.horizontalSpace,
               ElevatedButton(
-                onPressed: () => Navigator.pushNamed(context, AppRoutes.captainOrderDetails),
+                onPressed: () => Navigator.pushNamed(
+                  context,
+                  AppRoutes.captainOrderDetails,
+                  arguments: order,
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: colors.primary,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),

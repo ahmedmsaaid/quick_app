@@ -1,16 +1,24 @@
 import 'package:base_app/core/routes/app_routes.dart';
+import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:base_app/core/localizations/app_strings.g.dart';
 import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/styles/app_text_style.dart';
+import 'package:base_app/features/customer/orders/presentation/riverpod/orders_provider.dart';
+import 'package:base_app/features/customer/checkout/data/models/order_models.dart';
+import 'package:base_app/core/network/api_constants.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:base_app/core/widgets/lading_button.dart';
 
-class OrdersScreen extends StatelessWidget {
+class OrdersScreen extends ConsumerWidget {
   const OrdersScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColors(context);
+    final ordersState = ref.watch(ordersProvider);
 
     return DefaultTabController(
       length: 2,
@@ -35,29 +43,112 @@ class OrdersScreen extends StatelessWidget {
             ],
           ),
         ),
-        body: TabBarView(
-          children: [
-            _buildOrdersList(context, isCurrent: true),
-            _buildOrdersList(context, isCurrent: false),
-          ],
-        ),
+        body: _buildBody(context, ref, ordersState),
       ),
     );
   }
 
-  Widget _buildOrdersList(BuildContext context, {required bool isCurrent}) {
+  Widget _buildBody(BuildContext context, WidgetRef ref, OrdersState state) {
+    if (state.status == OrdersStatus.loading) {
+      return const Center(child: LoadingButton());
+    }
+
+    if (state.status == OrdersStatus.error) {
+      return Center(
+        child: Padding(
+          padding: EdgeInsets.all(20.r),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline_rounded, size: 48.sp, color: AppColors(context).error),
+              15.verticalSpace,
+              Text(
+                state.errorMessage ?? 'حدث خطأ أثناء تحميل الطلبات',
+                style: AppTextStyles.text14w500(color: AppColors(context).textSecondary),
+                textAlign: TextAlign.center,
+              ),
+              20.verticalSpace,
+              ElevatedButton(
+                onPressed: () {
+                  ref.read(ordersProvider.notifier).loadOrders();
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors(context).primary),
+                child: Text('إعادة المحاولة', style: AppTextStyles.text14w600(color: Colors.white)),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final allOrders = state.orders;
+
+    // Filter current: not completed (3) and not canceled (4)
+    final currentOrders = allOrders.where((o) => o.status != 3 && o.status != 4).toList();
+    // Filter completed/canceled: completed (3) or canceled (4)
+    final pastOrders = allOrders.where((o) => o.status == 3 || o.status == 4).toList();
+
+    return TabBarView(
+      children: [
+        _buildOrdersList(context, currentOrders, isCurrent: true),
+        _buildOrdersList(context, pastOrders, isCurrent: false),
+      ],
+    );
+  }
+
+  Widget _buildOrdersList(BuildContext context, List<OrderDto> orders, {required bool isCurrent}) {
+    if (orders.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.receipt_long_rounded, size: 60.sp, color: AppColors(context).textHint),
+            12.verticalSpace,
+            Text(
+              isCurrent ? 'لا توجد طلبات حالية حالياً' : 'لا توجد طلبات سابقة',
+              style: AppTextStyles.text14w500(color: AppColors(context).textSecondary),
+            ),
+          ],
+        ),
+      );
+    }
+
     return ListView.separated(
       padding: EdgeInsets.all(20.w),
-      itemCount: 3,
+      itemCount: orders.length,
       separatorBuilder: (context, index) => 15.verticalSpace,
       itemBuilder: (context, index) {
-        return _buildOrderCard(context, isCurrent);
+        return _buildOrderCard(context, orders[index]);
       },
     );
   }
 
-  Widget _buildOrderCard(BuildContext context, bool isCurrent) {
+  Widget _buildOrderCard(BuildContext context, OrderDto order) {
     final colors = AppColors(context);
+
+    // Dynamic Title & Image from products or offer
+    String orderTitle = 'طلب جديد';
+    String photoUrl = '';
+    
+    if (order.offerId != null) {
+      orderTitle = 'طلب عرض خاص #${order.offerId}';
+    } else if (order.products.isNotEmpty) {
+      final firstProd = order.products.first;
+      orderTitle = firstProd.productName ?? 'طلب جديد';
+      if (order.products.length > 1) {
+        orderTitle += ' و ${order.products.length - 1} منتجات أخرى';
+      }
+      final String? photo = firstProd.photo;
+      photoUrl = (photo != null && photo.isNotEmpty)
+          ? (photo.startsWith('http') ? photo : '${ApiConstants.streamUrl}$photo')
+          : '';
+    }
+
+    String dateStr = order.createdOn != null && order.createdOn!.isNotEmpty
+        ? order.createdOn!.split('T').first
+        : '';
+
+    final isCurrent = order.status != 3 && order.status != 4;
 
     return Container(
       padding: EdgeInsets.all(15.r),
@@ -66,7 +157,7 @@ class OrdersScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(15.r),
         boxShadow: [
           BoxShadow(
-            color: colors.shadow,
+            color: colors.shadow.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
@@ -76,16 +167,18 @@ class OrdersScreen extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(
-                width: 50.w,
-                height: 50.h,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10.r),
-                  image: const DecorationImage(
-                    image: AssetImage('assets/image/logo.png'),
-                    fit: BoxFit.cover,
-                  ),
-                ),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10.r),
+                child: photoUrl.isNotEmpty
+                    ? CachedNetworkImage(
+                        imageUrl: photoUrl,
+                        width: 50.w,
+                        height: 50.h,
+                        fit: BoxFit.cover,
+                        placeholder: (_, __) => Container(width: 50.w, height: 50.h, color: colors.shimmerBase),
+                        errorWidget: (_, __, ___) => Image.asset('assets/image/logo.png', width: 50.w, height: 50.h, fit: BoxFit.cover),
+                      )
+                    : Image.asset('assets/image/logo.png', width: 50.w, height: 50.h, fit: BoxFit.cover),
               ),
               15.horizontalSpace,
               Expanded(
@@ -93,12 +186,14 @@ class OrdersScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      AppStrings.orderFromQuickBurgerMsg,
+                      orderTitle,
                       style: AppTextStyles.text14w600(color: colors.textPrimary),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     5.verticalSpace,
                     Text(
-                      '${AppStrings.uniqueNumber}: #12345',
+                      '${AppStrings.uniqueNumber}: #${order.id}',
                       style: AppTextStyles.text12w400(color: colors.textSecondary),
                     ),
                   ],
@@ -107,15 +202,13 @@ class OrdersScreen extends StatelessWidget {
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
                 decoration: BoxDecoration(
-                  color: isCurrent 
-                      ? colors.primary.withOpacity(0.1)
-                      : colors.success.withOpacity(0.1),
+                  color: _getStatusColor(order.status, colors).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20.r),
                 ),
                 child: Text(
-                  isCurrent ? AppStrings.driverOnWayStep : AppStrings.completed,
+                  _getStatusText(order.status),
                   style: AppTextStyles.text10w500(
-                    color: isCurrent ? colors.primary : colors.success,
+                    color: _getStatusColor(order.status, colors),
                   ),
                 ),
               ),
@@ -128,11 +221,11 @@ class OrdersScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '${AppStrings.mockDate} • ${AppStrings.mockTime}',
+                dateStr,
                 style: AppTextStyles.text12w400(color: colors.textSecondary),
               ),
               Text(
-                '17,500 ${AppStrings.iqdCurrency}',
+                '${order.totalPrice.toStringAsFixed(0)} جنيه مصري',
                 style: AppTextStyles.text14w700(color: colors.primary),
               ),
             ],
@@ -183,7 +276,15 @@ class OrdersScreen extends StatelessWidget {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () {
-                        Navigator.of(context).pushNamed(AppRoutes.sendReview);
+                        Navigator.of(context).pushNamed(
+                          AppRoutes.sendReview,
+                          arguments: UserDto(
+                            id: order.creatorId,
+                            name: orderTitle,
+                            role: 0,
+                            status: 1,
+                          ),
+                        );
                       },
                       style: OutlinedButton.styleFrom(
                         side: BorderSide(color: colors.primary),
@@ -216,5 +317,33 @@ class OrdersScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _getStatusText(int status) {
+    switch (status) {
+      case 0:
+        return 'قيد الانتظار';
+      case 1:
+        return 'جاري التحضير';
+      case 2:
+        return 'في الطريق';
+      case 3:
+        return 'تم التوصيل';
+      case 4:
+        return 'ملغي';
+      default:
+        return 'قيد المعالجة';
+    }
+  }
+
+  Color _getStatusColor(int status, AppColors colors) {
+    switch (status) {
+      case 3:
+        return colors.success;
+      case 4:
+        return colors.error;
+      default:
+        return colors.primary;
+    }
   }
 }

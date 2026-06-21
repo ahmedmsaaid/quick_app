@@ -1,7 +1,8 @@
 abstract class ApiConstants {
   static const String baseUrl = 'https://quick-service.runasp.net/api/v1/';
-  static const String streamUrl = 'https://gtranzimdtayekdgopoq.supabase.co/storage/v1/object/public/quick-service-photos/';
+  static const String streamUrl = 'https://uzpvlmgqwpxcuvngsayb.supabase.co/storage/v1/object/public/quick-service-photos/';
   static const String signup = 'users/signup';
+  static const String captainSignup = 'deliveries/signup';
   static const String login = 'users/login';
   static const String sendOtp = 'users/send-otp';
   static const String verifyOtp = 'users/verify-otp';
@@ -17,6 +18,13 @@ abstract class ApiConstants {
   static const String updateProfile = 'users/update-profile';
   static const String deleteAccount = 'users/delete-account';
   static const String addFcmToken = 'users/add-fcm-token';
-  static const String stream = 'stream';
+  static const String stream = 'stream/public';
   static const String streamPublic = 'stream/public';
+  static const String offers = 'offers';
+  static const String productsPaginate = 'products/paginate';
+  static const String usersPaginate = 'users/paginate';
+  static const String categories = 'categories';
+  static const String mainCategories = 'main-categories';
+  static const String productRating = 'product-rating';
+  static const String userRating = 'user-rating';
 }

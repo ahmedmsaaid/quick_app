@@ -7,6 +7,7 @@ import 'package:base_app/core/styles/app_text_style.dart';
 import 'package:base_app/core/widgets/custom_arrow_back.dart';
 import 'package:base_app/core/widgets/custom_button.dart';
 import 'package:base_app/core/widgets/custom_toast.dart';
+import 'package:base_app/core/widgets/lading_button.dart';
 import 'package:base_app/core/routes/app_routes.dart';
 import 'package:base_app/features/customer/profile/presentation/riverpod/profile_provider.dart';
 import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
@@ -72,7 +73,7 @@ class AddressScreen extends ConsumerWidget {
         centerTitle: true,
       ),
       body: isLoading
-          ? Center(child: CircularProgressIndicator(color: colors.primary))
+          ? const LoadingButton()
           : locations.isEmpty
               ? _buildEmptyState(context)
               : ListView.separated(

@@ -10,6 +10,7 @@ import 'package:base_app/core/styles/app_text_style.dart';
 import 'package:base_app/features/customer/profile/presentation/riverpod/profile_provider.dart';
 import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
 import 'package:base_app/core/widgets/custom_toast.dart';
+import 'package:base_app/core/widgets/lading_button.dart';
 
 class LocationBottomSheet extends ConsumerWidget {
   const LocationBottomSheet({super.key});
@@ -139,11 +140,7 @@ class LocationBottomSheet extends ConsumerWidget {
         child: Row(
           children: [
             isUpdating 
-              ? SizedBox(
-                  width: 24.w,
-                  height: 24.w,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: colors.primary),
-                )
+              ? LoadingButton(size: 24.w, color: colors.primary)
               : Icon(Icons.my_location, color: colors.primary),
             15.horizontalSpace,
             Expanded(

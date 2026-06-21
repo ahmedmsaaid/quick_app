@@ -45,9 +45,13 @@ class UserDto {
   final String? avatar;
   final String? name;
   final String? address;
-  final int role; // 0: Customer, 1: Driver/Captain, etc.
+  final int role; // 0: Restaurant, 1: Market, 2: Customer, 3: Captain
   final int status;
   final LocationModel? location;
+  final String? description;
+  final bool? active;
+  final String? createdOn;
+  final double rating;
 
   UserDto({
     required this.id,
@@ -60,6 +64,10 @@ class UserDto {
     required this.role,
     required this.status,
     this.location,
+    this.description,
+    this.active,
+    this.createdOn,
+    this.rating = 0.0,
   });
 
   factory UserDto.fromJson(Map<String, dynamic> json) {
@@ -80,13 +88,30 @@ class UserDto {
       parsedRole = rawRole;
     } else if (rawRole != null) {
       final roleStr = rawRole.toString().toLowerCase();
-      if (roleStr == 'captain' || roleStr == 'driver' || roleStr == '1' || roleStr == '3') {
-        parsedRole = 3;
-      } else if (roleStr == 'customer' || roleStr == 'user' || roleStr == '0' || roleStr == '2') {
+      if (roleStr == 'restaurant' || roleStr == 'vendor' || roleStr == 'store' || roleStr == '0') {
+        parsedRole = 0;
+      } else if (roleStr == 'market' || roleStr == 'supermarket' || roleStr == '1') {
+        parsedRole = 1;
+      } else if (roleStr == 'customer' || roleStr == 'user' || roleStr == '2') {
         parsedRole = 2;
+      } else if (roleStr == 'captain' || roleStr == 'driver' || roleStr == '3') {
+        parsedRole = 3;
       } else {
         parsedRole = int.tryParse(roleStr) ?? 2;
       }
+    }
+
+    final double parsedRating = (userMap['rating'] ?? userMap['Rating'] ?? userMap['rate'] ?? userMap['Rate'] as num?)?.toDouble() ?? 0.0;
+
+    bool? parsedActive;
+    final dynamic rawActive = userMap['active'] ?? userMap['Active'] ?? userMap['isActive'] ?? userMap['IsActive'];
+    if (rawActive is bool) {
+      parsedActive = rawActive;
+    } else if (rawActive is int) {
+      parsedActive = rawActive == 1;
+    } else if (rawActive != null) {
+      final activeStr = rawActive.toString().toLowerCase();
+      parsedActive = activeStr == 'true' || activeStr == '1';
     }
 
     return UserDto(
@@ -102,6 +127,10 @@ class UserDto {
       location: userMap['location'] == null
           ? null
           : LocationModel.fromJson(userMap['location'] as Map<String, dynamic>),
+      description: userMap['description']?.toString(),
+      active: parsedActive,
+      createdOn: userMap['createdOn']?.toString(),
+      rating: parsedRating,
     );
   }
 
@@ -116,6 +145,10 @@ class UserDto {
     'role': role,
     'status': status,
     'location': location?.toJson(),
+    'description': description,
+    'active': active,
+    'createdOn': createdOn,
+    'rating': rating,
   };
 }
 

@@ -11,11 +11,13 @@ class SeeAllWidget extends StatelessWidget {
     required this.title,
     required this.onTap,
     this.isReviews,
+    this.showAll=true,
   });
 
   final String title;
   final VoidCallback onTap;
   final bool? isReviews;
+  final bool? showAll;
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +31,7 @@ class SeeAllWidget extends StatelessWidget {
             title,
             style: AppTextStyles.text18w600(color: colors.textPrimary),
           ),Spacer(),
-          TextButton(
+       if(showAll??true)   TextButton(
             onPressed: onTap,
             child: Text(
               isReviews ?? false

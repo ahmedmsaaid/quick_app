@@ -20,7 +20,7 @@ class _StreamDataSource implements StreamDataSource {
   final ParseErrorLogger? errorLogger;
 
   @override
-  Future<InvalidType> uploadStream({
+  Future<AppResultModel<StreamResult>> uploadStream({
     required int streamType,
     required MultipartFile file,
   }) async {
@@ -29,7 +29,7 @@ class _StreamDataSource implements StreamDataSource {
     final _headers = <String, dynamic>{};
     final _data = FormData();
     _data.files.add(MapEntry('file', file));
-    final _options = _setStreamType<InvalidType>(
+    final _options = _setStreamType<AppResultModel<StreamResult>>(
       Options(
             method: 'POST',
             headers: _headers,
@@ -38,16 +38,19 @@ class _StreamDataSource implements StreamDataSource {
           )
           .compose(
             _dio.options,
-            null,
+            'stream/public',
             queryParameters: queryParameters,
             data: _data,
           )
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
     final _result = await _dio.fetch<Map<String, dynamic>>(_options);
-    late InvalidType _value;
+    late AppResultModel<StreamResult> _value;
     try {
-      _value = InvalidType.fromJson(_result.data!);
+      _value = AppResultModel<StreamResult>.fromJson(
+        _result.data!,
+        (json) => StreamResult.fromJson(json as Map<String, dynamic>),
+      );
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options);
       rethrow;
@@ -56,25 +59,25 @@ class _StreamDataSource implements StreamDataSource {
   }
 
   @override
-  Future<InvalidType> deleteStream({required String url}) async {
+  Future<AppResultModel<void>> deleteStream({required String url}) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{r'url': url};
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<InvalidType>(
+    final _options = _setStreamType<AppResultModel<void>>(
       Options(method: 'DELETE', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
-            null,
+            'stream/public',
             queryParameters: queryParameters,
             data: _data,
           )
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
     final _result = await _dio.fetch<Map<String, dynamic>>(_options);
-    late InvalidType _value;
+    late AppResultModel<void> _value;
     try {
-      _value = InvalidType.fromJson(_result.data!);
+      _value = AppResultModel<void>.fromJson(_result.data!, (json) => () {}());
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options);
       rethrow;

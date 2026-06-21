@@ -23,6 +23,7 @@ import 'package:base_app/features/customer/main_nav/presentation/screens/user_na
 
 import 'package:base_app/features/customer/checkout/presentation/screens/checkout_screen.dart';
 import 'package:base_app/features/customer/orders/presentation/screens/order_tracking_screen.dart';
+import 'package:base_app/features/customer/orders/presentation/screens/rate_order_screen.dart';
 import 'package:base_app/features/customer/vendor_list/presentation/screens/vendor_list_screen.dart';
 import 'package:base_app/features/customer/home/presentation/screens/search_results_screen.dart';
 import 'package:base_app/features/customer/profile/presentation/screens/personal_info_screen.dart';
@@ -39,6 +40,16 @@ import 'package:base_app/features/delivery/captain/presentation/screens/captain_
 import 'package:base_app/features/delivery/captain/presentation/screens/captain_registration_details_screen.dart';
 
 import 'package:base_app/features/customer/home/presentation/screens/special_offer_details_screen.dart';
+import 'package:base_app/features/customer/favorites/presentation/screens/favorites_screen.dart';
+import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
+import 'package:base_app/features/customer/checkout/data/models/order_models.dart';
+import 'package:base_app/features/customer/home/data/models/offer_model.dart';
+import 'package:base_app/features/customer/home/data/models/category_model.dart';
+import 'package:base_app/features/customer/home/data/models/product_detail_model.dart';
+import 'package:base_app/features/customer/vendor_details/presentation/screens/store_product_details_screen.dart';
+import 'package:base_app/features/customer/home/presentation/screens/category_products_screen.dart';
+import 'package:base_app/features/customer/home/presentation/screens/all_categories_screen.dart';
+import 'package:base_app/features/delivery/captain/presentation/screens/captain_register_screen.dart';
 
 abstract class AppRouter {
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
@@ -97,29 +108,45 @@ abstract class AppRouter {
       case AppRoutes.captainRegistrationDetails:
         return _buildAnimatedRoute(const CaptainRegistrationDetailsScreen(), settings);
       case AppRoutes.captainOrderDetails:
-        return _buildAnimatedRoute(const CaptainOrderDetailsScreen(), settings);
+        final OrderDto order = settings.arguments as OrderDto;
+        return _buildAnimatedRoute(CaptainOrderDetailsScreen(order: order), settings);
       case AppRoutes.providerNav:
         return _buildAnimatedRoute(
           const Scaffold(body: Center(child: Text('Page not found'))),
           settings,
         );
+      case AppRoutes.providerStoreScreen:
       case AppRoutes.providerProductDetailsScreen:
-        final bool isMarket = (settings.arguments as bool?) ?? false;
-        return _buildAnimatedRoute(VendorDetailsScreen(isMarket: isMarket), settings);
+        final UserDto vendor = settings.arguments as UserDto;
+        return _buildAnimatedRoute(VendorDetailsScreen(vendor: vendor), settings);
       case AppRoutes.chatDetailsScreen:
         final String name = (settings.arguments as String?) ?? AppStrings.technicalSupportTitle;
         return _buildAnimatedRoute(ChatDetailsScreen(name: name), settings);
       case AppRoutes.cartScreen:
         return _buildAnimatedRoute(const CartScreen(), settings);
       case AppRoutes.cart: // Re-using cart if needed or specifically for Checkout
-        return _buildAnimatedRoute(const CheckoutScreen(), settings);
+        final Object? args = settings.arguments;
+        final OfferDto? offer = args is OfferDto ? args : null;
+        return _buildAnimatedRoute(CheckoutScreen(offer: offer), settings);
       case AppRoutes.orderDetailsScreen:
         return _buildAnimatedRoute(const OrderTrackingScreen(), settings);
+      case AppRoutes.allCategoriesScreen:
+        return _buildAnimatedRoute(const AllCategoriesScreen(), settings);
+      case AppRoutes.captainRegisterScreen:
+        return _buildAnimatedRoute(const CaptainRegisterScreen(), settings);
       case AppRoutes.StoreScreen:
-        final String title = (settings.arguments as String?) ?? AppStrings.storesTitle;
+        final Object? args = settings.arguments;
+        if (args is VendorListArgs) {
+          return _buildAnimatedRoute(
+            VendorListScreen(title: args.title, categoryId: args.categoryId, userRole: args.userRole),
+            settings,
+          );
+        }
+        final String title = (args as String?) ?? AppStrings.storesTitle;
         return _buildAnimatedRoute(VendorListScreen(title: title), settings);
       case AppRoutes.specialOfferDetails:
-        return _buildAnimatedRoute(const SpecialOfferDetailsScreen(), settings);
+        final OfferDto? offer = settings.arguments as OfferDto?;
+        return _buildAnimatedRoute(SpecialOfferDetailsScreen(offer: offer), settings);
       case AppRoutes.searchResults:
         final String query = (settings.arguments as String?) ?? '';
         return _buildAnimatedRoute(SearchResultsScreen(query: query), settings);
@@ -139,6 +166,17 @@ abstract class AppRouter {
         return _buildAnimatedRoute(const ContactUsScreen(), settings);
       case AppRoutes.changePassword:
         return _buildAnimatedRoute(const ChangePasswordScreen(), settings);
+      case AppRoutes.favorites:
+        return _buildAnimatedRoute(const FavoritesScreen(), settings);
+      case AppRoutes.sendReview:
+        final UserDto? vendor = settings.arguments as UserDto?;
+        return _buildAnimatedRoute(RateOrderScreen(vendor: vendor), settings);
+      case AppRoutes.storeProductDetailsScreen:
+        final ProductDetailDto product = settings.arguments as ProductDetailDto;
+        return _buildAnimatedRoute(StoreProductDetailsScreen(product: product), settings);
+      case AppRoutes.products:
+        final CategoryDto category = settings.arguments as CategoryDto;
+        return _buildAnimatedRoute(CategoryProductsScreen(category: category), settings);
 
       default:
         return _buildAnimatedRoute(
@@ -173,4 +211,12 @@ abstract class AppRouter {
       transitionDuration: const Duration(milliseconds: 300),
     );
   }
+}
+
+class VendorListArgs {
+  final String title;
+  final int? categoryId;
+  final int? userRole;
+
+  VendorListArgs({required this.title, this.categoryId, this.userRole});
 }

@@ -90,7 +90,7 @@ class AuthApiService {
     try {
       final formData = FormData.fromMap({
         'file': file,
-        'type': 0, // FormPart matching curl -F 'type=0'
+        'type': 1, // FormPart matching type=1
       });
       final response = await _dio.post(
         ApiConstants.streamPublic,
@@ -208,6 +208,88 @@ class AuthApiService {
       final apiResponse = ApiResponse<void>.fromJson(response.data, (_) {});
 
       return ApiResult.success(apiResponse);
+    } catch (e) {
+      return ApiResult.failure(handleError(e));
+    }
+  }
+
+  /// Register a new Captain/Delivery account with full delivery-specific data.
+  Future<ApiResult<ApiResponse<TokenDto>>> captainSignup({
+    required String phone,
+    required String name,
+    required String password,
+    required String confirmedPassword,
+    String? email,
+    String? photo,
+    String? description,
+    required int vehicleType,
+    required String nationalIdNumber,
+    required String nationalIdFrontImage,
+    required String nationalIdBackImage,
+    required String drivingLicenseNumber,
+    required String drivingLicenseImage,
+    required String walletNumber,
+    required String walletOwnerName,
+    required int walletType,
+    required int availability,
+  }) async {
+    try {
+      final response = await _dio.post(
+        ApiConstants.captainSignup,
+        data: {
+          'phone': phone,
+          'name': name,
+          'password': password,
+          'confirmedPassword': confirmedPassword,
+          'email': email,
+          'photo': photo,
+          'description': description,
+          'vehicleType': vehicleType,
+          'nationalIdNumber': nationalIdNumber,
+          'nationalIdFrontImage': nationalIdFrontImage,
+          'nationalIdBackImage': nationalIdBackImage,
+          'drivingLicenseNumber': drivingLicenseNumber,
+          'drivingLicenseImage': drivingLicenseImage,
+          'walletNumber': walletNumber,
+          'walletOwnerName': walletOwnerName,
+          'walletType': walletType,
+          'availability': availability,
+        },
+      );
+
+      final apiResponse = ApiResponse<TokenDto>.fromJson(
+        response.data,
+        (json) => TokenDto.fromJson(json as Map<String, dynamic>),
+      );
+
+      return ApiResult.success(apiResponse);
+    } catch (e) {
+      return ApiResult.failure(handleError(e));
+    }
+  }
+
+  /// Upload a private document image (national ID, driving license, etc.)
+  Future<ApiResult<String>> uploadDocumentImage(MultipartFile file) async {
+    try {
+      final formData = FormData.fromMap({
+        'file': file,
+        'type': 1, // private type
+      });
+      final response = await _dio.post(
+        ApiConstants.stream,
+        data: formData,
+      );
+      final success = response.data['success'] as bool? ?? false;
+      final result = response.data['result'] as String?;
+      if (success && result != null) {
+        return ApiResult.success(result);
+      } else {
+        return ApiResult.failure(
+          GenericError(
+            message: response.data['message'] ?? 'فشل رفع الصورة',
+          ),
+        );
+      }
     } catch (e) {
       return ApiResult.failure(handleError(e));
     }

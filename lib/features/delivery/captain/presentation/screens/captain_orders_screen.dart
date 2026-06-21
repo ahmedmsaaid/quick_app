@@ -1,16 +1,21 @@
 import 'package:base_app/core/routes/app_routes.dart';
 import 'package:base_app/core/localizations/app_strings.g.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/styles/app_text_style.dart';
+import 'package:base_app/features/customer/checkout/data/models/order_models.dart';
+import 'package:base_app/features/delivery/captain/presentation/riverpod/captain_orders_provider.dart';
+import 'package:base_app/core/widgets/lading_button.dart';
 
-class CaptainOrdersScreen extends StatelessWidget {
+class CaptainOrdersScreen extends ConsumerWidget {
   const CaptainOrdersScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColors(context);
+    final ordersState = ref.watch(captainOrdersProvider);
 
     return DefaultTabController(
       length: 2,
@@ -34,32 +39,70 @@ class CaptainOrdersScreen extends StatelessWidget {
             ],
           ),
         ),
-        body: TabBarView(
-          children: [
-            _buildOrdersList(context, true),
-            _buildOrdersList(context, false),
-          ],
-        ),
+        body: ordersState.status == CaptainOrdersStatus.loading && ordersState.activeOrders.isEmpty && ordersState.finishedOrders.isEmpty
+            ? Center(child: LoadingButton(color: colors.primary))
+            : TabBarView(
+                children: [
+                  _buildOrdersList(context, ordersState.activeOrders, true, ref),
+                  _buildOrdersList(context, ordersState.finishedOrders, false, ref),
+                ],
+              ),
       ),
     );
   }
 
-  Widget _buildOrdersList(BuildContext context, bool isActive) {
-    return ListView.separated(
-      padding: EdgeInsets.all(20.w),
-      itemCount: isActive ? 1 : 5,
-      separatorBuilder: (context, index) => 15.verticalSpace,
-      itemBuilder: (context, index) {
-        return _buildOrderCard(context, isActive);
+  Widget _buildOrdersList(BuildContext context, List<OrderDto> orders, bool isActive, WidgetRef ref) {
+    if (orders.isEmpty) {
+      final colors = AppColors(context);
+      return RefreshIndicator(
+        onRefresh: () async {
+          await ref.read(captainOrdersProvider.notifier).loadAll();
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Container(
+            height: 400.h,
+            alignment: Alignment.center,
+            child: Text(
+              isActive ? 'لا توجد مشاوير نشطة حالياً' : 'لم تقم بتوصيل أي طلبات بعد',
+              style: AppTextStyles.text14w600(color: colors.textHint),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        await ref.read(captainOrdersProvider.notifier).loadAll();
       },
+      child: ListView.separated(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.all(20.w),
+        itemCount: orders.length,
+        separatorBuilder: (context, index) => 15.verticalSpace,
+        itemBuilder: (context, index) {
+          return _buildOrderCard(context, orders[index], isActive);
+        },
+      ),
     );
   }
 
-  Widget _buildOrderCard(BuildContext context, bool isActive) {
+  Widget _buildOrderCard(BuildContext context, OrderDto order, bool isActive) {
     final colors = AppColors(context);
+    final storeName = order.creator?.name ?? 'متجر غير معروف';
+    final customerName = order.user?.name ?? 'زبون غير معروف';
+    final earnings = order.deliveryFee;
+
+    // Define status label text based on actual order status
+    String statusLabelText = isActive ? AppStrings.onWayLabel : AppStrings.arrivedDoneLabel;
+    if (isActive && order.status == 2) {
+      statusLabelText = 'بانتظار الاستلام';
+    }
+
     return InkWell(
       onTap: () {
-        Navigator.of(context).pushNamed(AppRoutes.captainOrderDetails);
+        Navigator.of(context).pushNamed(AppRoutes.captainOrderDetails, arguments: order);
       },
       child: Container(
         padding: EdgeInsets.all(15.r),
@@ -73,7 +116,7 @@ class CaptainOrdersScreen extends StatelessWidget {
           children: [
             Row(
               children: [
-                Text('${AppStrings.order} #12345', style: AppTextStyles.text14w700(color: colors.textPrimary)),
+                Text('${AppStrings.order} #${order.id}', style: AppTextStyles.text14w700(color: colors.textPrimary)),
                 const Spacer(),
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
@@ -82,16 +125,16 @@ class CaptainOrdersScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20.r),
                   ),
                   child: Text(
-                    isActive ? AppStrings.onWayLabel : AppStrings.arrivedDoneLabel,
+                    statusLabelText,
                     style: AppTextStyles.text10w500(color: isActive ? colors.warning : colors.success),
                   ),
                 ),
               ],
             ),
             20.verticalSpace,
-            _buildLocationRow(context, Icons.store, '${AppStrings.pickupFromLabel}: ${AppStrings.quickBurgerRestaurant}'),
+            _buildLocationRow(context, Icons.store, '${AppStrings.pickupFromLabel}: $storeName'),
             10.verticalSpace,
-            _buildLocationRow(context, Icons.location_on, '${AppStrings.deliverToLabel}: ${AppStrings.userNamePlaceholder}'),
+            _buildLocationRow(context, Icons.location_on, '${AppStrings.deliverToLabel}: $customerName'),
             15.verticalSpace,
             Divider(color: colors.divider),
             15.verticalSpace,
@@ -99,7 +142,7 @@ class CaptainOrdersScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(AppStrings.yourEarningsInThisOrder, style: AppTextStyles.text12w400(color: colors.textSecondary)),
-                Text('5,000 ${AppStrings.currency}', style: AppTextStyles.text14w700(color: colors.primary)),
+                Text('${earnings.toStringAsFixed(0)} ${AppStrings.currency}', style: AppTextStyles.text14w700(color: colors.primary)),
               ],
             ),
           ],

@@ -3,6 +3,7 @@ import 'package:base_app/core/styles/old_text_style.dart';
 
 import 'package:base_app/core/exports/exports.dart';
 import 'package:base_app/core/styles/app_colors.dart';
+import 'package:base_app/core/widgets/lading_button.dart';
 
 enum AlertTypes { success, error, warning, loading, normal }
 
@@ -170,13 +171,7 @@ class CustomDialog extends StatelessWidget {
 
   Widget _buildIconOrLoader(BuildContext context, Color typeColor) {
     if (dialogType == AlertTypes.loading && showCircularLoading) {
-      return Center(
-        child: SizedBox(
-          width: 40.w,
-          height: 40.h,
-          child: CircularProgressIndicator(strokeWidth: 3.5, color: typeColor),
-        ),
-      );
+      return LoadingButton(size: 40.w, color: typeColor);
     }
 
     if (asset != null) {

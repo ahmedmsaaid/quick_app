@@ -1,4 +1,3 @@
-import 'package:base_app/core/services/cach_helper/cache_helper.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -243,11 +242,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     )
                   else
                     Padding(
-                      padding: EdgeInsets.symmetric(vertical: 20.h),
-                      child: Text(
-                        AppStrings.joinCaptainTeamMsg,
-                        style: AppTextStyles.text12w600(
-                          color: colors.textSecondary,
+                      padding: EdgeInsets.symmetric(vertical: 12.h),
+                      child: InkWell(
+                        onTap: () => context.pushNamed(AppRoutes.captainRegisterScreen),
+                        borderRadius: BorderRadius.circular(8.r),
+                        child: RichText(
+                          text: TextSpan(
+                            children: [
+                              TextSpan(
+                                text: 'ليس لديك حساب؟ ',
+                                style: AppTextStyles.text12w400(
+                                    color: colors.textSecondary),
+                              ),
+                              TextSpan(
+                                text: 'إنشاء حساب كابتن',
+                                style: AppTextStyles.text12w600(
+                                    color: colors.primary),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),

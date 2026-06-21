@@ -150,11 +150,7 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen> {
                           child: Row(
                             children: [
                               _isLocating
-                                  ? SizedBox(
-                                      width: 16.w,
-                                      height: 16.w,
-                                      child: CircularProgressIndicator(strokeWidth: 2, color: colors.primary),
-                                    )
+                                  ? LoadingButton(size: 16.w, color: colors.primary)
                                   : Icon(Icons.my_location, color: colors.primary, size: 18.sp),
                               8.horizontalSpace,
                               Text(
