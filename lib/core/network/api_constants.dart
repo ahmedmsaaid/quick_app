@@ -27,4 +27,5 @@ abstract class ApiConstants {
   static const String mainCategories = 'main-categories';
   static const String productRating = 'product-rating';
   static const String userRating = 'user-rating';
+  static const String settings = 'settings';
 }

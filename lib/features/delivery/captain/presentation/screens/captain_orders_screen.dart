@@ -15,7 +15,7 @@ class CaptainOrdersScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColors(context);
-    final ordersState = ref.watch(captainOrdersProvider);
+    final ordersState = ref.watch(captainMyOrdersProvider);
 
     return DefaultTabController(
       length: 2,
@@ -39,7 +39,7 @@ class CaptainOrdersScreen extends ConsumerWidget {
             ],
           ),
         ),
-        body: ordersState.status == CaptainOrdersStatus.loading && ordersState.activeOrders.isEmpty && ordersState.finishedOrders.isEmpty
+        body: ordersState.status == MyOrdersStatus.loading && ordersState.activeOrders.isEmpty && ordersState.finishedOrders.isEmpty
             ? Center(child: LoadingButton(color: colors.primary))
             : TabBarView(
                 children: [
@@ -56,7 +56,7 @@ class CaptainOrdersScreen extends ConsumerWidget {
       final colors = AppColors(context);
       return RefreshIndicator(
         onRefresh: () async {
-          await ref.read(captainOrdersProvider.notifier).loadAll();
+          await ref.read(captainMyOrdersProvider.notifier).loadOrders();
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -74,7 +74,7 @@ class CaptainOrdersScreen extends ConsumerWidget {
 
     return RefreshIndicator(
       onRefresh: () async {
-        await ref.read(captainOrdersProvider.notifier).loadAll();
+        await ref.read(captainMyOrdersProvider.notifier).loadOrders();
       },
       child: ListView.separated(
         physics: const AlwaysScrollableScrollPhysics(),

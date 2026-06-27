@@ -47,6 +47,12 @@ class VendorDetailsState {
 
 @riverpod
 class VendorDetailsNotifier extends _$VendorDetailsNotifier {
+  CategoryDto? _preSelectedCategory;
+
+  void setPreSelectedCategory(CategoryDto category) {
+    _preSelectedCategory = category;
+  }
+
   @override
   VendorDetailsState build(int vendorId) {
     Future.microtask(() => loadVendorData());
@@ -66,9 +72,15 @@ class VendorDetailsNotifier extends _$VendorDetailsNotifier {
     categoriesResult.when(
       success: (response) async {
         final List<CategoryDto> categories = response.result ?? [];
-        CategoryDto? initialCategory;
-        if (categories.isNotEmpty) {
+        CategoryDto? initialCategory = _preSelectedCategory;
+
+        if (initialCategory == null && categories.isNotEmpty) {
           initialCategory = categories.first;
+        } else if (initialCategory != null) {
+          initialCategory = categories.firstWhere(
+            (c) => c.id == initialCategory!.id,
+            orElse: () => initialCategory!,
+          );
         }
 
         state = state.copyWith(

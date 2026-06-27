@@ -71,6 +71,20 @@ class HomeApiService {
     }
   }
 
+  /// Fetch a single user details by ID.
+  Future<ApiResult<ApiResponse<UserDto>>> getUserById(int id) async {
+    try {
+      final response = await _dio.get('${ApiConstants.getById}/$id');
+      final apiResponse = ApiResponse<UserDto>.fromJson(
+        response.data,
+        (json) => UserDto.fromJson(json as Map<String, dynamic>),
+      );
+      return ApiResult.success(apiResponse);
+    } catch (e) {
+      return ApiResult.failure(handleError(e));
+    }
+  }
+
   /// Search/paginate products from backend.
   Future<ApiResult<ApiResponse<List<ProductDetailDto>>>> searchProducts({
     required String query,
@@ -95,6 +109,39 @@ class HomeApiService {
                 .map(
                   (e) => ProductDetailDto.fromJson(e as Map<String, dynamic>),
             )
+                .toList();
+          }
+          return [];
+        },
+      );
+      return ApiResult.success(apiResponse);
+    } catch (e) {
+      return ApiResult.failure(handleError(e));
+    }
+  }
+
+  /// Fetch popular products (all products paginated) from backend.
+  Future<ApiResult<ApiResponse<List<ProductDetailDto>>>> getPopularProducts({
+    int pageNumber = 1,
+    int pageSize = 20,
+  }) async {
+    try {
+      final response = await _dio.patch(
+        ApiConstants.productsPaginate,
+        data: {
+          'pageNumber': pageNumber,
+          'pageSize': pageSize,
+          'enablePagination': true,
+        },
+      );
+      final apiResponse = ApiResponse<List<ProductDetailDto>>.fromJson(
+        response.data,
+        (json) {
+          if (json is List) {
+            return json
+                .map(
+                  (e) => ProductDetailDto.fromJson(e as Map<String, dynamic>),
+                )
                 .toList();
           }
           return [];
@@ -181,17 +228,24 @@ class HomeApiService {
   }
 
   /// Fetch main categories.
-  Future<ApiResult<ApiResponse<List<MainCategoryDto>>>> getMainCategories() async {
+  Future<ApiResult<ApiResponse<List<MainCategoryDto>>>> getMainCategories({
+    int? role,
+  }) async {
     try {
+      final Map<String, dynamic> filters = {};
+      if (role != null) {
+        // filters['type'] = role;
+       }
       final response = await _dio.patch(
         ApiConstants.mainCategories,
         data: {
           'enablePagination': false,
+          if (filters.isNotEmpty) 'filters': filters,
         },
       );
       final apiResponse = ApiResponse<List<MainCategoryDto>>.fromJson(
         response.data,
-            (json) {
+        (json) {
           if (json is List) {
             return json.map((e) =>
                 MainCategoryDto.fromJson(e as Map<String, dynamic>)).toList();

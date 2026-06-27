@@ -3,31 +3,43 @@ import 'package:base_app/core/network/api_result.dart';
 import 'package:base_app/features/customer/orders/data/orders_api_service.dart';
 import 'package:base_app/features/customer/checkout/data/models/order_models.dart';
 import 'package:base_app/features/customer/profile/presentation/riverpod/profile_provider.dart';
+import 'package:base_app/features/customer/cart/presentation/riverpod/cart_provider.dart';
+import 'package:base_app/features/customer/home/data/models/product_detail_model.dart';
 
 part 'orders_provider.g.dart';
 
 enum OrdersStatus { initial, loading, loaded, error }
 
+enum ReorderStatus { idle, loading, success, error }
+
 class OrdersState {
   final OrdersStatus status;
   final List<OrderDto> orders;
   final String? errorMessage;
+  final ReorderStatus reorderStatus;
+  final String? reorderError;
 
   const OrdersState({
     this.status = OrdersStatus.initial,
     this.orders = const [],
     this.errorMessage,
+    this.reorderStatus = ReorderStatus.idle,
+    this.reorderError,
   });
 
   OrdersState copyWith({
     OrdersStatus? status,
     List<OrderDto>? orders,
     String? errorMessage,
+    ReorderStatus? reorderStatus,
+    String? reorderError,
   }) {
     return OrdersState(
       status: status ?? this.status,
       orders: orders ?? this.orders,
       errorMessage: errorMessage ?? this.errorMessage,
+      reorderStatus: reorderStatus ?? this.reorderStatus,
+      reorderError: reorderError ?? this.reorderError,
     );
   }
 }
@@ -36,7 +48,6 @@ class OrdersState {
 class OrdersNotifier extends _$OrdersNotifier {
   @override
   OrdersState build() {
-    // Automatically load orders on initialization
     Future.microtask(() => loadOrders());
     return const OrdersState();
   }
@@ -77,6 +88,71 @@ class OrdersNotifier extends _$OrdersNotifier {
           errorMessage: error.message,
         );
       },
+    );
+  }
+
+  /// إعادة الطلب — يجهز السلة بمنتجات الطلب القديم ويعيد true للبدء في توجيه المستخدم لصفحة السلة
+  Future<bool> reorder(OrderDto oldOrder) async {
+    state = state.copyWith(
+      reorderStatus: ReorderStatus.loading,
+      reorderError: null,
+    );
+
+    if (oldOrder.products.isEmpty) {
+      state = state.copyWith(
+        reorderStatus: ReorderStatus.error,
+        reorderError: 'لا توجد منتجات في هذا الطلب لإعادتها',
+      );
+      return false;
+    }
+
+    try {
+      final cartNotifier = ref.read(cartProvider.notifier);
+
+      // تفريغ السلة الحالية
+      cartNotifier.clearCart();
+
+      // إضافة منتجات الطلب القديم إلى السلة
+      for (final p in oldOrder.products) {
+        final product = ProductDetailDto(
+          id: p.productId,
+          name: p.productName ?? 'منتج',
+          photo: p.photo,
+          description: '',
+          price: p.price,
+          rating: 5.0,
+          isFavorite: false,
+          isAvailable: true,
+          hasDiscount: false,
+          discountPercentage: 0.0,
+          categoryId: 0,
+          createdOn: '',
+          type: oldOrder.type,
+          creatorId: oldOrder.creatorId,
+        );
+
+        cartNotifier.addItem(
+          product,
+          quantity: p.quantity,
+          vendorId: oldOrder.creatorId,
+        );
+      }
+
+      state = state.copyWith(reorderStatus: ReorderStatus.success);
+      return true;
+    } catch (e) {
+      state = state.copyWith(
+        reorderStatus: ReorderStatus.error,
+        reorderError: 'حدث خطأ أثناء إعداد السلة: $e',
+      );
+      return false;
+    }
+  }
+
+  void resetReorderStatus() {
+    state = state.copyWith(
+      reorderStatus: ReorderStatus.idle,
+      reorderError: null,
     );
   }
 }

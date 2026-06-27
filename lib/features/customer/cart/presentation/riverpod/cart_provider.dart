@@ -26,11 +26,15 @@ class CartItem {
 // ─── Cart State ────────────────────────────────────────
 class CartState {
   final List<CartItem> items;
+  final int? vendorId;
 
-  const CartState({this.items = const []});
+  const CartState({this.items = const [], this.vendorId});
 
-  CartState copyWith({List<CartItem>? items}) =>
-      CartState(items: items ?? this.items);
+  CartState copyWith({List<CartItem>? items, int? vendorId, bool clearVendorId = false}) =>
+      CartState(
+        items: items ?? this.items,
+        vendorId: clearVendorId ? null : (vendorId ?? this.vendorId),
+      );
 
   int get totalQuantity => items.fold(0, (sum, i) => sum + i.quantity);
 
@@ -49,23 +53,35 @@ class CartNotifier extends _$CartNotifier {
   @override
   CartState build() => const CartState();
 
-  void addItem(ProductDetailDto product, {int quantity = 1}) {
+  void addItem(ProductDetailDto product, {int quantity = 1, int? vendorId}) {
     final items = [...state.items];
-    if (items.isNotEmpty && items.first.product.type != product.type) {
+    final resolvedVendorId = vendorId ?? product.creatorId;
+
+    // Clear cart if product type changes or if vendor ID changes (different vendors)
+    if (items.isNotEmpty && 
+        (items.first.product.type != product.type || 
+         (state.vendorId != null && resolvedVendorId != null && state.vendorId != resolvedVendorId))) {
       items.clear();
     }
+    
     final idx = items.indexWhere((i) => i.product.id == product.id);
     if (idx != -1) {
       items[idx] = items[idx].copyWith(quantity: items[idx].quantity + quantity);
     } else {
       items.add(CartItem(product: product, quantity: quantity));
     }
-    state = state.copyWith(items: items);
+    
+    state = state.copyWith(
+      items: items,
+      vendorId: items.isEmpty ? null : (resolvedVendorId ?? state.vendorId),
+    );
   }
 
   void removeItem(int productId) {
+    final newItems = state.items.where((i) => i.product.id != productId).toList();
     state = state.copyWith(
-      items: state.items.where((i) => i.product.id != productId).toList(),
+      items: newItems,
+      clearVendorId: newItems.isEmpty,
     );
   }
 

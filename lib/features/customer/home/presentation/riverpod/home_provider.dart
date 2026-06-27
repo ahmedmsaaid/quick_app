@@ -4,6 +4,7 @@ import 'package:base_app/features/customer/home/data/models/offer_model.dart';
 import 'package:base_app/features/customer/home/data/models/category_model.dart';
 import 'package:base_app/features/customer/home/data/home_api_service.dart';
 import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
+import 'package:base_app/features/customer/home/data/models/product_detail_model.dart';
 
 part 'home_provider.g.dart';
 
@@ -14,10 +15,12 @@ class HomeState {
   final HomeStatus restaurantsStatus;
   final HomeStatus categoriesStatus;
   final HomeStatus recommendedStoresStatus;
+  final HomeStatus popularProductsStatus;
   final List<OfferDto> offers;
   final List<UserDto> featuredRestaurants;
   final List<MainCategoryDto> categories;
   final List<UserDto> recommendedStores;
+  final List<ProductDetailDto> popularProducts;
   final MainCategoryDto? selectedCategory;
   final String? errorMessage;
 
@@ -26,10 +29,12 @@ class HomeState {
     this.restaurantsStatus = HomeStatus.initial,
     this.categoriesStatus = HomeStatus.initial,
     this.recommendedStoresStatus = HomeStatus.initial,
+    this.popularProductsStatus = HomeStatus.initial,
     this.offers = const [],
     this.featuredRestaurants = const [],
     this.categories = const [],
     this.recommendedStores = const [],
+    this.popularProducts = const [],
     this.selectedCategory,
     this.errorMessage,
   });
@@ -39,10 +44,12 @@ class HomeState {
     HomeStatus? restaurantsStatus,
     HomeStatus? categoriesStatus,
     HomeStatus? recommendedStoresStatus,
+    HomeStatus? popularProductsStatus,
     List<OfferDto>? offers,
     List<UserDto>? featuredRestaurants,
     List<MainCategoryDto>? categories,
     List<UserDto>? recommendedStores,
+    List<ProductDetailDto>? popularProducts,
     MainCategoryDto? selectedCategory,
     bool clearSelectedCategory = false,
     String? errorMessage,
@@ -52,10 +59,12 @@ class HomeState {
       restaurantsStatus: restaurantsStatus ?? this.restaurantsStatus,
       categoriesStatus: categoriesStatus ?? this.categoriesStatus,
       recommendedStoresStatus: recommendedStoresStatus ?? this.recommendedStoresStatus,
+      popularProductsStatus: popularProductsStatus ?? this.popularProductsStatus,
       offers: offers ?? this.offers,
       featuredRestaurants: featuredRestaurants ?? this.featuredRestaurants,
       categories: categories ?? this.categories,
       recommendedStores: recommendedStores ?? this.recommendedStores,
+      popularProducts: popularProducts ?? this.popularProducts,
       selectedCategory: clearSelectedCategory ? null : (selectedCategory ?? this.selectedCategory),
       errorMessage: errorMessage ?? this.errorMessage,
     );
@@ -66,14 +75,43 @@ class HomeState {
 class HomeNotifier extends _$HomeNotifier {
   @override
   HomeState build() {
-    // Automatically load offers, restaurants, categories and recommended stores when provider is constructed
+    // Automatically load offers, restaurants, categories, recommended stores, and popular products when provider is constructed
     Future.microtask(() {
       loadOffers();
       loadFeaturedRestaurants();
       loadCategories();
       loadRecommendedStores();
+      loadPopularProducts();
     });
     return const HomeState();
+  }
+
+  Future<void> loadPopularProducts() async {
+    state = state.copyWith(popularProductsStatus: HomeStatus.loading);
+
+    final result = await ref.read(homeApiServiceProvider).getPopularProducts();
+
+    result.when(
+      success: (response) {
+        if (response.success && response.result != null) {
+          state = state.copyWith(
+            popularProductsStatus: HomeStatus.loaded,
+            popularProducts: response.result!,
+          );
+        } else {
+          state = state.copyWith(
+            popularProductsStatus: HomeStatus.error,
+            errorMessage: response.message ?? 'فشل تحميل المنتجات الأكثر طلباً',
+          );
+        }
+      },
+      failure: (error) {
+        state = state.copyWith(
+          popularProductsStatus: HomeStatus.error,
+          errorMessage: error.message,
+        );
+      },
+    );
   }
 
   Future<void> loadOffers() async {

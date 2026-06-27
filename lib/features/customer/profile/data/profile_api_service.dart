@@ -1,6 +1,7 @@
 // lib/features/profile/data/profile_api_service.dart
 
 import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:base_app/core/network/dio_factory.dart';
 import 'package:base_app/core/network/api_constants.dart';
@@ -14,6 +15,49 @@ part 'profile_api_service.g.dart';
 ProfileApiService profileApiService(Ref ref) {
   final dio = ref.watch(dioProvider);
   return ProfileApiService(dio);
+}
+
+/// Model for the application settings (deliveryFee, orderFee, etc.)
+class UserSettingDto {
+  final int id;
+  final double orderFee;
+  final double orderMinFee;
+  final double orderMaxFee;
+  final double deliveryFee;
+
+  const UserSettingDto({
+    required this.id,
+    required this.orderFee,
+    required this.orderMinFee,
+    required this.orderMaxFee,
+    required this.deliveryFee,
+  });
+
+  factory UserSettingDto.fromJson(Map<String, dynamic> json) => UserSettingDto(
+    id: json['id'] is int ? json['id'] as int : int.tryParse(json['id']?.toString() ?? '0') ?? 0,
+    orderFee: (json['orderFee'] as num?)?.toDouble() ?? 0.0,
+    orderMinFee: (json['orderMinFee'] as num?)?.toDouble() ?? 0.0,
+    orderMaxFee: (json['orderMaxFee'] as num?)?.toDouble() ?? 0.0,
+    deliveryFee: (json['deliveryFee'] as num?)?.toDouble() ?? 0.0,
+  );
+}
+
+/// Cached provider — fetched once and shared across screens.
+final settingsProvider = FutureProvider<UserSettingDto?>((ref) async {
+  final service = ref.read(profileApiServiceProvider);
+  final result = await service.getSettings();
+  return result.when(
+    success: (response) => response.result,
+    failure: (_) => null,
+  );
+});
+
+/// Calculate the service/order fee based on backend logic:
+///   raw = subtotal × orderFee% ÷ 100
+///   final = clamp(raw, orderMinFee, orderMaxFee)
+double calcOrderFee(double subtotal, UserSettingDto settings) {
+  final raw = subtotal * settings.orderFee / 100;
+  return raw.clamp(settings.orderMinFee, settings.orderMaxFee);
 }
 
 class ProfileApiService {
@@ -214,6 +258,37 @@ class ProfileApiService {
       final apiResponse = ApiResponse<void>.fromJson(
         response.data,
         (_) {},
+      );
+      return ApiResult.success(apiResponse);
+    } catch (e) {
+      return ApiResult.failure(handleError(e));
+    }
+  }
+
+  /// Get a single location by ID.
+  Future<ApiResult<ApiResponse<LocationDto>>> getLocationById(int id) async {
+    try {
+      final response = await _dio.patch(
+        '${ApiConstants.locations}/$id',
+        data: {},
+      );
+      final apiResponse = ApiResponse<LocationDto>.fromJson(
+        response.data,
+        (json) => LocationDto.fromJson(json as Map<String, dynamic>),
+      );
+      return ApiResult.success(apiResponse);
+    } catch (e) {
+      return ApiResult.failure(handleError(e));
+    }
+  }
+
+  /// Fetch application settings (deliveryFee, orderFee, etc.)
+  Future<ApiResult<ApiResponse<UserSettingDto>>> getSettings() async {
+    try {
+      final response = await _dio.get(ApiConstants.settings);
+      final apiResponse = ApiResponse<UserSettingDto>.fromJson(
+        response.data,
+        (json) => UserSettingDto.fromJson(json as Map<String, dynamic>),
       );
       return ApiResult.success(apiResponse);
     } catch (e) {

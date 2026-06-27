@@ -32,7 +32,7 @@ class OrdersApiService {
           'pageNumber': pageNumber,
           'pageSize': pageSize,
           'enablePagination': true,
-          "includesPath": ["User"],
+          "includesPath": ["User", "Creator", "OrderProducts.Product"],
           "filters": {"userId": userId},
         },
       );

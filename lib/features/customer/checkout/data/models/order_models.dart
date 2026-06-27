@@ -29,6 +29,7 @@ class CreateOrderRequest {
   final int type; // 0 for Restaurant, 1 for Market
   final int userId;
   final int? offerId;
+  final int? userLocationId;
   final List<CreateOrderProductRequest>? products;
 
   CreateOrderRequest({
@@ -42,6 +43,7 @@ class CreateOrderRequest {
     required this.type,
     required this.userId,
     this.offerId,
+    this.userLocationId,
     this.products,
   });
 
@@ -59,6 +61,9 @@ class CreateOrderRequest {
     };
     if (offerId != null) {
       data['offerId'] = offerId;
+    }
+    if (userLocationId != null) {
+      data['userLocationId'] = userLocationId;
     }
     if (products != null) {
       data['products'] = products!.map((p) => p.toJson()).toList();
@@ -115,7 +120,10 @@ class OrderDto {
   final UserDto? user;
   final UserDto? creator;
   final UserDto? updator;
+  final int? updatorId;
   final String? rowVersion;
+  final int? userLocationId;
+  final LocationDto? userLocation;
 
   OrderDto({
     required this.id,
@@ -136,7 +144,10 @@ class OrderDto {
     this.user,
     this.creator,
     this.updator,
+    this.updatorId,
     this.rowVersion,
+    this.userLocationId,
+    this.userLocation,
   });
 
   factory OrderDto.fromJson(Map<String, dynamic> json) {
@@ -164,7 +175,14 @@ class OrderDto {
       user: json['user'] != null ? UserDto.fromJson(json['user'] as Map<String, dynamic>) : null,
       creator: json['creator'] != null ? UserDto.fromJson(json['creator'] as Map<String, dynamic>) : null,
       updator: json['updator'] != null ? UserDto.fromJson(json['updator'] as Map<String, dynamic>) : null,
+      updatorId: json['updatorId'] as int?,
       rowVersion: json['rowVersion']?.toString(),
+      userLocationId: json['userLocationId'] as int?,
+      userLocation: json['userLocation'] != null
+          ? LocationDto.fromJson(json['userLocation'] as Map<String, dynamic>)
+          : (json['userLocacion'] != null
+              ? LocationDto.fromJson(json['userLocacion'] as Map<String, dynamic>)
+              : null),
     );
   }
 }

@@ -117,8 +117,20 @@ abstract class AppRouter {
         );
       case AppRoutes.providerStoreScreen:
       case AppRoutes.providerProductDetailsScreen:
-        final UserDto vendor = settings.arguments as UserDto;
-        return _buildAnimatedRoute(VendorDetailsScreen(vendor: vendor), settings);
+        final UserDto vendor;
+        final CategoryDto? initialCategory;
+        if (settings.arguments is Map<String, dynamic>) {
+          final Map<String, dynamic> args = settings.arguments as Map<String, dynamic>;
+          vendor = args['vendor'] as UserDto;
+          initialCategory = args['initialCategory'] as CategoryDto?;
+        } else {
+          vendor = settings.arguments as UserDto;
+          initialCategory = null;
+        }
+        return _buildAnimatedRoute(
+          VendorDetailsScreen(vendor: vendor, initialCategory: initialCategory),
+          settings,
+        );
       case AppRoutes.chatDetailsScreen:
         final String name = (settings.arguments as String?) ?? AppStrings.technicalSupportTitle;
         return _buildAnimatedRoute(ChatDetailsScreen(name: name), settings);
@@ -172,8 +184,22 @@ abstract class AppRouter {
         final UserDto? vendor = settings.arguments as UserDto?;
         return _buildAnimatedRoute(RateOrderScreen(vendor: vendor), settings);
       case AppRoutes.storeProductDetailsScreen:
-        final ProductDetailDto product = settings.arguments as ProductDetailDto;
-        return _buildAnimatedRoute(StoreProductDetailsScreen(product: product), settings);
+        final args = settings.arguments;
+        if (args is ProductDetailDto) {
+          return _buildAnimatedRoute(StoreProductDetailsScreen(product: args), settings);
+        } else if (args is Map<String, dynamic>) {
+          return _buildAnimatedRoute(
+            StoreProductDetailsScreen(
+              product: args['product'] as ProductDetailDto,
+              vendorId: args['vendorId'] as int?,
+            ),
+            settings,
+          );
+        }
+        return _buildAnimatedRoute(
+          const Scaffold(body: Center(child: Text('Invalid Arguments'))),
+          settings,
+        );
       case AppRoutes.products:
         final CategoryDto category = settings.arguments as CategoryDto;
         return _buildAnimatedRoute(CategoryProductsScreen(category: category), settings);

@@ -155,7 +155,10 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
     return InkWell(
       onTap: () => context.pushNamed(
         AppRoutes.storeProductDetailsScreen,
-        arguments: product,
+        arguments: {
+          'product': product,
+          'vendorId': widget.category.creatorId,
+        },
       ),
       borderRadius: BorderRadius.circular(15.r),
       child: Container(

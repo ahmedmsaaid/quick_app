@@ -19,22 +19,73 @@ import 'package:base_app/features/customer/cart/presentation/riverpod/cart_provi
 import 'package:base_app/features/customer/favorites/presentation/riverpod/favorites_provider.dart';
 import 'package:base_app/features/customer/home/data/rating_api_service.dart';
 import 'package:base_app/features/customer/home/data/models/rating_models.dart';
+import 'package:base_app/features/customer/home/data/home_api_service.dart';
 
 class VendorDetailsScreen extends ConsumerStatefulWidget {
-  const VendorDetailsScreen({super.key, required this.vendor});
+  const VendorDetailsScreen({super.key, required this.vendor, this.initialCategory});
 
   final UserDto vendor;
+  final CategoryDto? initialCategory;
 
   @override
   ConsumerState<VendorDetailsScreen> createState() => _VendorDetailsScreenState();
 }
 
 class _VendorDetailsScreenState extends ConsumerState<VendorDetailsScreen> {
-  CategoryDto? _selectedCategory;
+  UserDto? _vendor;
+  bool _isLoadingVendor = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _vendor = widget.vendor;
+    
+    // If the photo/avatar is missing or empty, load it from backend
+    if (_vendor!.photo == null || _vendor!.photo!.isEmpty) {
+      _loadVendorDetails();
+    }
+
+    if (widget.initialCategory != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(vendorDetailsProvider(widget.vendor.id).notifier)
+            .setPreSelectedCategory(widget.initialCategory!);
+      });
+    }
+  }
+
+  Future<void> _loadVendorDetails() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoadingVendor = true;
+    });
+
+    final result = await ref.read(homeApiServiceProvider).getUserById(widget.vendor.id);
+
+    if (!mounted) return;
+    result.when(
+      success: (response) {
+        if (response.success && response.result != null) {
+          setState(() {
+            _vendor = response.result;
+            _isLoadingVendor = false;
+          });
+        } else {
+          setState(() {
+            _isLoadingVendor = false;
+          });
+        }
+      },
+      failure: (error) {
+        setState(() {
+          _isLoadingVendor = false;
+        });
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final vendor = widget.vendor;
+    final vendor = _vendor ?? widget.vendor;
     final bool isMarket = vendor.role == 1;
     final state = ref.watch(vendorDetailsProvider(vendor.id));
     final notifier = ref.read(vendorDetailsProvider(vendor.id).notifier);
@@ -150,20 +201,23 @@ class _VendorDetailsScreenState extends ConsumerState<VendorDetailsScreen> {
           ),
 
           // ─── Categories filter ───
-          if (isMarket)
-            if (_selectedCategory != null)
-              _buildSelectedCategoryHeader(context, _selectedCategory!, colors)
+          if (state.categories.isNotEmpty || state.categoriesStatus == VendorDetailsStatus.loading)
+            if (isMarket)
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _QuickMarketCategoriesHeaderDelegate(
+                  child: _QuickMarketCategoriesFilter(state: state, notifier: notifier, colors: colors),
+                ),
+              )
             else
-              const SliverToBoxAdapter(child: SizedBox.shrink())
-          else
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: _CategoriesHeaderDelegate(
-                child: _CategoriesFilter(state: state, notifier: notifier, colors: colors),
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _CategoriesHeaderDelegate(
+                  child: _CategoriesFilter(state: state, notifier: notifier, colors: colors),
+                ),
               ),
-            ),
 
-          if (!isMarket || _selectedCategory == null) ...[
+          if (true) ...[
             SliverToBoxAdapter(
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
@@ -255,59 +309,38 @@ class _VendorDetailsScreenState extends ConsumerState<VendorDetailsScreen> {
 
           // ─── Content body (Categories or Products) ───
           if (isMarket) ...[
-            if (_selectedCategory == null) ...[
-              if (state.categoriesStatus == VendorDetailsStatus.loading)
-                SliverPadding(
-                  padding: EdgeInsets.symmetric(horizontal: 16.w),
-                  sliver: _marketCategoriesShimmerGrid(colors),
-                )
-              else if (state.categoriesStatus == VendorDetailsStatus.error)
-                SliverFillRemaining(
-                  child: _ErrorWidget(
-                    message: state.errorMessage,
-                    onRetry: notifier.loadVendorData,
+            if (state.productsStatus == VendorDetailsStatus.loading)
+              SliverPadding(
+                padding: EdgeInsets.symmetric(horizontal: 16.w),
+                sliver: _marketShimmerGrid(),
+              )
+            else if (state.productsStatus == VendorDetailsStatus.error)
+              SliverFillRemaining(
+                child: _ErrorWidget(
+                  message: state.errorMessage,
+                  onRetry: () => notifier.loadProducts(categoryId: state.selectedCategory?.id),
+                ),
+              )
+            else if (state.products.isEmpty)
+              SliverFillRemaining(
+                child: _EmptyProducts(colors: colors),
+              )
+            else
+              SliverPadding(
+                padding: EdgeInsets.symmetric(horizontal: 16.w),
+                sliver: SliverGrid(
+                  delegate: SliverChildBuilderDelegate(
+                    (ctx, i) => _MarketProductCard(product: state.products[i], colors: colors, ref: ref, vendorId: vendor.id),
+                    childCount: state.products.length,
                   ),
-                )
-              else if (state.categories.isEmpty)
-                SliverFillRemaining(
-                  child: _EmptyCategories(colors: colors),
-                )
-              else
-                _buildMarketCategoriesGrid(context, state.categories, colors, notifier)
-            ] else ...[
-              if (state.productsStatus == VendorDetailsStatus.loading)
-                SliverPadding(
-                  padding: EdgeInsets.symmetric(horizontal: 16.w),
-                  sliver: _marketShimmerGrid(),
-                )
-              else if (state.productsStatus == VendorDetailsStatus.error)
-                SliverFillRemaining(
-                  child: _ErrorWidget(
-                    message: state.errorMessage,
-                    onRetry: () => notifier.loadProducts(categoryId: _selectedCategory!.id),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.68,
+                    crossAxisSpacing: 12.w,
+                    mainAxisSpacing: 12.h,
                   ),
-                )
-              else if (state.products.isEmpty)
-                SliverFillRemaining(
-                  child: _EmptyProducts(colors: colors),
-                )
-              else
-                SliverPadding(
-                  padding: EdgeInsets.symmetric(horizontal: 16.w),
-                  sliver: SliverGrid(
-                    delegate: SliverChildBuilderDelegate(
-                      (ctx, i) => _MarketProductCard(product: state.products[i], colors: colors, ref: ref),
-                      childCount: state.products.length,
-                    ),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      childAspectRatio: 0.68,
-                      crossAxisSpacing: 12.w,
-                      mainAxisSpacing: 12.h,
-                    ),
-                  ),
-                )
-            ]
+                ),
+              )
           ] else ...[
             if (state.productsStatus == VendorDetailsStatus.loading)
               SliverPadding(
@@ -332,7 +365,7 @@ class _VendorDetailsScreenState extends ConsumerState<VendorDetailsScreen> {
                   delegate: SliverChildBuilderDelegate(
                     (ctx, i) => Padding(
                       padding: EdgeInsets.only(bottom: 12.h),
-                      child: _RestaurantProductCard(product: state.products[i], colors: colors, ref: ref),
+                      child: _RestaurantProductCard(product: state.products[i], colors: colors, ref: ref, vendorId: vendor.id),
                     ),
                     childCount: state.products.length,
                   ),
@@ -347,155 +380,7 @@ class _VendorDetailsScreenState extends ConsumerState<VendorDetailsScreen> {
     );
   }
 
-  Widget _buildSelectedCategoryHeader(BuildContext context, CategoryDto category, AppColors colors) {
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-        child: Row(
-          children: [
-            InkWell(
-              onTap: () {
-                setState(() {
-                  _selectedCategory = null;
-                });
-              },
-              borderRadius: BorderRadius.circular(30.r),
-              child: Container(
-                padding: EdgeInsets.all(8.r),
-                decoration: BoxDecoration(
-                  color: colors.surface,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: colors.border),
-                  boxShadow: [
-                    BoxShadow(
-                      color: colors.shadow.withValues(alpha: 0.05),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Icon(
-                  Icons.arrow_back_rounded,
-                  color: colors.primary,
-                  size: 20.sp,
-                ),
-              ),
-            ),
-            12.horizontalSpace,
-            Expanded(
-              child: Text(
-                category.name ?? '',
-                style: AppTextStyles.text18w700(color: colors.textPrimary),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
-  Widget _buildMarketCategoriesGrid(
-    BuildContext context,
-    List<CategoryDto> categories,
-    AppColors colors,
-    VendorDetailsNotifier notifier,
-  ) {
-    return SliverPadding(
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-      sliver: SliverGrid(
-        delegate: SliverChildBuilderDelegate(
-          (ctx, i) {
-            final category = categories[i];
-            final String imageUrl = _imageUrl(category.photo);
-            return Material(
-              color: colors.surface,
-              borderRadius: BorderRadius.circular(16.r),
-              elevation: 0,
-              child: InkWell(
-                onTap: () {
-                  setState(() {
-                    _selectedCategory = category;
-                  });
-                  notifier.selectCategory(category);
-                },
-                borderRadius: BorderRadius.circular(16.r),
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16.r),
-                    border: Border.all(color: colors.border),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Photo
-                      Expanded(
-                        flex: 6,
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.vertical(top: Radius.circular(15.r)),
-                          child: imageUrl.isNotEmpty
-                              ? CachedNetworkImage(
-                                  imageUrl: imageUrl,
-                                  fit: BoxFit.cover,
-                                  placeholder: (_, __) => Container(color: colors.shimmerBase),
-                                  errorWidget: (_, __, ___) => _imgFallback(colors, double.infinity, double.infinity, Icons.category_rounded),
-                                )
-                              : _imgFallback(colors, double.infinity, double.infinity, Icons.category_rounded),
-                        ),
-                      ),
-                      // Name
-                      Expanded(
-                        flex: 4,
-                        child: Container(
-                          alignment: Alignment.center,
-                          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                          child: Text(
-                            category.name ?? '',
-                            style: AppTextStyles.text12w700(color: colors.textPrimary),
-                            textAlign: TextAlign.center,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-          childCount: categories.length,
-        ),
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          childAspectRatio: 1.1,
-          crossAxisSpacing: 16.w,
-          mainAxisSpacing: 16.h,
-        ),
-      ),
-    );
-  }
-
-  SliverGrid _marketCategoriesShimmerGrid(AppColors colors) => SliverGrid(
-    delegate: SliverChildBuilderDelegate(
-      (context, _) => Shimmer.fromColors(
-        baseColor: colors.shimmerBase,
-        highlightColor: colors.shimmerHighlight,
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16.r),
-          ),
-        ),
-      ),
-      childCount: 6,
-    ),
-    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-      crossAxisCount: 2,
-      childAspectRatio: 1.1,
-      crossAxisSpacing: 16.w,
-      mainAxisSpacing: 16.h,
-    ),
-  );
 
   Widget _placeholderBg(AppColors colors, bool isMarket) => Container(
     color: colors.primary,
@@ -642,11 +527,12 @@ class _CategoriesFilter extends StatelessWidget {
 
 // ── Restaurant product card ───────────────────────────────────
 class _RestaurantProductCard extends ConsumerWidget {
-  const _RestaurantProductCard({required this.product, required this.colors, required this.ref});
+  const _RestaurantProductCard({required this.product, required this.colors, required this.ref, required this.vendorId});
 
   final ProductDetailDto product;
   final AppColors colors;
   final WidgetRef ref;
+  final int vendorId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -661,7 +547,13 @@ class _RestaurantProductCard extends ConsumerWidget {
       elevation: 0,
       child: InkWell(
         borderRadius: BorderRadius.circular(16.r),
-        onTap: () => context.pushNamed(AppRoutes.storeProductDetailsScreen, arguments: product),
+        onTap: () => context.pushNamed(
+          AppRoutes.storeProductDetailsScreen,
+          arguments: {
+            'product': product,
+            'vendorId': vendorId,
+          },
+        ),
         child: Container(
           height: 125.h,
           decoration: BoxDecoration(
@@ -759,7 +651,7 @@ class _RestaurantProductCard extends ConsumerWidget {
                           ),
                           _AddBtn(
                             onTap: () {
-                              ref.read(cartProvider.notifier).addItem(product);
+                              ref.read(cartProvider.notifier).addItem(product, vendorId: vendorId);
                               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                                 content: Text(AppStrings.addedToCartSuccessMsg),
                                 backgroundColor: colors.primary,
@@ -784,11 +676,12 @@ class _RestaurantProductCard extends ConsumerWidget {
 
 // ── Market product card ───────────────────────────────────────
 class _MarketProductCard extends ConsumerWidget {
-  const _MarketProductCard({required this.product, required this.colors, required this.ref});
+  const _MarketProductCard({required this.product, required this.colors, required this.ref, required this.vendorId});
 
   final ProductDetailDto product;
   final AppColors colors;
   final WidgetRef ref;
+  final int vendorId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -798,16 +691,28 @@ class _MarketProductCard extends ConsumerWidget {
         : product.price;
 
     return Material(
-      color: colors.surface,
-      borderRadius: BorderRadius.circular(16.r),
-      elevation: 0,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16.r),
-        onTap: () => context.pushNamed(AppRoutes.storeProductDetailsScreen, arguments: product),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16.r),
-            border: Border.all(color: colors.border),
+      color: Colors.transparent,
+      child: Container(
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(20.r),
+          border: Border.all(color: colors.border.withValues(alpha: 0.6)),
+          boxShadow: [
+            BoxShadow(
+              color: colors.shadow.withValues(alpha: 0.03),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20.r),
+          onTap: () => context.pushNamed(
+            AppRoutes.storeProductDetailsScreen,
+            arguments: {
+              'product': product,
+              'vendorId': vendorId,
+            },
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -816,7 +721,7 @@ class _MarketProductCard extends ConsumerWidget {
               Expanded(
                 flex: 6,
                 child: ClipRRect(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(15.r)),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
@@ -838,14 +743,26 @@ class _MarketProductCard extends ConsumerWidget {
                         Positioned(
                           top: 8.r, right: 8.r,
                           child: Container(
-                            padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 3.h),
+                            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
                             decoration: BoxDecoration(
                               color: colors.error,
-                              borderRadius: BorderRadius.circular(8.r),
+                              borderRadius: BorderRadius.circular(10.r),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: colors.error.withValues(alpha: 0.25),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
                             ),
                             child: Text(
                               '-${product.discountPercentage.toStringAsFixed(0)}%',
-                              style: AppTextStyles.text10w500(color: Colors.white),
+                              style: TextStyle(
+                                fontSize: 10.sp,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                fontFamily: 'Cairo',
+                              ),
                             ),
                           ),
                         ),
@@ -855,18 +772,42 @@ class _MarketProductCard extends ConsumerWidget {
               ),
               // Info
               Expanded(
-                flex: 4,
+                flex: 5,
                 child: Padding(
-                  padding: EdgeInsets.fromLTRB(10.w, 8.h, 10.w, 8.h),
+                  padding: EdgeInsets.all(12.r),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        product.name ?? '',
-                        style: AppTextStyles.text13w700(color: colors.textPrimary),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            product.name ?? '',
+                            style: TextStyle(
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.bold,
+                              color: colors.textPrimary,
+                              fontFamily: 'Cairo',
+                              height: 1.3,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (product.hasDiscount) ...[
+                            4.verticalSpace,
+                            Text(
+                              '${product.price.toStringAsFixed(0)} ${AppStrings.currency}',
+                              style: TextStyle(
+                                fontSize: 10.sp,
+                                fontWeight: FontWeight.w500,
+                                color: colors.textHint,
+                                decoration: TextDecoration.lineThrough,
+                                fontFamily: 'Cairo',
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -874,21 +815,58 @@ class _MarketProductCard extends ConsumerWidget {
                           Flexible(
                             child: Text(
                               '${price.toStringAsFixed(0)} ${AppStrings.currency}',
-                              style: AppTextStyles.text13w700(color: colors.primary),
+                              style: TextStyle(
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.w900,
+                                color: colors.primary,
+                                fontFamily: 'Cairo',
+                              ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          _AddBtn(
-                            size: 28,
+                          // Premium Pill Add Button
+                          GestureDetector(
                             onTap: () {
-                              ref.read(cartProvider.notifier).addItem(product);
+                              ref.read(cartProvider.notifier).addItem(product, vendorId: vendorId);
                               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                content: Text(AppStrings.addedToCartSuccessMsg),
+                                content: Text(
+                                  AppStrings.addedToCartSuccessMsg,
+                                  style: const TextStyle(fontFamily: 'Cairo'),
+                                ),
                                 backgroundColor: colors.primary,
                                 duration: const Duration(seconds: 1),
                               ));
                             },
-                            colors: colors,
+                            child: Container(
+                              padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+                              decoration: BoxDecoration(
+                                gradient: AppColors.gradient,
+                                borderRadius: BorderRadius.circular(12.r),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: colors.primary.withValues(alpha: 0.25),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.add, color: Colors.white, size: 12.sp),
+                                  2.horizontalSpace,
+                                  Text(
+                                    'أضف',
+                                    style: TextStyle(
+                                      fontSize: 10.sp,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                      fontFamily: 'Cairo',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -997,25 +975,6 @@ class _EmptyProducts extends StatelessWidget {
           Icon(Icons.inventory_2_outlined, size: 56.sp, color: colors.textHint),
           12.verticalSpace,
           Text('لا توجد منتجات في هذه الفئة', style: AppTextStyles.text14w600(color: colors.textSecondary)),
-        ],
-      ),
-    );
-  }
-}
-
-class _EmptyCategories extends StatelessWidget {
-  const _EmptyCategories({required this.colors});
-  final AppColors colors;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.category_outlined, size: 56.sp, color: colors.textHint),
-          12.verticalSpace,
-          Text('لا توجد أقسام في هذا المتجر', style: AppTextStyles.text14w600(color: colors.textSecondary)),
         ],
       ),
     );
@@ -1644,3 +1603,161 @@ class _VendorRatingsListBottomSheetState extends ConsumerState<_VendorRatingsLis
     );
   }
 }
+
+// ── Quick Market categories pinned header delegate ────────────────────────────
+class _QuickMarketCategoriesHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
+  _QuickMarketCategoriesHeaderDelegate({required this.child});
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Material(
+      elevation: overlapsContent ? 3 : 0,
+      color: AppColors(context).surface,
+      child: child,
+    );
+  }
+
+  @override double get minExtent => 102.h;
+  @override double get maxExtent => 102.h;
+  @override bool shouldRebuild(covariant _QuickMarketCategoriesHeaderDelegate old) => old.child != child;
+}
+
+// ── Quick Market custom category selector ─────────────────────────────────────
+class _QuickMarketCategoriesFilter extends StatelessWidget {
+  const _QuickMarketCategoriesFilter({required this.state, required this.notifier, required this.colors});
+
+  final VendorDetailsState state;
+  final VendorDetailsNotifier notifier;
+  final AppColors colors;
+
+  String _imageUrl(String? path) {
+    if (path == null || path.isEmpty) return '';
+    if (path.startsWith('http')) return path;
+    return '${ApiConstants.streamUrl}$path';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (state.categoriesStatus == VendorDetailsStatus.loading) {
+      return SizedBox(
+        height: 102.h,
+        child: ListView.separated(
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+          scrollDirection: Axis.horizontal,
+          itemCount: 5,
+          separatorBuilder: (_, __) => 15.horizontalSpace,
+          itemBuilder: (_, __) => Shimmer.fromColors(
+            baseColor: colors.shimmerBase,
+            highlightColor: colors.shimmerHighlight,
+            child: Column(
+              children: [
+                Container(
+                  width: 50.r,
+                  height: 50.r,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                8.verticalSpace,
+                Container(
+                  width: 60.w,
+                  height: 10.h,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(4.r),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (state.categories.isEmpty) return const SizedBox(height: 110.0);
+
+    return SizedBox(
+      height: 102.h,
+      child: ListView.separated(
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+        scrollDirection: Axis.horizontal,
+        itemCount: state.categories.length,
+        separatorBuilder: (_, __) => 12.horizontalSpace,
+        itemBuilder: (_, i) {
+          final CategoryDto cat = state.categories[i];
+          final bool selected = state.selectedCategory?.id == cat.id;
+          final String imageUrl = _imageUrl(cat.photo);
+
+          return GestureDetector(
+            onTap: () => notifier.selectCategory(cat),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOut,
+              width: 80.w,
+              margin: EdgeInsets.symmetric(vertical: 4.h),
+              decoration: BoxDecoration(
+                color: selected ? colors.primary.withValues(alpha: 0.08) : colors.surface,
+                borderRadius: BorderRadius.circular(16.r),
+                border: Border.all(
+                  color: selected ? colors.primary : colors.border.withValues(alpha: 0.6),
+                  width: selected ? 2 : 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: selected
+                        ? colors.primary.withValues(alpha: 0.12)
+                        : colors.shadow.withValues(alpha: 0.02),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 38.r,
+                    height: 38.r,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: selected
+                          ? colors.primary.withValues(alpha: 0.1)
+                          : colors.containerBackground,
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(20.r),
+                      child: imageUrl.isNotEmpty
+                          ? CachedNetworkImage(
+                              imageUrl: imageUrl,
+                              fit: BoxFit.cover,
+                              placeholder: (_, __) => Container(color: colors.shimmerBase),
+                              errorWidget: (_, __, ___) => Icon(Icons.category_rounded, size: 16.sp, color: colors.textHint),
+                            )
+                          : Icon(Icons.category_rounded, size: 16.sp, color: colors.textHint),
+                    ),
+                  ),
+                  6.verticalSpace,
+                  Text(
+                    cat.name ?? '',
+                    style: TextStyle(
+                      fontSize: 10.sp,
+                      fontWeight: selected ? FontWeight.bold : FontWeight.w600,
+                      color: selected ? colors.primary : colors.textSecondary,
+                      fontFamily: 'Cairo',
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+

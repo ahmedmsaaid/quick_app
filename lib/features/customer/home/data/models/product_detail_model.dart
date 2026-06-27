@@ -13,6 +13,7 @@ class ProductDetailDto {
   final String createdOn;
   final String? updatedOn;
   final int type; // 0 for Restaurant, 1 for Market
+  final int? creatorId;
 
   ProductDetailDto({
     required this.id,
@@ -29,6 +30,7 @@ class ProductDetailDto {
     required this.createdOn,
     this.updatedOn,
     required this.type,
+    this.creatorId,
   });
 
   factory ProductDetailDto.fromJson(Map<String, dynamic> json) {
@@ -47,6 +49,7 @@ class ProductDetailDto {
       createdOn: json['createdOn']?.toString() ?? '',
       updatedOn: json['updatedOn']?.toString(),
       type: json['type'] is int ? json['type'] as int : 0,
+      creatorId: json['creatorId'] is int ? json['creatorId'] as int : int.tryParse(json['creatorId']?.toString() ?? ''),
     );
   }
 
@@ -65,5 +68,6 @@ class ProductDetailDto {
     'createdOn': createdOn,
     'updatedOn': updatedOn,
     'type': type,
+    'creatorId': creatorId,
   };
 }

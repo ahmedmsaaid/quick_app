@@ -107,229 +107,164 @@ class HomeSpeedHeader extends ConsumerWidget {
           ),
 
           // Header Content
+          // Header Content
           Padding(
             padding: EdgeInsets.fromLTRB(
               20.w,
               MediaQuery.of(context).padding.top + 8.h,
               20.w,
-              18.h,
+              14.h,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Top Row: Avatar, Logo, Actions
+                // Top Row: Location (left), Logo (center), Profile (right)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // Profile Avatar
+                    // Left Location Details
                     GestureDetector(
-                      onTap: () => context.pushNamed(AppRoutes.personalInfo),
-                      child: Container(
-                        width: 38.w,
-                        height: 38.w,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.6),
-                            width: 1.5,
-                          ),
-                        ),
-                        child: ClipOval(
-                          child: (user?.photo != null && user!.photo!.isNotEmpty)
-                              ? CachedNetworkImage(
-                                  imageUrl: user.photo!.startsWith('http')
-                                      ? user.photo!
-                                      : '${ApiConstants.streamUrl}${user.photo}',
-                                  fit: BoxFit.cover,
-                                  placeholder: (_, __) =>
-                                      Container(color: colors.shimmerBase),
-                                  errorWidget: (_, __, ___) => Icon(
-                                    Icons.person,
+                      onTap: () => _showLocationSheet(context),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.location_on_rounded,
+                                color: colors.secondary,
+                                size: 12.sp,
+                              ),
+                              3.horizontalSpace,
+                              Container(
+                                constraints: BoxConstraints(maxWidth: 100.w),
+                                child: Text(
+                                  addressName,
+                                  style: TextStyle(
+                                    fontSize: 12.sp,
+                                    fontWeight: FontWeight.bold,
                                     color: Colors.white,
-                                    size: 18.sp,
+                                    fontFamily: 'Cairo',
                                   ),
-                                )
-                              : Icon(
-                                  Icons.person,
-                                  color: Colors.white,
-                                  size: 18.sp,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                        ),
+                              ),
+                            ],
+                          ),
+                          3.verticalSpace,
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 8.w, vertical: 3.h),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(10.r),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.25),
+                                width: 0.8,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'تغيير العنوان',
+                                  style: TextStyle(
+                                    fontSize: 9.sp,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                    fontFamily: 'Cairo',
+                                  ),
+                                ),
+                                2.horizontalSpace,
+                                Icon(
+                                  Icons.keyboard_arrow_down_rounded,
+                                  color: Colors.white,
+                                  size: 10.sp,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
 
-                    // Centered Brand Logo
+                    // Center Logo
                     Image.asset(
-                      'assets/image/home_logo.png',
-                      height: 42.h,
+                      'assets/image/quick_panner.png',
+                      height: 60.h,
                       fit: BoxFit.contain,
                       errorBuilder: (context, error, stackTrace) => Image.asset(
-                        'assets/image/logo.png',
-                        height: 32.h,
+                        'assets/image/quick_panner.png',
+                        height: 60.h,
                         fit: BoxFit.contain,
                         errorBuilder: (context, error, stackTrace) =>
                             const SizedBox.shrink(),
                       ),
                     ),
 
-                    // Actions Right: Notifications + Settings
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          icon: Icon(
-                            Icons.notifications_none_rounded,
-                            color: Colors.white,
-                            size: 20.sp,
-                          ),
-                          onPressed: () =>
-                              context.pushNamed(AppRoutes.notifications),
-                        ),
-                        10.horizontalSpace,
-                        IconButton(
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          icon: Icon(
-                            Icons.settings_outlined,
-                            color: Colors.white,
-                            size: 20.sp,
-                          ),
-                          onPressed: () =>
-                              context.pushNamed(AppRoutes.settings),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                10.verticalSpace,
-
-                // Location Selector
-                GestureDetector(
-                  onTap: () => _showLocationSheet(context),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.location_on_rounded,
-                        color: colors.secondary, // Orange color to pop
-                        size: 14.sp,
-                      ),
-                      4.horizontalSpace,
-                      Container(
-                        constraints: BoxConstraints(maxWidth: 200.w),
-                        child: Text(
-                          addressName,
-                          style: TextStyle(
-                            fontSize: 11.sp,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white.withValues(alpha: 0.9),
-                            fontFamily: 'Cairo',
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      2.horizontalSpace,
-                      Icon(
-                        Icons.keyboard_arrow_down_rounded,
-                        color: Colors.white.withValues(alpha: 0.9),
-                        size: 14.sp,
-                      ),
-                    ],
-                  ),
-                ),
-                10.verticalSpace,
-
-                // Speed Badge + Titles
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          AppStrings.food,
-                          style: TextStyle(
-                            fontSize: 18.sp,
-                            fontWeight: FontWeight.w300,
-                            color: Colors.white.withValues(alpha: 0.85),
-                            fontFamily: 'Cairo',
+                    // Right Profile Avatar
+                    GestureDetector(
+                      onTap: () => context.pushNamed(AppRoutes.personalInfo),
+                      child: Container(
+                        width: 36.w,
+                        height: 36.w,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withValues(alpha: 0.15),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.4),
+                            width: 1.2,
                           ),
                         ),
-                        Text(
-                          AppStrings.deliciousAndFast,
-                          style: TextStyle(
-                            fontSize: 25.sp,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.white,
-                            fontFamily: 'Cairo',
-                            height: 1.1,
-                          ),
+                        child: ClipOval(
+                          child: (user?.photo != null &&
+                                  user!.photo!.isNotEmpty)
+                              ? CachedNetworkImage(
+                                  imageUrl: user.photo!.startsWith('http')
+                                      ? user.photo!
+                                      : '${ApiConstants.streamUrl}${user.photo}',
+                                  fit: BoxFit.cover,
+                                  placeholder: (_, __) => Container(
+                                      color: colors.shimmerBase),
+                                  errorWidget: (_, __, ___) => Icon(
+                                    Icons.person,
+                                    color: Colors.white,
+                                    size: 16.sp,
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.person,
+                                  color: Colors.white,
+                                  size: 16.sp,
+                                ),
                         ),
-                      ],
-                    ),
-                    // Orange Glowing Speed Badge
-                    Container(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                      decoration: BoxDecoration(
-                        color: colors.secondary,
-                        borderRadius: BorderRadius.circular(10.r),
-                        boxShadow: [
-                          BoxShadow(
-                            color: colors.secondary.withValues(alpha: 0.35),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.bolt_rounded,
-                              color: Colors.white, size: 12.sp),
-                          3.horizontalSpace,
-                          Text(
-                            AppStrings.fastDelivery,
-                            style: TextStyle(
-                              fontSize: 9.sp,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
-                              fontFamily: 'Cairo',
-                            ),
-                          ),
-                        ],
                       ),
                     ),
                   ],
                 ),
-                14.verticalSpace,
+                12.verticalSpace,
 
-                // Search Bar nested inside
+                // Search Bar nested inside (larger, search icon on right)
                 Container(
-                  height: 40.h,
+                  height: 44.h,
                   decoration: BoxDecoration(
                     color: colors.surface,
                     borderRadius: BorderRadius.circular(12.r),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
                       ),
                     ],
                   ),
-                  padding: EdgeInsets.symmetric(horizontal: 12.w),
+                  padding: EdgeInsets.symmetric(horizontal: 14.w),
                   child: Row(
                     children: [
-                      Icon(
-                        Icons.search_rounded,
-                        color: colors.textHint,
-                        size: 18.sp,
-                      ),
-                      8.horizontalSpace,
                       Expanded(
                         child: TextField(
                           onSubmitted: (value) {
@@ -338,16 +273,22 @@ class HomeSpeedHeader extends ConsumerWidget {
                                   arguments: value);
                             }
                           },
-                          style: AppTextStyles.text12w600(
+                          style: AppTextStyles.text13w600(
                               color: colors.textPrimary),
                           decoration: InputDecoration(
-                            hintText: AppStrings.searchHint,
-                            hintStyle: AppTextStyles.text11w600(
+                            hintText: 'ابحث عن برجر، بيتزا، لبن، شيبسي...',
+                            hintStyle: AppTextStyles.text11w500(
                                 color: colors.textHint),
                             border: InputBorder.none,
                             isDense: true,
                           ),
                         ),
+                      ),
+                      8.horizontalSpace,
+                      Icon(
+                        Icons.search_rounded,
+                        color: colors.textHint,
+                        size: 20.sp,
                       ),
                     ],
                   ),

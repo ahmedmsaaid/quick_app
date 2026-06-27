@@ -11,19 +11,23 @@ import 'package:base_app/core/widgets/custom_arrow_back.dart';
 import 'package:base_app/core/widgets/custom_button.dart';
 import 'package:base_app/core/network/api_constants.dart';
 import 'package:base_app/features/customer/cart/presentation/riverpod/cart_provider.dart';
+import 'package:base_app/features/customer/profile/data/profile_api_service.dart';
 
 class CartScreen extends ConsumerWidget {
   const CartScreen({super.key});
-
-  static const double _deliveryFee = 2500;
-  static const double _serviceFee = 500;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColors(context);
     final cart = ref.watch(cartProvider);
     final notifier = ref.read(cartProvider.notifier);
-    final total = cart.subtotal + _deliveryFee + _serviceFee;
+    final settingsAsync = ref.watch(settingsProvider);
+
+    // Calculate fees dynamically
+    final settings = settingsAsync.asData?.value;
+    final deliveryFee = settings?.deliveryFee ?? 0.0;
+    final serviceFee = settings != null ? calcOrderFee(cart.subtotal, settings) : 0.0;
+    final total = cart.subtotal + deliveryFee + serviceFee;
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -66,9 +70,10 @@ class CartScreen extends ConsumerWidget {
                 ),
                 _SummaryCard(
                   subtotal: cart.subtotal,
-                  deliveryFee: _deliveryFee,
-                  serviceFee: _serviceFee,
+                  deliveryFee: deliveryFee,
+                  serviceFee: serviceFee,
                   total: total,
+                  isLoadingFees: settingsAsync.isLoading,
                   colors: colors,
                 ),
               ],
@@ -324,10 +329,12 @@ class _SummaryCard extends StatelessWidget {
     required this.serviceFee,
     required this.total,
     required this.colors,
+    this.isLoadingFees = false,
   });
 
   final double subtotal, deliveryFee, serviceFee, total;
   final AppColors colors;
+  final bool isLoadingFees;
 
   @override
   Widget build(BuildContext context) {
@@ -343,9 +350,13 @@ class _SummaryCard extends StatelessWidget {
         children: [
           _row(AppStrings.subtotalLabel, '${subtotal.toStringAsFixed(0)} ${AppStrings.currency}'),
           10.verticalSpace,
-          _row(AppStrings.deliveryFeesLabel, '${deliveryFee.toStringAsFixed(0)} ${AppStrings.currency}'),
+          isLoadingFees
+              ? _loadingRow(AppStrings.deliveryFeesLabel)
+              : _row(AppStrings.deliveryFeesLabel, '${deliveryFee.toStringAsFixed(0)} ${AppStrings.currency}'),
           10.verticalSpace,
-          _row(AppStrings.serviceFeesLabel, '${serviceFee.toStringAsFixed(0)} ${AppStrings.currency}'),
+          isLoadingFees
+              ? _loadingRow(AppStrings.serviceFeesLabel)
+              : _row(AppStrings.serviceFeesLabel, '${serviceFee.toStringAsFixed(0)} ${AppStrings.currency}'),
           12.verticalSpace,
           Divider(color: colors.divider, height: 1),
           12.verticalSpace,
@@ -356,6 +367,24 @@ class _SummaryCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _loadingRow(String label) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: AppTextStyles.text14w400(color: colors.textSecondary)),
+        SizedBox(
+          width: 60,
+          height: 12,
+          child: LinearProgressIndicator(
+            borderRadius: BorderRadius.circular(4),
+            color: colors.primary,
+            backgroundColor: colors.shimmerBase,
+          ),
+        ),
+      ],
     );
   }
 

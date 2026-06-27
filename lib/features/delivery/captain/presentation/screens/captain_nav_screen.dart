@@ -6,6 +6,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/features/customer/profile/presentation/riverpod/profile_provider.dart';
+import '../riverpod/captain_orders_provider.dart';
 import 'captain_home_screen.dart';
 import 'captain_orders_screen.dart';
 
@@ -56,6 +57,9 @@ class _CaptainNavScreenState extends ConsumerState<CaptainNavScreen> {
                     setState(() {
                       _selectedIndex = index;
                     });
+                    if (index == 1) {
+                      ref.read(captainMyOrdersProvider.notifier).loadOrders();
+                    }
                   }
                 : null,
             type: BottomNavigationBarType.fixed,

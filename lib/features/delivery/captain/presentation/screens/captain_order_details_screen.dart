@@ -12,6 +12,8 @@ import 'package:base_app/core/widgets/custom_arrow_back.dart';
 import 'package:base_app/features/customer/checkout/data/models/order_models.dart';
 import 'package:base_app/features/customer/orders/data/orders_api_service.dart';
 import 'package:base_app/features/delivery/captain/presentation/riverpod/captain_orders_provider.dart';
+import 'package:base_app/features/customer/profile/data/profile_api_service.dart';
+import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -29,6 +31,7 @@ class _CaptainOrderDetailsScreenState extends ConsumerState<CaptainOrderDetailsS
   bool _isLoading = false;
   bool _isFetchingDetails = false;
   late OrderDto _order;
+  LocationDto? _vendorLocation;
 
   double? _distanceBetweenStoreAndCustomer;
   double? _distanceToStore;
@@ -66,8 +69,8 @@ class _CaptainOrderDetailsScreenState extends ConsumerState<CaptainOrderDetailsS
   }
 
   void _updateMarkers() {
-    final storeLat = _order.creator?.location?.latitude;
-    final storeLng = _order.creator?.location?.longitude;
+    final storeLat = _vendorLocation?.latitude ?? _order.userLocation?.latitude ?? _order.creator?.location?.latitude;
+    final storeLng = _vendorLocation?.longitude ?? _order.userLocation?.longitude ?? _order.creator?.location?.longitude;
     final destLat = _order.latitude;
     final destLng = _order.longitude;
 
@@ -80,7 +83,7 @@ class _CaptainOrderDetailsScreenState extends ConsumerState<CaptainOrderDetailsS
           position: LatLng(storeLat, storeLng),
           infoWindow: InfoWindow(
             title: _order.creator?.name ?? "المحل",
-            snippet: _order.creator?.address ?? "عنوان المحل",
+            snippet: _vendorLocation?.address ?? _order.userLocation?.address ?? _order.creator?.address ?? "عنوان المحل",
           ),
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
         ),
@@ -111,8 +114,8 @@ class _CaptainOrderDetailsScreenState extends ConsumerState<CaptainOrderDetailsS
   void _fitMapToMarkers() {
     if (_mapController == null || _markers.isEmpty) return;
     
-    final storeLat = _order.creator?.location?.latitude;
-    final storeLng = _order.creator?.location?.longitude;
+    final storeLat = _vendorLocation?.latitude ?? _order.userLocation?.latitude ?? _order.creator?.location?.latitude;
+    final storeLng = _vendorLocation?.longitude ?? _order.userLocation?.longitude ?? _order.creator?.location?.longitude;
     final destLat = _order.latitude;
     final destLng = _order.longitude;
 
@@ -132,8 +135,8 @@ class _CaptainOrderDetailsScreenState extends ConsumerState<CaptainOrderDetailsS
   }
 
   Future<void> _calculateDistances() async {
-    final storeLat = _order.creator?.location?.latitude;
-    final storeLng = _order.creator?.location?.longitude;
+    final storeLat = _vendorLocation?.latitude ?? _order.userLocation?.latitude ?? _order.creator?.location?.latitude;
+    final storeLng = _vendorLocation?.longitude ?? _order.userLocation?.longitude ?? _order.creator?.location?.longitude;
     final destLat = _order.latitude;
     final destLng = _order.longitude;
 
@@ -168,28 +171,56 @@ class _CaptainOrderDetailsScreenState extends ConsumerState<CaptainOrderDetailsS
     final apiService = ref.read(ordersApiServiceProvider);
     final result = await apiService.getOrderById(
       orderId: widget.order.id,
-      includesPath: ["User", "Creator", "OrderProducts.Product"],
+      includesPath: ["User", "Creator", "OrderProducts.Product", "UserLocation"],
     );
-    result.when(
-      success: (response) {
+    
+    OrderDto? updatedOrder;
+    
+    await result.when(
+      success: (response) async {
         if (response.success && response.result != null) {
-          setState(() {
-            _order = response.result!;
-            _initializeOrderState();
-          });
-          _updateMarkers();
-          _calculateDistances();
+          updatedOrder = response.result!;
+          
+          if (updatedOrder!.userLocationId != null) {
+            final locResult = await ref.read(profileApiServiceProvider).getLocationById(updatedOrder!.userLocationId!);
+            locResult.when(
+              success: (locResponse) {
+                if (locResponse.success && locResponse.result != null) {
+                  if (mounted) {
+                    setState(() {
+                      _vendorLocation = locResponse.result;
+                    });
+                  }
+                }
+              },
+              failure: (error) {
+                debugPrint("Error fetching location by ID: ${error.message}");
+              },
+            );
+          }
         }
       },
       failure: (error) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(error.message ?? 'حدث خطأ أثناء تحميل تفاصيل الطلب')),
+            SnackBar(content: Text(error.message)),
           );
         }
       },
     );
-    setState(() => _isFetchingDetails = false);
+
+    if (updatedOrder != null && mounted) {
+      setState(() {
+        _order = updatedOrder!;
+        _initializeOrderState();
+      });
+      _updateMarkers();
+      _calculateDistances();
+    }
+    
+    if (mounted) {
+      setState(() => _isFetchingDetails = false);
+    }
   }
 
   Future<void> _handleActionButton() async {
@@ -287,8 +318,8 @@ class _CaptainOrderDetailsScreenState extends ConsumerState<CaptainOrderDetailsS
 
   Widget _buildMapAndDistanceSection(BuildContext context) {
     final colors = AppColors(context);
-    final storeLat = _order.creator?.location?.latitude;
-    final storeLng = _order.creator?.location?.longitude;
+    final storeLat = _vendorLocation?.latitude ?? _order.userLocation?.latitude ?? _order.creator?.location?.latitude;
+    final storeLng = _vendorLocation?.longitude ?? _order.userLocation?.longitude ?? _order.creator?.location?.longitude;
     final destLat = _order.latitude;
     final destLng = _order.longitude;
 
@@ -591,17 +622,21 @@ class _CaptainOrderDetailsScreenState extends ConsumerState<CaptainOrderDetailsS
 
   Widget _buildLocationTimeline(BuildContext context, OrderDto order) {
     final colors = AppColors(context);
-    final storeLat = order.creator?.location?.latitude;
-    final storeLng = order.creator?.location?.longitude;
+    final storeLat = _vendorLocation?.latitude ?? _order.userLocation?.latitude ?? order.creator?.location?.latitude;
+    final storeLng = _vendorLocation?.longitude ?? _order.userLocation?.longitude ?? order.creator?.location?.longitude;
     final destLat = order.latitude;
     final destLng = order.longitude;
 
     final storeName = order.creator?.name ?? "متجر غير معروف";
-    final storeAddress = (order.creator?.address != null && order.creator!.address!.isNotEmpty)
-        ? order.creator!.address!
-        : (storeLat != null && storeLng != null && storeLat != 0 && storeLng != 0)
-            ? "الموقع: ${storeLat.toStringAsFixed(5)}, ${storeLng.toStringAsFixed(5)}"
-            : "عنوان غير متوفر";
+    final storeAddress = (_vendorLocation?.address != null && _vendorLocation!.address!.isNotEmpty)
+        ? _vendorLocation!.address!
+        : (_order.userLocation?.address != null && _order.userLocation!.address!.isNotEmpty)
+            ? _order.userLocation!.address!
+            : (order.creator?.address != null && order.creator!.address!.isNotEmpty)
+                ? order.creator!.address!
+                : (storeLat != null && storeLng != null && storeLat != 0 && storeLng != 0)
+                    ? "الموقع: ${storeLat.toStringAsFixed(5)}, ${storeLng.toStringAsFixed(5)}"
+                    : "عنوان غير متوفر";
 
     final customerName = order.user?.name ?? "زبون غير معروف";
     final customerAddress = (order.address != null && order.address!.isNotEmpty)

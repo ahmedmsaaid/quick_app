@@ -1,4 +1,6 @@
 import 'package:base_app/core/localizations/app_strings.g.dart';
+import 'package:base_app/core/network/api_result.dart';
+import 'package:base_app/core/routes/app_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +14,9 @@ import 'package:base_app/core/utils/extensions.dart';
 import 'package:base_app/core/routes/app_routes.dart';
 import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
 import 'package:base_app/features/customer/vendor_list/presentation/riverpod/vendor_list_provider.dart';
+import 'package:base_app/features/customer/home/presentation/riverpod/home_provider.dart';
+import 'package:base_app/features/customer/home/data/home_api_service.dart';
+import 'package:base_app/features/customer/home/data/models/category_model.dart';
 
 class VendorListScreen extends ConsumerStatefulWidget {
   const VendorListScreen({super.key, required this.title, this.categoryId, this.userRole});
@@ -26,10 +31,60 @@ class VendorListScreen extends ConsumerStatefulWidget {
 
 class _VendorListScreenState extends ConsumerState<VendorListScreen> {
   int _selectedFilterIndex = 0;
+  bool _isLoading = false;
+  List<MainCategoryDto> _marketCategories = [];
+  bool _isLoadingCategories = false;
+  String? _categoriesError;
+
+  @override
+  void initState() {
+    super.initState();
+    final bool isSupermarket = widget.userRole == 1 || widget.title == AppStrings.quickMarketCategory;
+    final bool isMainMarketScreen = isSupermarket && widget.categoryId == null;
+    if (isMainMarketScreen) {
+      _loadMarketCategories();
+    }
+  }
+
+  Future<void> _loadMarketCategories() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoadingCategories = true;
+      _categoriesError = null;
+    });
+
+    final result = await ref.read(homeApiServiceProvider).getMainCategories(role: 1);
+
+    if (!mounted) return;
+    result.when(
+      success: (response) {
+        if (response.success && response.result != null) {
+          setState(() {
+            _marketCategories = response.result!
+                .where((category) => category.userRole == 1)
+                .toList();
+            _isLoadingCategories = false;
+          });
+        } else {
+          setState(() {
+            _categoriesError = response.message ?? AppStrings.errorOccurred;
+            _isLoadingCategories = false;
+          });
+        }
+      },
+      failure: (error) {
+        setState(() {
+          _categoriesError = error.message;
+          _isLoadingCategories = false;
+        });
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final bool isSupermarket = widget.userRole == 1 || widget.title == AppStrings.quickMarketCategory;
+    final bool isMainMarketScreen = isSupermarket && widget.categoryId == null;
     final int role = widget.userRole ?? (isSupermarket ? 1 : 0);
     final vendorListState = ref.watch(vendorListProvider(role, categoryId: widget.categoryId));
     final colors = AppColors(context);
@@ -46,13 +101,24 @@ class _VendorListScreenState extends ConsumerState<VendorListScreen> {
         ),
         centerTitle: true,
       ),
-      body: Column(
+      body: Stack(
         children: [
-          if (isSupermarket) _buildMarketBanner(context, vendorListState.vendors),
-          if (!isSupermarket) _buildFilterChips(context, role),
-          Expanded(
-            child: _buildBody(context, ref, vendorListState, isSupermarket, role),
+          Column(
+            children: [
+              if (isMainMarketScreen) _buildMarketBanner(context, vendorListState.vendors),
+              if (!isSupermarket) _buildFilterChips(context, role),
+              Expanded(
+                child: _buildBody(context, ref, vendorListState, isSupermarket, isMainMarketScreen, role),
+              ),
+            ],
           ),
+          if (_isLoading)
+            Container(
+              color: Colors.black26,
+              child: const Center(
+                child: LoadingButton(),
+              ),
+            ),
         ],
       ),
     );
@@ -63,38 +129,41 @@ class _VendorListScreenState extends ConsumerState<VendorListScreen> {
     WidgetRef ref,
     VendorListState state,
     bool isSupermarket,
+    bool isMainMarketScreen,
     int role,
   ) {
     final colors = AppColors(context);
 
-    if (isSupermarket) {
-      final otherMarkets = state.vendors.where((v) => v.id != 31).toList();
-      
-      if (state.status == VendorListStatus.loading) {
+    if (isMainMarketScreen) {
+      if (_isLoadingCategories && _marketCategories.isEmpty) {
         return const LoadingButton();
       }
 
-      if (otherMarkets.isEmpty) {
+      if (_categoriesError != null && _marketCategories.isEmpty) {
         return Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.storefront, size: 64.sp, color: colors.textHint),
+              Icon(Icons.error_outline, size: 48.sp, color: colors.error),
               10.verticalSpace,
               Text(
-                AppStrings.noItemsFound,
-                style: AppTextStyles.text16w600(color: colors.textSecondary),
+                _categoriesError!,
+                style: AppTextStyles.text14w500(color: colors.textSecondary),
+                textAlign: TextAlign.center,
+              ),
+              15.verticalSpace,
+              ElevatedButton(
+                onPressed: () {
+                  _loadMarketCategories();
+                },
+                child: Text(AppStrings.tryAgain),
               ),
             ],
           ),
         );
       }
 
-      return _buildVendorsGrid(context, ref, otherMarkets, isSupermarket);
-    }
-
-    if (state.status == VendorListStatus.loading) {
-      return const LoadingButton();
+      return _buildMarketCategoriesGrid(context, ref, _marketCategories);
     }
 
     if (state.status == VendorListStatus.error) {
@@ -127,7 +196,11 @@ class _VendorListScreenState extends ConsumerState<VendorListScreen> {
       );
     }
 
-    if (state.vendors.isEmpty) {
+    final displayVendors = isSupermarket
+        ? state.vendors.where((v) => v.role == 1).toList()
+        : state.vendors.where((v) => v.role == 0).toList();
+
+    if (displayVendors.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -143,7 +216,7 @@ class _VendorListScreenState extends ConsumerState<VendorListScreen> {
       );
     }
 
-    return _buildVendorsGrid(context, ref, state.vendors, isSupermarket);
+    return _buildVendorsGrid(context, ref, displayVendors, isSupermarket);
   }
 
   Widget _buildFilterChips(BuildContext context, int role) {
@@ -190,8 +263,16 @@ class _VendorListScreenState extends ConsumerState<VendorListScreen> {
     );
   }
 
-  Widget _buildVendorsGrid(BuildContext context, WidgetRef ref, List<UserDto> vendors, bool isMarket) {
+  Widget _buildVendorsGrid(
+    BuildContext context,
+    WidgetRef ref,
+    List<UserDto> vendors,
+    bool isMarket, {
+    bool shrinkWrap = false,
+  }) {
     return GridView.builder(
+      shrinkWrap: shrinkWrap,
+      physics: shrinkWrap ? const NeverScrollableScrollPhysics() : const BouncingScrollPhysics(),
       padding: EdgeInsets.all(20.w),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
@@ -295,128 +376,251 @@ class _VendorListScreenState extends ConsumerState<VendorListScreen> {
     );
   }
 
-  Widget _buildMarketCategoriesGrid(BuildContext context, WidgetRef ref, List<UserDto> vendors) {
+  Widget _buildMarketCategoriesGrid(
+    BuildContext context,
+    WidgetRef ref,
+    List<MainCategoryDto> categories,
+  ) {
     final colors = AppColors(context);
-    final isArabic = Localizations.localeOf(context).languageCode == 'ar';
 
-    final categories = [
-      {
-        'title': isArabic ? 'ألبان وأجبان' : 'Dairy & Cheese',
-        'emoji': '🥛',
-        'color': const Color(0xFFE3F2FD),
-        'iconColor': const Color(0xFF1E88E5),
-      },
-      {
-        'title': isArabic ? 'مجمدات' : 'Frozen Foods',
-        'emoji': '❄️',
-        'color': const Color(0xFFE0F7FA),
-        'iconColor': const Color(0xFF00ACC1),
-      },
-      {
-        'title': isArabic ? 'بقالة ومواد غذائية' : 'Groceries',
-        'emoji': '🌾',
-        'color': const Color(0xFFF1F8E9),
-        'iconColor': const Color(0xFF7CB342),
-      },
-      {
-        'title': isArabic ? 'خضار وفواكه' : 'Fruits & Veggies',
-        'emoji': '🍎',
-        'color': const Color(0xFFFFF3E0),
-        'iconColor': const Color(0xFFFB8C00),
-      },
-      {
-        'title': isArabic ? 'مخبوزات وحلويات' : 'Bakery & Sweets',
-        'emoji': '🍞',
-        'color': const Color(0xFFEFEBE9),
-        'iconColor': const Color(0xFF8D6E63),
-      },
-      {
-        'title': isArabic ? 'مشروبات وعصائر' : 'Beverages',
-        'emoji': '🥤',
-        'color': const Color(0xFFFFFDE7),
-        'iconColor': const Color(0xFFFBC02D),
-      },
-      {
-        'title': isArabic ? 'منظفات وعناية' : 'Detergents & Care',
-        'emoji': '🧼',
-        'color': const Color(0xFFF3E5F5),
-        'iconColor': const Color(0xFF8E24AA),
-      },
-      {
-        'title': isArabic ? 'معلبات وجاهز' : 'Canned Foods',
-        'emoji': '🥫',
-        'color': const Color(0xFFFFEBEE),
-        'iconColor': const Color(0xFFE53935),
-      },
-    ];
+    if (categories.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.category_rounded, size: 64.sp, color: colors.textHint),
+            10.verticalSpace,
+            Text(
+              AppStrings.noItemsFound,
+              style: AppTextStyles.text16w600(color: colors.textSecondary),
+            ),
+          ],
+        ),
+      );
+    }
 
     return GridView.builder(
+      physics: const BouncingScrollPhysics(),
       padding: EdgeInsets.all(20.w),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: 1.1,
+        childAspectRatio: 1.05,
         crossAxisSpacing: 16.w,
         mainAxisSpacing: 16.h,
       ),
       itemCount: categories.length,
       itemBuilder: (context, index) {
-        final cat = categories[index];
-        return InkWell(
-          onTap: () {
-            if (vendors.isNotEmpty) {
-              context.pushNamed(
-                AppRoutes.providerProductDetailsScreen,
-                arguments: vendors.first,
+        final category = categories[index];
+        final String photo = category.photo ?? '';
+        final String imageUrl = (photo.isNotEmpty)
+            ? (photo.startsWith('http') ? photo : '${ApiConstants.streamUrl}$photo')
+            : '';
+
+        return GestureDetector(
+          onTap: () async {
+            if (_isLoading) return;
+            setState(() {
+              _isLoading = true;
+            });
+
+            try {
+              final result = await ref.read(homeApiServiceProvider).getUsersPaginate(
+                role: 1,
+                categoryId: category.id,
+                pageSize: 2,
               );
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    isArabic ? 'جاري تحميل بيانات السوبر ماركت...' : 'Loading supermarket details...',
-                    style: const TextStyle(fontFamily: 'Cairo'),
-                  ),
-                  duration: const Duration(seconds: 1),
+
+              result.when(
+                success: (response) {
+                  if (response.success && response.result != null && response.result!.isNotEmpty) {
+                    final shops = response.result!;
+                    if (shops.length == 1) {
+                      context.pushNamed(
+                        AppRoutes.providerStoreScreen,
+                        arguments: {
+                          'vendor': shops.first,
+                          'initialCategory': CategoryDto(
+                            id: category.id,
+                            name: category.name,
+                            description: category.description,
+                            photo: category.photo,
+                            type: 1,
+                            creatorId: shops.first.id,
+                          ),
+                        },
+                      );
+                    } else {
+                      context.pushNamed(
+                        AppRoutes.StoreScreen,
+                        arguments: VendorListArgs(
+                          title: category.name ?? '',
+                          categoryId: category.id,
+                          userRole: 1,
+                        ),
+                      );
+                    }
+                  } else {
+                    context.pushNamed(
+                      AppRoutes.StoreScreen,
+                      arguments: VendorListArgs(
+                        title: category.name ?? '',
+                        categoryId: category.id,
+                        userRole: 1,
+                      ),
+                    );
+                  }
+                },
+                failure: (error) {
+                  context.pushNamed(
+                    AppRoutes.StoreScreen,
+                    arguments: VendorListArgs(
+                      title: category.name ?? '',
+                      categoryId: category.id,
+                      userRole: 1,
+                    ),
+                  );
+                },
+              );
+            } catch (e) {
+              context.pushNamed(
+                AppRoutes.StoreScreen,
+                arguments: VendorListArgs(
+                  title: category.name ?? '',
+                  categoryId: category.id,
+                  userRole: 1,
                 ),
               );
+            } finally {
+              if (mounted) {
+                setState(() {
+                  _isLoading = false;
+                });
+              }
             }
           },
-          borderRadius: BorderRadius.circular(16.r),
-          child: Container(
-            padding: EdgeInsets.all(16.r),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 14.h),
             decoration: BoxDecoration(
-              color: cat['color'] as Color,
-              borderRadius: BorderRadius.circular(16.r),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  colors.surface,
+                  colors.primary.withValues(alpha: 0.02),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(24.r),
               border: Border.all(
-                color: (cat['iconColor'] as Color).withValues(alpha: 0.15),
-                width: 1.5,
+                color: colors.primary.withValues(alpha: 0.12),
+                width: 1.2,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: colors.shadow.withValues(alpha: 0.04),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
+                  color: colors.primary.withValues(alpha: 0.04),
+                  blurRadius: 14,
+                  offset: const Offset(0, 6),
+                ),
+                BoxShadow(
+                  color: colors.shadow.withValues(alpha: 0.02),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+            child: Stack(
               children: [
-                Text(
-                  cat['emoji'] as String,
-                  style: TextStyle(fontSize: 36.sp),
-                ),
-                10.verticalSpace,
-                Text(
-                  cat['title'] as String,
-                  style: TextStyle(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.bold,
-                    color: colors.textPrimary,
-                    fontFamily: 'Cairo',
+                Positioned(
+                  top: -12.r,
+                  right: -12.r,
+                  child: Container(
+                    width: 44.r,
+                    height: 44.r,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: colors.primary.withValues(alpha: 0.025),
+                    ),
                   ),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                ),
+                Align(
+                  alignment: Alignment.center,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 64.r,
+                        height: 64.r,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20.r),
+                          color: colors.primary.withValues(alpha: 0.06),
+                          boxShadow: [
+                            BoxShadow(
+                              color: colors.primary.withValues(alpha: 0.04),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(20.r),
+                          child: imageUrl.isNotEmpty
+                              ? CachedNetworkImage(
+                                  imageUrl: imageUrl,
+                                  fit: BoxFit.cover,
+                                  placeholder: (_, __) => Container(color: colors.shimmerBase),
+                                  errorWidget: (_, __, ___) => Center(
+                                    child: Icon(Icons.category_rounded, size: 28.sp, color: colors.primary),
+                                  ),
+                                )
+                              : Center(
+                                  child: Icon(Icons.category_rounded, size: 28.sp, color: colors.primary),
+                                ),
+                        ),
+                      ),
+                      12.verticalSpace,
+                      Text(
+                        category.name ?? '',
+                        style: TextStyle(
+                          fontSize: 13.sp,
+                          fontWeight: FontWeight.bold,
+                          color: colors.textPrimary,
+                          fontFamily: 'Cairo',
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      6.verticalSpace,
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                        decoration: BoxDecoration(
+                          color: colors.primary.withValues(alpha: 0.06),
+                          borderRadius: BorderRadius.circular(10.r),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              "تسوّق الآن",
+                              style: TextStyle(
+                                fontSize: 9.sp,
+                                fontWeight: FontWeight.w600,
+                                color: colors.primary,
+                                fontFamily: 'Cairo',
+                              ),
+                            ),
+                            2.horizontalSpace,
+                            Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              size: 7.sp,
+                              color: colors.primary,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -446,7 +650,10 @@ class _VendorListScreenState extends ConsumerState<VendorListScreen> {
           );
           context.pushNamed(
             AppRoutes.providerStoreScreen,
-            arguments: market31,
+            arguments: {
+              'vendor': market31,
+              'initialCategory': null,
+            },
           );
         },
         borderRadius: BorderRadius.circular(20.r),

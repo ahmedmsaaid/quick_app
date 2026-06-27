@@ -6,6 +6,10 @@ import 'package:base_app/features/customer/profile/presentation/riverpod/profile
 
 part 'captain_orders_provider.g.dart';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// CaptainOrders — الطلبات المتاحة + إحصائيات الكابتن
+// ─────────────────────────────────────────────────────────────────────────────
+
 enum CaptainOrdersStatus { initial, loading, loaded, error }
 
 class CaptainOrdersState {
@@ -52,12 +56,21 @@ class CaptainOrdersState {
 class CaptainOrders extends _$CaptainOrders {
   @override
   CaptainOrdersState build() {
+    // Listener: نادي loadAll لما يتحمل الـ profile للمرة الأولى أو يتغير المستخدم
     ref.listen(profileProvider, (previous, next) {
-      if (next.status == ProfileStatus.loaded && next.user != null) {
-        loadAll();
+      final wasLoaded = previous?.status == ProfileStatus.loaded;
+      final isNowLoaded =
+          next.status == ProfileStatus.loaded && next.user != null;
+      if (!wasLoaded && isNowLoaded) {
+        final currentStatus = state.status;
+        final userChanged = previous?.user?.id != next.user?.id;
+        if (currentStatus != CaptainOrdersStatus.loaded || userChanged) {
+          loadAll();
+        }
       }
     });
 
+    // لو الـ profile اتحمل قبل ما الـ provider يتبني (عند الرجوع للشاشة مثلاً)
     final profile = ref.read(profileProvider);
     if (profile.status == ProfileStatus.loaded && profile.user != null) {
       Future.microtask(() => loadAll());
@@ -66,6 +79,7 @@ class CaptainOrders extends _$CaptainOrders {
   }
 
   Future<void> loadAll() async {
+    if (state.status == CaptainOrdersStatus.loading) return;
     state = state.copyWith(status: CaptainOrdersStatus.loading);
 
     final profileState = ref.read(profileProvider);
@@ -84,46 +98,34 @@ class CaptainOrders extends _$CaptainOrders {
 
     final apiService = ref.read(ordersApiServiceProvider);
 
-    // 1. Fetch available orders (cannot filter by status due to backend Enum filter limitation)
-    // We fetch recent orders and filter locally for status == 2 (ready_for_pickup)
-    final recentResult = await apiService.getOrdersWithFilters(
-      includesPath: ["User","Creator"],
+    // طلب واحد يجيب كل الطلبات ونقوم بفلترتها محلياً لتجنب استدعاء الاندبوينت مرتين
+    final result = await apiService.getOrdersWithFilters(
+      includesPath: ['User', 'Creator', 'OrderProducts.Product', 'UserLocation'],
+      filters: {
+    "UpdatorId": user?.id,},
       pageSize: 100,
     );
-
-    // 2. Fetch captain's orders (updated by this captain)
-    // We filter by updatorId = user.id and include related data.
-    final captainResult = await apiService.getOrdersWithFilters(
-
-      includesPath: ["User", "Creator"],
-      pageSize: 100,
-    );
+    if (!ref.mounted) return;
 
     List<OrderDto> available = [];
     List<OrderDto> active = [];
     List<OrderDto> finished = [];
     String? error;
 
-    recentResult.when(
+    result.when(
       success: (response) {
         final list = response.result ?? [];
-        // In production: only o.status == 2 (Ready for Pickup) should be shown.
-        // For testing, we also allow o.status == 0 (Pending) to let you see and test accepting orders.
+        // المتاحة: status=2 (جاهز للاستلام) أو status=0 (للاختبار)
         available = list.where((o) => o.status == 2 || o.status == 0).toList();
+        // النشطة للكابتن الحالي: updatorId == user.id و status=3
+        active = list.where((o) => o.updatorId == user.id && o.status == 3).toList();
+        // المنتهية للكابتن الحالي: updatorId == user.id و status=4
+        finished = list.where((o) => o.updatorId == user.id && o.status == 4).toList();
       },
       failure: (e) => error = e.message,
     );
 
-    captainResult.when(
-      success: (response) {
-        final list = response.result ?? [];
-        active = list.where((o) => o.status == 3).toList();
-        finished = list.where((o) => o.status == 4).toList();
-      },
-      failure: (e) => error = error ?? e.message,
-    );
-
-    // Calculate today's stats from finished orders
+    // احسب إحصائيات اليوم من الطلبات المنتهية
     final now = DateTime.now();
     final todayStart = DateTime(now.year, now.month, now.day);
     final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
@@ -160,7 +162,7 @@ class CaptainOrders extends _$CaptainOrders {
     }
   }
 
-  /// Accept an available order (update status from 2 to 3)
+  /// قبول طلب متاح (update status من 2 إلى 3)
   Future<bool> acceptOrder(OrderDto order) async {
     final apiService = ref.read(ordersApiServiceProvider);
     final result = await apiService.updateOrderStatus(
@@ -168,11 +170,13 @@ class CaptainOrders extends _$CaptainOrders {
       status: 3,
       rowVersion: order.rowVersion,
     );
+    if (!ref.mounted) return false;
 
     return result.when(
       success: (response) {
         if (response.success) {
           loadAll();
+          ref.read(captainMyOrdersProvider.notifier).loadOrders();
           return true;
         }
         return false;
@@ -181,7 +185,7 @@ class CaptainOrders extends _$CaptainOrders {
     );
   }
 
-  /// Update active order status
+  /// تحديث status الطلب النشط
   Future<bool> updateStatus(OrderDto order, int newStatus) async {
     final apiService = ref.read(ordersApiServiceProvider);
     final result = await apiService.updateOrderStatus(
@@ -189,11 +193,131 @@ class CaptainOrders extends _$CaptainOrders {
       status: newStatus,
       rowVersion: order.rowVersion,
     );
+    if (!ref.mounted) return false;
 
     return result.when(
       success: (response) {
         if (response.success) {
           loadAll();
+          ref.read(captainMyOrdersProvider.notifier).loadOrders();
+          return true;
+        }
+        return false;
+      },
+      failure: (_) => false,
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CaptainMyOrders — مشاوير الكابتن (تاب "مشاواري")
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum MyOrdersStatus { initial, loading, loaded, error }
+
+class MyOrdersState {
+  final MyOrdersStatus status;
+  final List<OrderDto> activeOrders;
+  final List<OrderDto> finishedOrders;
+  final String? errorMessage;
+
+  const MyOrdersState({
+    this.status = MyOrdersStatus.initial,
+    this.activeOrders = const [],
+    this.finishedOrders = const [],
+    this.errorMessage,
+  });
+
+  MyOrdersState copyWith({
+    MyOrdersStatus? status,
+    List<OrderDto>? activeOrders,
+    List<OrderDto>? finishedOrders,
+    String? errorMessage,
+  }) {
+    return MyOrdersState(
+      status: status ?? this.status,
+      activeOrders: activeOrders ?? this.activeOrders,
+      finishedOrders: finishedOrders ?? this.finishedOrders,
+      errorMessage: errorMessage ?? this.errorMessage,
+    );
+  }
+}
+
+@riverpod
+class CaptainMyOrders extends _$CaptainMyOrders {
+  @override
+  MyOrdersState build() {
+    // لا تعمل microtask هنا — الـ CaptainOrders provider بيتولى التحميل عند الفتح
+    // loadOrders بيتعمل manually لما الكابتن يدخل تاب "مشاواري"
+    return const MyOrdersState();
+  }
+
+  Future<void> loadOrders() async {
+    state = state.copyWith(status: MyOrdersStatus.loading);
+
+    final profileState = ref.read(profileProvider);
+    final user = profileState.user;
+    if (user == null) {
+      state = state.copyWith(
+        status: MyOrdersStatus.error,
+        errorMessage: 'الرجاء تسجيل الدخول أولاً لرؤية الطلبات',
+      );
+      return;
+    }
+
+    final apiService = ref.read(ordersApiServiceProvider);
+
+    // جيب طلبات الكابتن بفلتر UpdatorId
+    final result = await apiService.getOrdersWithFilters(
+      filters: {'UpdatorId': user.id},
+      includesPath: ['User', 'Creator', 'OrderProducts.Product', 'UserLocation'],
+      pageSize: 100,
+    );
+    if (!ref.mounted) return;
+
+    List<OrderDto> active = [];
+    List<OrderDto> finished = [];
+    String? error;
+
+    result.when(
+      success: (response) {
+        final list = response.result ?? [];
+        active = list.where((o) => o.status == 3).toList();
+        finished = list.where((o) => o.status == 4).toList();
+      },
+      failure: (e) => error = e.message,
+    );
+
+    if (error != null) {
+      state = state.copyWith(
+        status: MyOrdersStatus.error,
+        errorMessage: error,
+      );
+    } else {
+      state = MyOrdersState(
+        status: MyOrdersStatus.loaded,
+        activeOrders: active,
+        finishedOrders: finished,
+      );
+    }
+  }
+
+  /// تحديث status الطلب النشط
+  Future<bool> updateStatus(OrderDto order, int newStatus) async {
+    final apiService = ref.read(ordersApiServiceProvider);
+    final result = await apiService.updateOrderStatus(
+      orderId: order.id,
+      status: newStatus,
+      rowVersion: order.rowVersion,
+    );
+    if (!ref.mounted) return false;
+
+    return result.when(
+      success: (response) {
+        if (response.success) {
+          loadOrders();
+          // Refresh general provider to update stats
+          ref.read(captainOrdersProvider.notifier).loadAll();
           return true;
         }
         return false;

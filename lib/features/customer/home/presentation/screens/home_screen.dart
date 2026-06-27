@@ -16,6 +16,9 @@ import 'package:base_app/features/customer/home/presentation/widgets/mock_store_
 import 'package:base_app/features/customer/home/presentation/widgets/home_type_segment_tab.dart';
 import 'package:base_app/features/customer/home/data/models/category_model.dart';
 import 'package:base_app/core/routes/app_router.dart';
+import 'package:base_app/features/customer/home/presentation/widgets/home_most_requested.dart';
+import 'package:base_app/features/customer/home/presentation/widgets/home_todays_offers.dart';
+import 'package:base_app/features/customer/home/presentation/widgets/home_order_again.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -64,6 +67,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             12.verticalSpace,
             const HomeModernBanner(),
             16.verticalSpace,
+
+            // New Sections for high accessibility and crowded Home screen
+            const HomeMostRequested(),
+            12.verticalSpace,
+            const HomeTodaysOffers(),
+            12.verticalSpace,
+            const HomeOrderAgain(),
+            12.verticalSpace,
 
             // Rest of page content
             Column(

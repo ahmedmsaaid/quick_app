@@ -11,6 +11,7 @@ import 'package:base_app/features/customer/checkout/data/models/order_models.dar
 import 'package:base_app/core/network/api_constants.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:base_app/core/widgets/lading_button.dart';
+import 'package:base_app/core/widgets/custom_toast.dart';
 
 class OrdersScreen extends ConsumerWidget {
   const OrdersScreen({super.key});
@@ -295,20 +296,7 @@ class OrdersScreen extends ConsumerWidget {
                   ),
                   10.horizontalSpace,
                   Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).pushNamed(AppRoutes.cartScreen);
-                      },
-                      icon: const Icon(Icons.refresh, color: Colors.white, size: 18),
-                      label: Text(
-                        AppStrings.reBooking,
-                        style: AppTextStyles.text12w600(color: Colors.white),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: colors.primary,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
-                      ),
-                    ),
+                    child: _ReorderButton(order: order),
                   ),
                 ],
               ),
@@ -345,5 +333,63 @@ class OrdersScreen extends ConsumerWidget {
       default:
         return colors.primary;
     }
+  }
+}
+
+// ─── زر إعادة الطلب مع loading state مستقل لكل كارت ───
+class _ReorderButton extends ConsumerStatefulWidget {
+  final OrderDto order;
+  const _ReorderButton({required this.order});
+
+  @override
+  ConsumerState<_ReorderButton> createState() => _ReorderButtonState();
+}
+
+class _ReorderButtonState extends ConsumerState<_ReorderButton> {
+  bool _isLoading = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors(context);
+    return ElevatedButton.icon(
+      onPressed: _isLoading
+          ? null
+          : () async {
+              setState(() => _isLoading = true);
+              final success = await ref
+                  .read(ordersProvider.notifier)
+                  .reorder(widget.order);
+              if (!context.mounted) return;
+              setState(() => _isLoading = false);
+              if (success) {
+                CustomToast.success(context, 'تم إضافة المنتجات إلى السلة! 🛒');
+                Navigator.of(context).pushNamed(AppRoutes.cartScreen);
+              } else {
+                final err = ref.read(ordersProvider).reorderError;
+                CustomToast.error(
+                  context,
+                  err ?? 'فشل إضافة المنتجات، حاول مرة أخرى',
+                );
+              }
+            },
+      icon: _isLoading
+          ? SizedBox(
+              width: 14.w,
+              height: 14.w,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            )
+          : const Icon(Icons.refresh_rounded, color: Colors.white, size: 18),
+      label: Text(
+        AppStrings.reBooking,
+        style: AppTextStyles.text12w600(color: Colors.white),
+      ),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: _isLoading ? colors.primary.withValues(alpha: 0.6) : colors.primary,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+      ),
+    );
   }
 }
