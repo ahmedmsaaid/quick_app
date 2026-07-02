@@ -24,7 +24,7 @@ class _CaptainNavScreenState extends ConsumerState<CaptainNavScreen> {
     const CaptainHomeScreen(),
     const CaptainOrdersScreen(),
     const CaptainWalletScreen(),
-    const ProfileScreen(), // Reusing profile screen with captain logic if needed
+    const ProfileScreen(),
   ];
 
   @override

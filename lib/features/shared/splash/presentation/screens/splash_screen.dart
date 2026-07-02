@@ -10,6 +10,8 @@ import 'package:base_app/core/routes/app_routes.dart';
 import 'package:base_app/core/services/cach_helper/cache_helper.dart';
 import 'package:base_app/core/services/cach_helper/cache_helper_keys.dart';
 import 'package:base_app/core/utils/assets/app_images.dart';
+import 'package:base_app/core/services/push_notification/push_notification_service.dart';
+import 'package:base_app/features/shared/notifications/presentation/riverpod/notifications_provider.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -83,6 +85,23 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
   }
 
   Future<void> _initApp() async {
+    try {
+      await ref.read(pushNotificationServiceProvider).init();
+      await ref.read(pushNotificationServiceProvider).registerDeviceTokenWithBackend();
+    } catch (e) {
+      debugPrint('❌ Error initializing push notifications: $e');
+    }
+
+    // Pre-fetch notification unread count if user is already logged in
+    try {
+      final token = CacheHelper.getString(CacheKeys.token);
+      if (token != null && token.isNotEmpty) {
+        ref.read(notificationsProvider.notifier).fetchUnreadCount();
+      }
+    } catch (e) {
+      debugPrint('❌ Error pre-fetching notification count: $e');
+    }
+
     try {
       await _restoreSavedLocale();
       debugPrint('✅ Locale restored');

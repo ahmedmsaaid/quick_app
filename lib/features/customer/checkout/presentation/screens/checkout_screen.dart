@@ -605,11 +605,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     }
 
                     // Show order success screen
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(
-                        builder: (_) => const OrderSuccessScreen(),
-                      ),
-                    );
+                    final createdOrder = ref.read(checkoutProvider).createdOrder;
+                    if (createdOrder != null) {
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(
+                          builder: (_) => OrderSuccessScreen(order: createdOrder),
+                        ),
+                      );
+                    }
                   } else {
                     final errorMsg =
                         ref.read(checkoutProvider).errorMessage ??

@@ -1,0 +1,37 @@
+import "google/protobuf/timestamp.proto";
+option csharp_namespace = "Altromeda.Afiti.BLL.Grpc.Chats";
+package chat;	
+
+
+// service
+service GrpcChatService {
+  rpc SendMessage(stream GrpcSendMessageRequest) returns (stream GrpcRrecipientMessage);
+}
+
+// models
+message GrpcSendMessageRequest {
+  required int64 RecipientId = 1;
+  optional string Message = 2;
+  required GrpcMessageType Type = 3;
+  optional string MediaUrl = 4;
+}
+
+message GrpcRrecipientMessage {
+  required int64 ChatId = 1;
+  required int64 RecipientId = 2;
+  required int64 CreatorId = 3;
+  optional string Content = 4;
+  required GrpcMessageType Type = 5;
+  optional string MediaUrl = 6;
+  required google.protobuf.Timestamp CreatedOn = 7;
+}
+
+// enums
+enum GrpcMessageType {
+	Text = 0;
+	Video = 1;
+	Audio = 2;
+	Image = 3;
+	File = 4;
+}
+

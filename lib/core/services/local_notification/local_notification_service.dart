@@ -14,6 +14,7 @@ class LocalNotificationService {
       StreamController<NotificationResponse>.broadcast();
 
   /// Called when the user taps the notification
+  @pragma('vm:entry-point')
   static void onTap(NotificationResponse notificationResponse) {
     streamController.add(notificationResponse);
   }
@@ -40,7 +41,9 @@ class LocalNotificationService {
   /// Show Notification (basic + image if exists)
   static Future<void> showBasicNotification(RemoteMessage message) async {
     try {
-      final imageUrl = message.notification?.android?.imageUrl ?? '';
+      final imageUrl = message.notification?.android?.imageUrl ??
+          message.notification?.apple?.imageUrl ??
+          '';
 
       BigPictureStyleInformation? bigPictureStyleInformation;
 
@@ -52,8 +55,10 @@ class LocalNotificationService {
 
         bigPictureStyleInformation = BigPictureStyleInformation(
           FilePathAndroidBitmap(filePath),
+          largeIcon: const DrawableResourceAndroidBitmap('ic_launcher'),
           contentTitle: message.notification?.title,
           summaryText: message.notification?.body,
+          hideExpandedLargeIcon: false,
         );
       }
 
@@ -63,22 +68,26 @@ class LocalNotificationService {
         channelDescription: 'Basic notification channel',
         importance: Importance.max,
         priority: Priority.high,
+        // Always show the app icon as the large icon on the right
+        largeIcon: const DrawableResourceAndroidBitmap('ic_launcher'),
         styleInformation: bigPictureStyleInformation,
       );
 
       final NotificationDetails details = NotificationDetails(android: android);
 
+      // Use hashCode for unique ID so multiple notifications don't overwrite each other
       await flutterLocalNotificationsPlugin.show(
-        0,
+        message.hashCode,
         message.notification?.title,
         message.notification?.body,
         details,
-        payload: "Payload Data",
+        payload: message.data['route'] ?? 'notifications',
       );
     } catch (e) {
       print("❌ Error showing notification: $e");
     }
   }
+
 
   /// Helper: download image using Dio and save locally
   static Future<String> _downloadAndSaveFile(

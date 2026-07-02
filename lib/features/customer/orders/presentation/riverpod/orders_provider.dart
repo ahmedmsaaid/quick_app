@@ -149,6 +149,27 @@ class OrdersNotifier extends _$OrdersNotifier {
     }
   }
 
+  Future<bool> cancelOrder(OrderDto order) async {
+    final apiService = ref.read(ordersApiServiceProvider);
+    final result = await apiService.updateOrderStatus(
+      orderId: order.id,
+      status: 8, // Cancelled
+      rowVersion: order.rowVersion,
+    );
+    if (!ref.mounted) return false;
+
+    return result.when(
+      success: (response) {
+        if (response.success) {
+          loadOrders(); // Refresh orders list
+          return true;
+        }
+        return false;
+      },
+      failure: (_) => false,
+    );
+  }
+
   void resetReorderStatus() {
     state = state.copyWith(
       reorderStatus: ReorderStatus.idle,
@@ -156,3 +177,32 @@ class OrdersNotifier extends _$OrdersNotifier {
     );
   }
 }
+
+@riverpod
+Stream<OrderDto> trackOrder(Ref ref, int orderId) async* {
+  final apiService = ref.watch(ordersApiServiceProvider);
+  
+  while (true) {
+    final result = await apiService.getOrderById(
+      orderId: orderId,
+      includesPath: const ["User", "Creator", "OrderProducts.Product"],
+    );
+    
+    final order = result.when(
+      success: (response) {
+        if (response.success && response.result != null) {
+          return response.result!;
+        }
+        return null;
+      },
+      failure: (error) => null,
+    );
+    
+    if (order != null) {
+      yield order;
+    }
+    
+    await Future.delayed(const Duration(seconds: 10));
+  }
+}
+

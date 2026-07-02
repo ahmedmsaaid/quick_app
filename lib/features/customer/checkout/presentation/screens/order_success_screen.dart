@@ -5,9 +5,11 @@ import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/styles/app_text_style.dart';
 import 'package:base_app/core/routes/app_routes.dart';
 import 'package:base_app/core/widgets/custom_button.dart';
+import 'package:base_app/features/customer/checkout/data/models/order_models.dart';
 
 class OrderSuccessScreen extends StatelessWidget {
-  const OrderSuccessScreen({super.key});
+  final OrderDto order;
+  const OrderSuccessScreen({super.key, required this.order});
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +25,7 @@ class OrderSuccessScreen extends StatelessWidget {
             Container(
               padding: EdgeInsets.all(20.r),
               decoration: BoxDecoration(
-                color: colors.primary.withOpacity(0.1),
+                color: colors.primary.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(Icons.check_circle, color: colors.primary, size: 100.sp),
@@ -42,7 +44,11 @@ class OrderSuccessScreen extends StatelessWidget {
             40.verticalSpace,
             CustomAppButton(
               text: AppStrings.trackOrderNowBtn,
-              onPressed: () => Navigator.pushReplacementNamed(context, AppRoutes.orderDetailsScreen),
+              onPressed: () => Navigator.pushReplacementNamed(
+                context,
+                AppRoutes.orderDetailsScreen,
+                arguments: order,
+              ),
             ),
             15.verticalSpace,
             TextButton(

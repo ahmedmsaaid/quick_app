@@ -71,7 +71,7 @@ class HomeState {
   }
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
 class HomeNotifier extends _$HomeNotifier {
   @override
   HomeState build() {
@@ -90,6 +90,8 @@ class HomeNotifier extends _$HomeNotifier {
     state = state.copyWith(popularProductsStatus: HomeStatus.loading);
 
     final result = await ref.read(homeApiServiceProvider).getPopularProducts();
+
+    if (!ref.mounted) return;
 
     result.when(
       success: (response) {
@@ -118,6 +120,8 @@ class HomeNotifier extends _$HomeNotifier {
     state = state.copyWith(status: HomeStatus.loading);
 
     final result = await ref.read(homeApiServiceProvider).getOffers();
+
+    if (!ref.mounted) return;
 
     result.when(
       success: (response) {
@@ -151,6 +155,8 @@ class HomeNotifier extends _$HomeNotifier {
       pageSize: 10,
     );
 
+    if (!ref.mounted) return;
+
     result.when(
       success: (response) {
         if (response.success && response.result != null) {
@@ -178,6 +184,8 @@ class HomeNotifier extends _$HomeNotifier {
     state = state.copyWith(categoriesStatus: HomeStatus.loading);
 
     final result = await ref.read(homeApiServiceProvider).getMainCategories();
+
+    if (!ref.mounted) return;
 
     result.when(
       success: (response) {
@@ -213,6 +221,8 @@ class HomeNotifier extends _$HomeNotifier {
       categoryId: categoryId,
       pageSize: 20,
     );
+
+    if (!ref.mounted) return;
 
     result.when(
       success: (response) {

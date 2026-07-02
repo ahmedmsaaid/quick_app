@@ -10,6 +10,7 @@ import 'package:base_app/core/utils/extensions.dart';
 import 'package:base_app/core/network/api_constants.dart';
 import 'package:base_app/features/customer/profile/presentation/riverpod/profile_provider.dart';
 import 'package:base_app/features/customer/home/presentation/widgets/location_bottom_sheet.dart';
+import 'package:base_app/features/shared/notifications/presentation/riverpod/notifications_provider.dart';
 
 class HomeSpeedHeader extends ConsumerWidget {
   const HomeSpeedHeader({super.key});
@@ -206,43 +207,51 @@ class HomeSpeedHeader extends ConsumerWidget {
                       ),
                     ),
 
-                    // Right Profile Avatar
-                    GestureDetector(
-                      onTap: () => context.pushNamed(AppRoutes.personalInfo),
-                      child: Container(
-                        width: 36.w,
-                        height: 36.w,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white.withValues(alpha: 0.15),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.4),
-                            width: 1.2,
-                          ),
-                        ),
-                        child: ClipOval(
-                          child: (user?.photo != null &&
-                                  user!.photo!.isNotEmpty)
-                              ? CachedNetworkImage(
-                                  imageUrl: user.photo!.startsWith('http')
-                                      ? user.photo!
-                                      : '${ApiConstants.streamUrl}${user.photo}',
-                                  fit: BoxFit.cover,
-                                  placeholder: (_, __) => Container(
-                                      color: colors.shimmerBase),
-                                  errorWidget: (_, __, ___) => Icon(
-                                    Icons.person,
-                                    color: Colors.white,
-                                    size: 16.sp,
-                                  ),
-                                )
-                              : Icon(
-                                  Icons.person,
-                                  color: Colors.white,
-                                  size: 16.sp,
-                                ),
-                        ),
-                      ),
+                    // Right Section: Notification Bell + Profile Avatar
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Notification Bell with Badge
+                        _NotificationBell(),
+                        10.horizontalSpace,
+                        // GestureDetector(
+                        //   onTap: () => context.pushNamed(AppRoutes.personalInfo),
+                        //   child: Container(
+                        //     width: 36.w,
+                        //     height: 36.w,
+                        //     decoration: BoxDecoration(
+                        //       shape: BoxShape.circle,
+                        //       color: Colors.white.withValues(alpha: 0.15),
+                        //       border: Border.all(
+                        //         color: Colors.white.withValues(alpha: 0.4),
+                        //         width: 1.2,
+                        //       ),
+                        //     ),
+                        //     child: ClipOval(
+                        //       child: (user?.photo != null &&
+                        //           user!.photo!.isNotEmpty)
+                        //           ? CachedNetworkImage(
+                        //         imageUrl: user.photo!.startsWith('http')
+                        //             ? user.photo!
+                        //             : '${ApiConstants.streamUrl}${user.photo}',
+                        //         fit: BoxFit.cover,
+                        //         placeholder: (_, __) => Container(
+                        //             color: colors.shimmerBase),
+                        //         errorWidget: (_, __, ___) => Icon(
+                        //           Icons.person,
+                        //           color: Colors.white,
+                        //           size: 16.sp,
+                        //         ),
+                        //       )
+                        //           : Icon(
+                        //         Icons.person,
+                        //         color: Colors.white,
+                        //         size: 16.sp,
+                        //       ),
+                        //     ),
+                        //   ),
+                        // ),
+                      ],
                     ),
                   ],
                 ),
@@ -296,6 +305,78 @@ class HomeSpeedHeader extends ConsumerWidget {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Notification bell button with animated unread badge.
+/// Placed in the home header; taps navigate to NotificationsScreen.
+class _NotificationBell extends ConsumerWidget {
+  const _NotificationBell();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final unreadCount =
+        ref.watch(notificationsProvider.select((s) => s.unreadCount));
+
+    return GestureDetector(
+      onTap: () async {
+        await Navigator.of(context).pushNamed(AppRoutes.notifications);
+        // ignore: use_build_context_synchronously
+        ref.read(notificationsProvider.notifier).fetchUnreadCount();
+      },
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            width: 36.w,
+            height: 36.w,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withValues(alpha: 0.15),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.4),
+                width: 1.2,
+              ),
+            ),
+            child: Icon(
+              Icons.notifications_rounded,
+              color: Colors.white,
+              size: 18.sp,
+            ),
+          ),
+          if (unreadCount > 0)
+            Positioned(
+              top: -4,
+              right: -4,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                transitionBuilder: (child, animation) =>
+                    ScaleTransition(scale: animation, child: child),
+                child: Container(
+                  key: ValueKey(unreadCount),
+                  constraints: BoxConstraints(minWidth: 18.w, minHeight: 18.w),
+                  padding: EdgeInsets.symmetric(horizontal: 4.w),
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent,
+                    borderRadius: BorderRadius.circular(9.r),
+                    border: Border.all(color: Colors.white, width: 1.5),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    unreadCount > 99 ? '99+' : '$unreadCount',
+                    style: TextStyle(
+                      fontSize: 9.sp,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                      height: 1,
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );

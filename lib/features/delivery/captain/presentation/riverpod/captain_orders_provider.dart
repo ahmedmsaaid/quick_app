@@ -98,68 +98,67 @@ class CaptainOrders extends _$CaptainOrders {
 
     final apiService = ref.read(ordersApiServiceProvider);
 
-    // طلب واحد يجيب كل الطلبات ونقوم بفلترتها محلياً لتجنب استدعاء الاندبوينت مرتين
+    // ✅ call واحدة بس — بدون فلتر UpdatorId عشان تجيب الكل
     final result = await apiService.getOrdersWithFilters(
-      includesPath: ['User', 'Creator', 'OrderProducts.Product', 'UserLocation'],
-      filters: {
-    "UpdatorId": user?.id,},
+      includesPath: [
+        'User',
+        'Creator',
+        'OrderProducts.Product',
+        'UserLocation',
+      ],
       pageSize: 100,
     );
-    if (!ref.mounted) return;
 
-    List<OrderDto> available = [];
-    List<OrderDto> active = [];
-    List<OrderDto> finished = [];
-    String? error;
+    if (!ref.mounted) return;
 
     result.when(
       success: (response) {
         final list = response.result ?? [];
-        // المتاحة: status=2 (جاهز للاستلام) أو status=0 (للاختبار)
-        available = list.where((o) => o.status == 2 || o.status == 0).toList();
-        // النشطة للكابتن الحالي: updatorId == user.id و status=3
-        active = list.where((o) => o.updatorId == user.id && o.status == 3).toList();
-        // المنتهية للكابتن الحالي: updatorId == user.id و status=4
-        finished = list.where((o) => o.updatorId == user.id && o.status == 4).toList();
+
+        // ✅ تقسيم النتيجة هنا
+        final available = list
+            .where((o) => o.status == 2 )
+            .toList();
+
+        final active = list
+            .where(
+              (o) => o.updatorId == user.id && o.status >= 2 && o.status <= 6,
+            )
+            .toList();
+
+        final finished = list
+            .where((o) => o.updatorId == user.id && o.status == 7)
+            .toList();
+
+        // إحصائيات اليوم
+        final now = DateTime.now();
+        final todayStart = DateTime(now.year, now.month, now.day);
+        final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
+
+        final todayCompleted = finished.where((o) {
+          if (o.createdOn == null) return false;
+          try {
+            final date = DateTime.parse(o.createdOn!);
+            return date.isAfter(todayStart) && date.isBefore(todayEnd);
+          } catch (_) {
+            return false;
+          }
+        }).toList();
+
+        state = CaptainOrdersState(
+          status: CaptainOrdersStatus.loaded,
+          availableOrders: available,
+          activeOrders: active,
+          finishedOrders: finished,
+          todayOrdersCount: todayCompleted.length,
+          todayEarnings: todayCompleted.fold(0.0, (sum, o) => sum + o.deliveryFee),
+        );
       },
-      failure: (e) => error = e.message,
-    );
-
-    // احسب إحصائيات اليوم من الطلبات المنتهية
-    final now = DateTime.now();
-    final todayStart = DateTime(now.year, now.month, now.day);
-    final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
-
-    final todayCompleted = finished.where((o) {
-      if (o.createdOn == null) return false;
-      try {
-        final date = DateTime.parse(o.createdOn!);
-        return date.isAfter(todayStart) && date.isBefore(todayEnd);
-      } catch (_) {
-        return false;
-      }
-    }).toList();
-
-    final todayEarningsSum = todayCompleted.fold<double>(
-      0.0,
-      (sum, item) => sum + item.deliveryFee,
-    );
-
-    if (error != null) {
-      state = state.copyWith(
+      failure: (e) => state = state.copyWith(
         status: CaptainOrdersStatus.error,
-        errorMessage: error,
-      );
-    } else {
-      state = CaptainOrdersState(
-        status: CaptainOrdersStatus.loaded,
-        availableOrders: available,
-        activeOrders: active,
-        finishedOrders: finished,
-        todayOrdersCount: todayCompleted.length,
-        todayEarnings: todayEarningsSum,
-      );
-    }
+        errorMessage: e.message,
+      ),
+    );
   }
 
   /// قبول طلب متاح (update status من 2 إلى 3)
@@ -267,10 +266,15 @@ class CaptainMyOrders extends _$CaptainMyOrders {
 
     final apiService = ref.read(ordersApiServiceProvider);
 
-    // جيب طلبات الكابتن بفلتر UpdatorId
+    // جيب طلبات الكابتن بفلتر updatorId
     final result = await apiService.getOrdersWithFilters(
-      filters: {'UpdatorId': user.id},
-      includesPath: ['User', 'Creator', 'OrderProducts.Product', 'UserLocation'],
+      filters: {'updatorId': user.id},
+      includesPath: [
+        'User',
+        'Creator',
+        'OrderProducts.Product',
+        'UserLocation',
+      ],
       pageSize: 100,
     );
     if (!ref.mounted) return;
@@ -282,17 +286,15 @@ class CaptainMyOrders extends _$CaptainMyOrders {
     result.when(
       success: (response) {
         final list = response.result ?? [];
-        active = list.where((o) => o.status == 3).toList();
-        finished = list.where((o) => o.status == 4).toList();
+        final filteredList = list.where((o) => o.updatorId == user.id).toList();
+        active = filteredList.where((o) => o.status >= 2 && o.status <= 6).toList();
+        finished = filteredList.where((o) => o.status == 7).toList();
       },
       failure: (e) => error = e.message,
     );
 
     if (error != null) {
-      state = state.copyWith(
-        status: MyOrdersStatus.error,
-        errorMessage: error,
-      );
+      state = state.copyWith(status: MyOrdersStatus.error, errorMessage: error);
     } else {
       state = MyOrdersState(
         status: MyOrdersStatus.loaded,

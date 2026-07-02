@@ -13,6 +13,10 @@ dependencies:
   flutter:
     sdk: flutter
   cached_network_image: ^3.3.1
+  grpc: ^4.1.0
+  protobuf: ^5.1.0
+  photo_view: ^0.15.0
+  jwt_decoder: ^2.0.1
 
   cupertino_icons: ^1.0.8
   # Flutter plugin for Firebase Core, enabling connecting to multiple Firebase apps.
@@ -54,6 +58,7 @@ dependencies:
   smooth_page_indicator: ^2.0.1
   flutter_svg: ^2.2.3
   geolocator: ^13.0.1
+  path_provider: ^2.1.1
   country_picker: ^2.0.27
   flutter_otp_text_field: ^1.5.1+1
   image_picker: ^1.2.1
@@ -70,6 +75,7 @@ dev_dependencies:
   build_runner: ^2.5.4
   json_serializable: ^6.9.0
   freezed: ^3.2.3
+  permission_handler:
   easy_localization_loader:
 flutter_launcher_icons:
   android: true

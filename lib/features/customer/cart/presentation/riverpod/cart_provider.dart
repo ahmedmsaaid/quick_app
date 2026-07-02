@@ -48,7 +48,7 @@ class CartState {
 }
 
 // ─── Cart Notifier ─────────────────────────────────────
-@riverpod
+@Riverpod(keepAlive: true)
 class CartNotifier extends _$CartNotifier {
   @override
   CartState build() => const CartState();

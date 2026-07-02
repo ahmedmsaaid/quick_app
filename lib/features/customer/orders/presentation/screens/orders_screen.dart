@@ -84,10 +84,10 @@ class OrdersScreen extends ConsumerWidget {
 
     final allOrders = state.orders;
 
-    // Filter current: not completed (3) and not canceled (4)
-    final currentOrders = allOrders.where((o) => o.status != 3 && o.status != 4).toList();
-    // Filter completed/canceled: completed (3) or canceled (4)
-    final pastOrders = allOrders.where((o) => o.status == 3 || o.status == 4).toList();
+    // Filter current: status is less than 7 (Delivered) and not Cancelled/Rejected (8, 9)
+    final currentOrders = allOrders.where((o) => o.status < 7).toList();
+    // Filter completed/canceled: Delivered (7), Cancelled (8), Rejected (9)
+    final pastOrders = allOrders.where((o) => o.status >= 7).toList();
 
     return TabBarView(
       children: [
@@ -149,7 +149,7 @@ class OrdersScreen extends ConsumerWidget {
         ? order.createdOn!.split('T').first
         : '';
 
-    final isCurrent = order.status != 3 && order.status != 4;
+    final isCurrent = order.status < 7;
 
     return Container(
       padding: EdgeInsets.all(15.r),
@@ -238,7 +238,10 @@ class OrdersScreen extends ConsumerWidget {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () {
-                      Navigator.of(context).pushNamed(AppRoutes.orderDetailsScreen);
+                      Navigator.of(context).pushNamed(
+                        AppRoutes.orderDetailsScreen,
+                        arguments: order,
+                      );
                     },
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(color: colors.primary),
@@ -268,6 +271,10 @@ class OrdersScreen extends ConsumerWidget {
                 ),
               ],
             ),
+            if (order.status < 6) ...[
+              10.verticalSpace,
+              _CancelOrderCardButton(order: order),
+            ],
           ] else ...[
             15.verticalSpace,
             SizedBox(
@@ -312,13 +319,23 @@ class OrdersScreen extends ConsumerWidget {
       case 0:
         return 'قيد الانتظار';
       case 1:
-        return 'جاري التحضير';
+        return 'في انتظار الدفع';
       case 2:
-        return 'في الطريق';
+        return 'قيد التوصيل';
       case 3:
-        return 'تم التوصيل';
+        return 'تم التأكيد';
       case 4:
+        return 'جاري التحضير';
+      case 5:
+        return 'جاهز للاستلام';
+      case 6:
+        return 'في الطريق';
+      case 7:
+        return 'تم التوصيل';
+      case 8:
         return 'ملغي';
+      case 9:
+        return 'مرفوض';
       default:
         return 'قيد المعالجة';
     }
@@ -326,9 +343,10 @@ class OrdersScreen extends ConsumerWidget {
 
   Color _getStatusColor(int status, AppColors colors) {
     switch (status) {
-      case 3:
+      case 7:
         return colors.success;
-      case 4:
+      case 8:
+      case 9:
         return colors.error;
       default:
         return colors.primary;
@@ -393,3 +411,85 @@ class _ReorderButtonState extends ConsumerState<_ReorderButton> {
     );
   }
 }
+
+// ─── زر إلغاء الطلب من داخل الكارت ───
+class _CancelOrderCardButton extends ConsumerStatefulWidget {
+  final OrderDto order;
+  const _CancelOrderCardButton({required this.order});
+
+  @override
+  ConsumerState<_CancelOrderCardButton> createState() => _CancelOrderCardButtonState();
+}
+
+class _CancelOrderCardButtonState extends ConsumerState<_CancelOrderCardButton> {
+  bool _isCancelling = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors(context);
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton(
+        onPressed: _isCancelling ? null : _cancel,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: colors.error,
+          side: BorderSide(color: colors.error.withValues(alpha: 0.5)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+          padding: EdgeInsets.symmetric(vertical: 10.h),
+        ),
+        child: _isCancelling
+            ? SizedBox(
+                width: 18.w,
+                height: 18.w,
+                child: CircularProgressIndicator(color: colors.error, strokeWidth: 2),
+              )
+            : Text(
+                'إلغاء الطلب',
+                style: AppTextStyles.text12w600(color: colors.error),
+              ),
+      ),
+    );
+  }
+
+  Future<void> _cancel() async {
+    final colors = AppColors(context);
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('تأكيد إلغاء الطلب'),
+        content: const Text('هل أنت متأكد من رغبتك في إلغاء هذا الطلب؟'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('تراجع', style: TextStyle(color: colors.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('نعم، إلغاء', style: TextStyle(color: colors.error, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _isCancelling = true);
+    final success = await ref.read(ordersProvider.notifier).cancelOrder(widget.order);
+    if (mounted) setState(() => _isCancelling = false);
+
+    if (success) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تم إلغاء الطلب بنجاح')),
+        );
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('فشل إلغاء الطلب، يرجى المحاولة لاحقاً')),
+        );
+      }
+    }
+  }
+}
+

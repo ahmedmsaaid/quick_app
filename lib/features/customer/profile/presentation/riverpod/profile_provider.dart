@@ -388,4 +388,35 @@ class ProfileNotifier extends _$ProfileNotifier {
       base: true,
     );
   }
+
+  /// Toggle user online/active status.
+  Future<bool> toggleActivity() async {
+    final user = state.user;
+    if (user == null) return false;
+
+    state = state.copyWith(status: ProfileStatus.updating);
+    final result = await ref.read(profileApiServiceProvider).toggleActivityStatus(user.id);
+    
+    return result.when(
+      success: (response) async {
+        if (response.success) {
+          await loadProfile(); // Reload to refresh user active status
+          return true;
+        } else {
+          state = state.copyWith(
+            status: ProfileStatus.error,
+            errorMessage: response.message,
+          );
+          return false;
+        }
+      },
+      failure: (error) {
+        state = state.copyWith(
+          status: ProfileStatus.error,
+          errorMessage: error.message,
+        );
+        return false;
+      },
+    );
+  }
 }

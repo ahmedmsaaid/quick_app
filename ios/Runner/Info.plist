@@ -49,5 +49,9 @@
 	<string>نحتاج للوصول إلى موقعك لتحديد عنوان التوصيل بدقة وتسهيل وصول الطلبات إليك.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
 	<string>نحتاج للوصول إلى موقعك لتحديد عنوان التوصيل بدقة وتسهيل وصول الطلبات إليك.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 </dict>
 </plist>

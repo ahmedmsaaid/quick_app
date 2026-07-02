@@ -295,4 +295,18 @@ class ProfileApiService {
       return ApiResult.failure(handleError(e));
     }
   }
+
+  /// Toggle the user's active/activity status.
+  Future<ApiResult<ApiResponse<bool>>> toggleActivityStatus(int userId) async {
+    try {
+      final response = await _dio.patch('${ApiConstants.toggleActivity}/$userId');
+      final apiResponse = ApiResponse<bool>.fromJson(
+        response.data,
+        (json) => json is bool ? json : (json == true),
+      );
+      return ApiResult.success(apiResponse);
+    } catch (e) {
+      return ApiResult.failure(handleError(e));
+    }
+  }
 }

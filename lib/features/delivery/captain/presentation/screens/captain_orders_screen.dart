@@ -16,6 +16,9 @@ class CaptainOrdersScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColors(context);
     final ordersState = ref.watch(captainMyOrdersProvider);
+    if (ordersState.status == MyOrdersStatus.initial) {
+      Future.microtask(() => ref.read(captainMyOrdersProvider.notifier).loadOrders());
+    }
 
     return DefaultTabController(
       length: 2,
@@ -96,7 +99,7 @@ class CaptainOrdersScreen extends ConsumerWidget {
 
     // Define status label text based on actual order status
     String statusLabelText = isActive ? AppStrings.onWayLabel : AppStrings.arrivedDoneLabel;
-    if (isActive && order.status == 2) {
+    if (isActive && (order.status == 2 || order.status == 5)) {
       statusLabelText = 'بانتظار الاستلام';
     }
 

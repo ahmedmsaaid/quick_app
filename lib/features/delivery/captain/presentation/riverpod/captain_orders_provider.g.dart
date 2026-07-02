@@ -41,7 +41,7 @@ final class CaptainOrdersProvider
   }
 }
 
-String _$captainOrdersHash() => r'e605446b7cbf3bb77a386f4389640e5252caef03';
+String _$captainOrdersHash() => r'9aeed9d893039b3c018023f6a6ba872832bb3d3a';
 
 abstract class _$CaptainOrders extends $Notifier<CaptainOrdersState> {
   CaptainOrdersState build();
@@ -93,7 +93,7 @@ final class CaptainMyOrdersProvider
   }
 }
 
-String _$captainMyOrdersHash() => r'db6522c86f797fe2c42bb01318ed03a719aff109';
+String _$captainMyOrdersHash() => r'e03d2cd59d28e62cc577b5719283d09548a5cbb6';
 
 abstract class _$CaptainMyOrders extends $Notifier<MyOrdersState> {
   MyOrdersState build();

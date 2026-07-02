@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "634389575709",
+    "project_id": "quick-c535b",
+    "storage_bucket": "quick-c535b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:634389575709:android:c15cac0d3778dc43edaef4",
+        "android_client_info": {
+          "package_name": "com.quick.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDsoWyVFxvAohGY8Ljrn8OxXfalcgV8zMA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

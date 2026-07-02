@@ -6,6 +6,7 @@ import 'package:base_app/core/services/cach_helper/cache_helper_keys.dart';
 import 'package:base_app/core/network/api_result.dart';
 import 'package:base_app/features/shared/auth/data/auth_api_service.dart';
 import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
+import 'package:base_app/core/services/push_notification/push_notification_service.dart';
 
 part 'auth_provider.g.dart';
 
@@ -60,6 +61,7 @@ class Auth extends _$Auth {
   /// Sets the authentication state to authenticated directly (e.g. after OTP)
   void setAuthenticated() {
     final role = CacheHelper.getInt('userRole') ?? 2;
+    ref.read(pushNotificationServiceProvider).registerDeviceTokenWithBackend();
     state = AuthState.authenticated(UserDto(id: 0, role: role, status: 0));
   }
 
@@ -93,6 +95,9 @@ class Auth extends _$Auth {
           
           // Cache the user role!
           await CacheHelper.setInt('userRole', isUser ? 2 : 3);
+          
+          // Register FCM token with backend immediately upon login!
+          ref.read(pushNotificationServiceProvider).registerDeviceTokenWithBackend();
           
           state = AuthState.authenticated(UserDto(id: 0, role: isUser ? 2 : 3, status: 0));
           return true;

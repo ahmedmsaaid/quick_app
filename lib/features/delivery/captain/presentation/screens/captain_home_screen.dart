@@ -11,6 +11,7 @@ import 'package:base_app/features/customer/checkout/data/models/order_models.dar
 import 'package:base_app/features/customer/profile/presentation/riverpod/profile_provider.dart';
 import 'package:base_app/features/shared/auth/presentation/riverpod/auth_provider.dart';
 import 'package:base_app/features/delivery/captain/presentation/riverpod/captain_orders_provider.dart';
+import 'package:base_app/features/shared/notifications/presentation/riverpod/notifications_provider.dart';
 
 class CaptainHomeScreen extends ConsumerStatefulWidget {
   const CaptainHomeScreen({super.key});
@@ -19,7 +20,7 @@ class CaptainHomeScreen extends ConsumerStatefulWidget {
   ConsumerState<CaptainHomeScreen> createState() => _CaptainHomeScreenState();
 }
 
-class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> {
+class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with WidgetsBindingObserver {
   bool _isOnline = true;
   Timer? _breakTimer;
   int _breakSecondsRemaining = 1800; // 30 minutes
@@ -27,22 +28,100 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     // Load the user profile to check activation status
     Future.microtask(() {
       ref.read(profileProvider.notifier).loadProfile();
     });
   }
 
-  void _toggleStatus(bool val) {
-    setState(() {
-      _isOnline = val;
-      if (!_isOnline) {
-        _startBreakTimer();
-      } else {
-        _breakTimer?.cancel();
-        _breakSecondsRemaining = 1800;
+  Future<int?> _showBreakDurationDialog() async {
+    final colors = AppColors(context);
+    return showDialog<int>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: colors.surface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15.r)),
+          title: Text(
+            'اختر مدة الاستراحة',
+            style: AppTextStyles.text16w700(color: colors.textPrimary),
+            textAlign: TextAlign.center,
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildDurationOption(context, '10 دقائق', 10),
+              10.verticalSpace,
+              _buildDurationOption(context, '20 دقيقة', 20),
+              10.verticalSpace,
+              _buildDurationOption(context, '30 دقيقة', 30),
+              10.verticalSpace,
+              _buildDurationOption(context, '45 دقيقة', 45),
+              10.verticalSpace,
+              _buildDurationOption(context, 'ساعة واحدة', 60),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(null),
+              child: Text(
+                'إلغاء',
+                style: AppTextStyles.text14w600(color: colors.error),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildDurationOption(BuildContext context, String title, int minutes) {
+    final colors = AppColors(context);
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: colors.primary.withValues(alpha: 0.1),
+          foregroundColor: colors.primary,
+          elevation: 0,
+          padding: EdgeInsets.symmetric(vertical: 12.h),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10.r),
+            side: BorderSide(color: colors.primary.withValues(alpha: 0.3)),
+          ),
+        ),
+        onPressed: () => Navigator.of(context).pop(minutes),
+        child: Text(
+          title,
+          style: AppTextStyles.text14w700(color: colors.primary),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _toggleStatus(bool val) async {
+    if (!val) {
+      // Going offline (Break) -> Show duration dialog
+      final minutes = await _showBreakDurationDialog();
+      if (minutes == null) {
+        // User cancelled, do not update backend or local switch state
+        return;
       }
-    });
+      setState(() {
+        _breakSecondsRemaining = minutes * 60;
+      });
+    }
+
+    final success = await ref.read(profileProvider.notifier).toggleActivity();
+    if (!success) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('فشل تحديث حالة النشاط، يرجى المحاولة لاحقاً')),
+        );
+      }
+    }
   }
 
   void _startBreakTimer() {
@@ -54,10 +133,7 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> {
         });
       } else {
         timer.cancel();
-        setState(() {
-          _isOnline = true;
-          _breakSecondsRemaining = 1800;
-        });
+        ref.read(profileProvider.notifier).toggleActivity();
       }
     });
   }
@@ -69,7 +145,17 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Refresh captain orders and unread notification badge count when app comes back to foreground
+      ref.read(captainOrdersProvider.notifier).loadAll();
+      ref.read(notificationsProvider.notifier).fetchUnreadCount();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _breakTimer?.cancel();
     super.dispose();
   }
@@ -79,6 +165,41 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> {
     final colors = AppColors(context);
     final profileState = ref.watch(profileProvider);
     final ordersState = ref.watch(captainOrdersProvider);
+
+    // Synchronize initial loaded active status
+    if (profileState.status == ProfileStatus.loaded && profileState.user != null) {
+      final nextActive = profileState.user!.active ?? false;
+      if (_isOnline != nextActive && _breakTimer == null) {
+        Future.microtask(() {
+          if (mounted) {
+            setState(() {
+              _isOnline = nextActive;
+              if (!_isOnline) {
+                _startBreakTimer();
+              }
+            });
+          }
+        });
+      }
+    }
+
+    // Listen to live profile status changes to update break/online status dynamically
+    ref.listen(profileProvider, (previous, next) {
+      if (next.status == ProfileStatus.loaded && next.user != null) {
+        final nextActive = next.user!.active ?? false;
+        if (_isOnline != nextActive) {
+          setState(() {
+            _isOnline = nextActive;
+            if (!_isOnline) {
+              _startBreakTimer();
+            } else {
+              _breakTimer?.cancel();
+              _breakSecondsRemaining = 1800;
+            }
+          });
+        }
+      }
+    });
 
     // Show loading while profile is being fetched
     if (profileState.status == ProfileStatus.loading ||
@@ -105,6 +226,7 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> {
       appBar: AppBar(
         backgroundColor: colors.surface,
         elevation: 0,
+        leading: const _NotificationBell(),
         title: Text(
           AppStrings.controlPanelTitle,
           style: AppTextStyles.text18w700(color: colors.textPrimary),
@@ -171,7 +293,7 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> {
                     ),
                   )
                 else
-                  _buildAvailableOrdersList(context, ordersState.availableOrders)
+                  _buildAvailableOrdersList(context, ordersState.activeOrders)
               ] else
                 _buildBreakMessage(context),
             ],
@@ -663,3 +785,76 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> {
     );
   }
 }
+
+class _NotificationBell extends ConsumerWidget {
+  const _NotificationBell();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColors(context);
+    final unreadCount =
+        ref.watch(notificationsProvider.select((s) => s.unreadCount));
+
+    return GestureDetector(
+      onTap: () async {
+        await Navigator.of(context).pushNamed(AppRoutes.notifications);
+        ref.read(notificationsProvider.notifier).fetchUnreadCount();
+      },
+      child: Center(
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              width: 38.w,
+              height: 38.w,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: colors.surface,
+                border: Border.all(
+                  color: colors.border,
+                  width: 1.2,
+                ),
+              ),
+              child: Icon(
+                Icons.notifications_rounded,
+                color: colors.textPrimary,
+                size: 20.sp,
+              ),
+            ),
+            if (unreadCount > 0)
+              Positioned(
+                top: -2,
+                right: -2,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  transitionBuilder: (child, animation) =>
+                      ScaleTransition(scale: animation, child: child),
+                  child: Container(
+                    key: ValueKey(unreadCount),
+                    constraints: BoxConstraints(minWidth: 16.w, minHeight: 16.w),
+                    padding: EdgeInsets.symmetric(horizontal: 4.w),
+                    decoration: BoxDecoration(
+                      color: Colors.redAccent,
+                      borderRadius: BorderRadius.circular(8.r),
+                      border: Border.all(color: colors.surface, width: 1.5),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      unreadCount > 99 ? '99+' : '$unreadCount',
+                      style: TextStyle(
+                        fontSize: 8.sp,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        height: 1,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+

@@ -8,8 +8,8 @@ class AppColors {
   bool get _isDark => Theme.of(context).brightness == Brightness.dark;
 
   // ===== Brand Palette =====
-  static const Color brandTeal = Color(0xFF035B5A);
-  static const Color brandTealDark = Color(0xFF006D6D);
+  static const Color brandTeal = Color(0xFF004D40);
+  static const Color brandTealDark = Color(0xFF22373F);
   static const Color brandTealLight = Color(0xFFE6F6F6);
 
   static const Color brandOrange = Color(0xFFFF8A1F);

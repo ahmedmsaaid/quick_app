@@ -34,7 +34,9 @@ import 'package:base_app/features/customer/profile/presentation/screens/settings
 import 'package:base_app/features/customer/profile/presentation/screens/privacy_policy_screen.dart';
 import 'package:base_app/features/customer/profile/presentation/screens/contact_us_screen.dart';
 import 'package:base_app/features/customer/profile/presentation/screens/change_password_screen.dart';
-import 'package:base_app/features/shared/chats/presentation/screens/chat_details_screen.dart';
+import 'package:base_app/features/shared/chats/presentation/screens/app_chat_screen.dart';
+import 'package:base_app/features/shared/chats/presentation/screens/app_chats_list_screen.dart';
+import 'package:base_app/features/shared/chats/data/enums/role_type_enum.dart';
 import 'package:base_app/features/delivery/captain/presentation/screens/captain_nav_screen.dart';
 import 'package:base_app/features/delivery/captain/presentation/screens/captain_order_details_screen.dart';
 import 'package:base_app/features/delivery/captain/presentation/screens/captain_registration_details_screen.dart';
@@ -131,9 +133,25 @@ abstract class AppRouter {
           VendorDetailsScreen(vendor: vendor, initialCategory: initialCategory),
           settings,
         );
+      case AppRoutes.chatsScreen:
+        return _buildAnimatedRoute(const AppChatsListScreen(), settings);
       case AppRoutes.chatDetailsScreen:
-        final String name = (settings.arguments as String?) ?? AppStrings.technicalSupportTitle;
-        return _buildAnimatedRoute(ChatDetailsScreen(name: name), settings);
+        final args = settings.arguments;
+        AppChatArgument argument;
+        if (args is AppChatArgument) {
+          argument = args;
+        } else {
+          final String title = (args as String?) ?? AppStrings.technicalSupportTitle;
+          argument = AppChatArgument(
+            chatId: null,
+            recipientId: 1, // Default support recipientId
+            profileId: 0,
+            typeEnum: RoleTypeEnum.admin,
+            recipientName: title,
+            recipientImage: '',
+          );
+        }
+        return _buildAnimatedRoute(AppChatScreen(appChatArgument: argument), settings);
       case AppRoutes.cartScreen:
         return _buildAnimatedRoute(const CartScreen(), settings);
       case AppRoutes.cart: // Re-using cart if needed or specifically for Checkout
@@ -141,7 +159,8 @@ abstract class AppRouter {
         final OfferDto? offer = args is OfferDto ? args : null;
         return _buildAnimatedRoute(CheckoutScreen(offer: offer), settings);
       case AppRoutes.orderDetailsScreen:
-        return _buildAnimatedRoute(const OrderTrackingScreen(), settings);
+        final OrderDto? trackOrder = settings.arguments is OrderDto ? settings.arguments as OrderDto : null;
+        return _buildAnimatedRoute(OrderTrackingScreen(order: trackOrder), settings);
       case AppRoutes.allCategoriesScreen:
         return _buildAnimatedRoute(const AllCategoriesScreen(), settings);
       case AppRoutes.captainRegisterScreen:

@@ -28,4 +28,7 @@ abstract class ApiConstants {
   static const String productRating = 'product-rating';
   static const String userRating = 'user-rating';
   static const String settings = 'settings';
+  static const String getNotifications = 'users/notifications';
+  static const String countNotifications = 'users/count-notifications';
+  static const String readNotification = 'users/read-notifications';
 }
