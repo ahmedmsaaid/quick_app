@@ -114,10 +114,30 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final int type;
 
     if (widget.offer != null) {
-      productsPrice = widget.offer!.price;
-      offerId = widget.offer!.id;
-      products = null;
-      type = widget.offer!.type;
+      if (widget.offer!.offerType == 1 && widget.offer!.products != null) {
+        double sum = 0.0;
+        for (final p in widget.offer!.products!) {
+          sum += p.price * p.quantity;
+        }
+        productsPrice = sum > 0 ? sum : widget.offer!.price;
+        offerId = null; // Set offerId to null so the backend treats it as a normal order of products
+        products = widget.offer!.products!
+            .map((p) => CreateOrderProductRequest(
+                  productId: p.id,
+                  price: p.price,
+                  quantity: p.quantity,
+                  productName: p.name,
+                  photo: p.photo,
+                  totalPrice: p.price * p.quantity,
+                ))
+            .toList();
+        type = widget.offer!.type;
+      } else {
+        productsPrice = widget.offer!.price;
+        offerId = widget.offer!.id;
+        products = null;
+        type = widget.offer!.type;
+      }
     } else {
       final cart = ref.watch(cartProvider);
       productsPrice = cart.subtotal;
@@ -128,6 +148,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               productId: item.product.id,
               price: item.effectivePrice,
               quantity: item.quantity,
+              productName: item.product.name,
+              photo: item.product.photo,
+              totalPrice: item.effectivePrice * item.quantity,
             ),
           )
           .toList();

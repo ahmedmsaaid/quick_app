@@ -8,6 +8,7 @@ class ProductDto {
   final double price;
   final int categoryId;
   final int creatorId;
+  final int quantity;
 
   ProductDto({
     required this.id,
@@ -17,6 +18,7 @@ class ProductDto {
     required this.price,
     required this.categoryId,
     required this.creatorId,
+    this.quantity = 1,
   });
 
   factory ProductDto.fromJson(Map<String, dynamic> json) {
@@ -28,6 +30,7 @@ class ProductDto {
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       categoryId: json['categoryId'] is int ? json['categoryId'] as int : 0,
       creatorId: json['creatorId'] is int ? json['creatorId'] as int : 0,
+      quantity: json['quantity'] is int ? json['quantity'] as int : (int.tryParse(json['quantity']?.toString() ?? '1') ?? 1),
     );
   }
 
@@ -39,6 +42,7 @@ class ProductDto {
     'price': price,
     'categoryId': categoryId,
     'creatorId': creatorId,
+    'quantity': quantity,
   };
 }
 
@@ -50,6 +54,7 @@ class OfferDto {
   final List<String>? otherPhotos;
   final String? description;
   final int type; // 0 for Restaurant, 1 for Market
+  final int offerType; // 0 for Non-editable, 1 for Editable
   final bool active;
   final bool approved;
   final int numberOfClicks;
@@ -69,6 +74,7 @@ class OfferDto {
     this.otherPhotos,
     this.description,
     required this.type,
+    this.offerType = 0,
     required this.active,
     required this.approved,
     required this.numberOfClicks,
@@ -92,6 +98,7 @@ class OfferDto {
           : null,
       description: json['description']?.toString(),
       type: json['type'] is int ? json['type'] as int : 0,
+      offerType: json['offerType'] is int ? json['offerType'] as int : (int.tryParse(json['offerType']?.toString() ?? '0') ?? 0),
       active: json['active'] as bool? ?? false,
       approved: json['approved'] as bool? ?? false,
       numberOfClicks: json['numberOfClicks'] is int ? json['numberOfClicks'] as int : 0,
@@ -115,6 +122,7 @@ class OfferDto {
     'otherPhotos': otherPhotos,
     'description': description,
     'type': type,
+    'offerType': offerType,
     'active': active,
     'approved': approved,
     'numberOfClicks': numberOfClicks,

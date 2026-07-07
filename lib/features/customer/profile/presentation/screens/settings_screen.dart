@@ -29,38 +29,42 @@ class SettingsScreen extends ConsumerWidget {
         ),
         centerTitle: true,
       ),
-      body: Column(
-        children: [
-          20.verticalSpace,
-          _buildSettingItem(
-            context, 
-            AppStrings.languageLabel, 
-            context.locale.languageCode == 'ar' ? AppStrings.arabic : AppStrings.english, 
-            Icons.language,
-            onTap: () {
-              Navigator.of(context).pushNamed(AppRoutes.chooseYourLanguageScreen, arguments: true);
-            },
-          ),
-          _buildSettingItem(
-            context, 
-            AppStrings.displayModeLabel, 
-            themeMode == ThemeMode.dark ? AppStrings.nightLabel : AppStrings.dayLabel, 
-            Icons.dark_mode_outlined,
-            onTap: () {
-              ref.read(themeNotifierProvider.notifier).toggleTheme();
-            },
-          ),
-          _buildSettingItem(context, AppStrings.notifications, AppStrings.notificationsOnLabel, Icons.notifications_none),
-          _buildSettingItem(
-            context, 
-            AppStrings.changePasswordBtn,
-            '', 
-            Icons.lock_outline,
-            onTap: () {
-              Navigator.of(context).pushNamed(AppRoutes.changePassword);
-            },
-          ),
-        ],
+      body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: Column(
+          children: [
+            20.verticalSpace,
+            _buildSettingItem(
+              context,
+              AppStrings.languageLabel,
+              context.locale.languageCode == 'ar' ? AppStrings.arabic : AppStrings.english,
+              Icons.language,
+              onTap: () {
+                Navigator.of(context).pushNamed(AppRoutes.chooseYourLanguageScreen, arguments: true);
+              },
+            ),
+            _buildSettingItem(
+              context,
+              AppStrings.displayModeLabel,
+              themeMode == ThemeMode.dark ? AppStrings.nightLabel : AppStrings.dayLabel,
+              Icons.dark_mode_outlined,
+              onTap: () {
+                ref.read(themeNotifierProvider.notifier).toggleTheme();
+              },
+            ),
+            _buildSettingItem(context, AppStrings.notifications, AppStrings.notificationsOnLabel, Icons.notifications_none),
+            _buildSettingItem(
+              context,
+              AppStrings.changePasswordBtn,
+              '',
+              Icons.lock_outline,
+              onTap: () {
+                Navigator.of(context).pushNamed(AppRoutes.changePassword);
+              },
+            ),
+            20.verticalSpace,
+          ],
+        ),
       ),
     );
   }
@@ -70,7 +74,7 @@ class SettingsScreen extends ConsumerWidget {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 20.w, vertical: 5.h),
       decoration: BoxDecoration(
-        color: colors.surface, 
+        color: colors.surface,
         borderRadius: BorderRadius.circular(12.r),
         border: Border.all(color: colors.border),
       ),
@@ -85,7 +89,7 @@ class SettingsScreen extends ConsumerWidget {
             10.horizontalSpace,
             Icon(
               Icons.arrow_forward_ios,
-              size: 14, 
+              size: 14,
               color: colors.textHint,
             ),
           ],

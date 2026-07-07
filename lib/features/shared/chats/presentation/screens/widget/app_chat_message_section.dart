@@ -23,8 +23,15 @@ class AppChatBubble extends StatelessWidget {
       final token = CacheHelper.getString(CacheKeys.token) ?? '';
       if (token.isNotEmpty) {
         final decoded = JwtDecoder.decode(token);
-        final userIdStr = decoded['UserId'] ?? decoded['id'] ?? '0';
-        extractedId = int.parse(userIdStr);
+        final rawVal = decoded['UserId'] ??
+            decoded['userId'] ??
+            decoded['id'] ??
+            decoded['nameid'] ??
+            decoded['sub'] ??
+            decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'];
+        if (rawVal != null) {
+          extractedId = int.tryParse(rawVal.toString()) ?? 0;
+        }
       }
     } catch (e) {
       print('Error parsing token in AppChatBubble: $e');

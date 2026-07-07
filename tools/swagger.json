@@ -5065,36 +5065,6 @@
         "description": "This endpoint supports pagination of audit notifications. The operation can be cancelled by\r\n            providing a cancellation token. The response includes pagination metadata along with the audit notification\r\n            data.",
         "parameters": [
           {
-            "name": "includesPath",
-            "in": "query",
-            "schema": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          },
-          {
-            "name": "searchFilter",
-            "in": "query",
-            "schema": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          },
-          {
-            "name": "filters",
-            "in": "query",
-            "schema": {
-              "type": "object",
-              "additionalProperties": {
-                "nullable": true
-              }
-            }
-          },
-          {
             "name": "pageNumber",
             "in": "query",
             "schema": {
@@ -5455,21 +5425,18 @@
         "properties": {
           "id": {
             "type": "integer",
-            "format": "int64",
-            "readOnly": true
+            "format": "int64"
           },
           "entityId": {
             "type": "integer",
-            "format": "int64",
-            "readOnly": true
+            "format": "int64"
           },
           "entityType": {
             "$ref": "#/components/schemas/EntityType"
           },
           "content": {
             "type": "string",
-            "nullable": true,
-            "readOnly": true
+            "nullable": true
           },
           "creatorMessage": {
             "$ref": "#/components/schemas/LocalizedText"
@@ -5479,26 +5446,22 @@
           },
           "creatorId": {
             "type": "integer",
-            "format": "int64",
-            "readOnly": true
+            "format": "int64"
           },
           "creator": {
             "$ref": "#/components/schemas/UserDto"
           },
           "createdOn": {
             "type": "string",
-            "format": "date-time",
-            "readOnly": true
+            "format": "date-time"
           },
           "readOn": {
             "type": "string",
             "format": "date-time",
-            "nullable": true,
-            "readOnly": true
+            "nullable": true
           },
           "read": {
-            "type": "boolean",
-            "readOnly": true
+            "type": "boolean"
           }
         },
         "additionalProperties": false
@@ -6124,6 +6087,20 @@
         },
         "additionalProperties": false
       },
+      "CreateOfferProductRequest": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "quantity": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
       "CreateOfferRequest": {
         "type": "object",
         "properties": {
@@ -6153,11 +6130,10 @@
           "active": {
             "type": "boolean"
           },
-          "productIds": {
+          "productId": {
             "type": "array",
             "items": {
-              "type": "integer",
-              "format": "int64"
+              "$ref": "#/components/schemas/CreateOfferProductRequest"
             },
             "nullable": true
           },
@@ -8735,11 +8711,10 @@
           "active": {
             "type": "boolean"
           },
-          "productIds": {
+          "productId": {
             "type": "array",
             "items": {
-              "type": "integer",
-              "format": "int64"
+              "$ref": "#/components/schemas/CreateOfferProductRequest"
             },
             "nullable": true
           },

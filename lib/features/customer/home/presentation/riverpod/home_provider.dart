@@ -259,6 +259,19 @@ class HomeNotifier extends _$HomeNotifier {
       loadRecommendedStores(categoryId: category.id, role: category.userRole);
     }
   }
+
+  Future<void> refreshAllData() async {
+    await Future.wait([
+      loadOffers(),
+      loadFeaturedRestaurants(),
+      loadCategories(),
+      loadRecommendedStores(
+        categoryId: state.selectedCategory?.id,
+        role: state.selectedCategory?.userRole,
+      ),
+      loadPopularProducts(),
+    ]);
+  }
 }
 
 @riverpod
@@ -311,6 +324,7 @@ Future<OfferDto> getOfferDetails(Ref ref, int id) async {
             otherPhotos: offer.otherPhotos,
             description: offer.description,
             type: offer.type,
+            offerType: offer.offerType,
             active: offer.active,
             approved: offer.approved,
             numberOfClicks: offer.numberOfClicks,

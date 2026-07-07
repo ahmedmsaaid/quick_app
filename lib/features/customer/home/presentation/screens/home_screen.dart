@@ -16,7 +16,6 @@ import 'package:base_app/features/customer/home/presentation/widgets/mock_store_
 import 'package:base_app/features/customer/home/presentation/widgets/home_type_segment_tab.dart';
 import 'package:base_app/features/customer/home/data/models/category_model.dart';
 import 'package:base_app/core/routes/app_router.dart';
-import 'package:base_app/features/customer/home/presentation/widgets/home_most_requested.dart';
 import 'package:base_app/features/customer/home/presentation/widgets/home_todays_offers.dart';
 import 'package:base_app/features/customer/home/presentation/widgets/home_order_again.dart';
 
@@ -55,10 +54,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     return Scaffold(
       backgroundColor: colors.background,
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      body: RefreshIndicator(
+        color: colors.secondary,
+        backgroundColor: colors.cardBackground,
+        strokeWidth: 2.5,
+        triggerMode: RefreshIndicatorTriggerMode.anywhere,
+        onRefresh: () async {
+          await ref.read(homeProvider.notifier).refreshAllData();
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             // Colored Speed Header Container
             const HomeSpeedHeader(),
 
@@ -68,11 +76,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             const HomeModernBanner(),
             16.verticalSpace,
 
-            // New Sections for high accessibility and crowded Home screen
-            const HomeMostRequested(),
-            12.verticalSpace,
+            // عروض الـ API الحقيقية
             const HomeTodaysOffers(),
             12.verticalSpace,
+            // العروض القابلة للتعديل
+            const HomeEditableOffers(),
+            12.verticalSpace,
+            // اطلب مرة أخرى من الطلبات السابقة
             const HomeOrderAgain(),
             12.verticalSpace,
 
@@ -189,6 +199,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

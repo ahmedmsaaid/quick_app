@@ -62,12 +62,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return Scaffold(
       backgroundColor: AppColors(context).background,
       body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
         child: Column(
           children: [
             _buildProfileHeader(context, user?.name, user?.phone, user?.photo ?? user?.avatar),
             20.verticalSpace,
             _buildMenuSection(context, ref),
-            30.verticalSpace,
+            SizedBox(height: 64.h + 16.h + MediaQuery.of(context).padding.bottom + 16.h),
           ],
         ),
       ),

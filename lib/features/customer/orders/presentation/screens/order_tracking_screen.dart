@@ -607,6 +607,53 @@ class _VendorRow extends StatelessWidget {
                 ],
               ),
             ),
+            if (vendor != null)
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AppChatScreen(
+                        appChatArgument: AppChatArgument(
+                          chatId: null,
+                          profileId: vendor.id,
+                          typeEnum: order.type == 0
+                              ? RoleTypeEnum.restaurant
+                              : RoleTypeEnum.market,
+                          recipientId: vendor.id,
+                          recipientName: vendor.name ?? '',
+                          recipientImage: photoUrl,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                  decoration: BoxDecoration(
+                    color: colors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12.r),
+                    border: Border.all(
+                      color: colors.primary.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.chat_bubble_outline_rounded,
+                        color: colors.primary,
+                        size: 16.sp,
+                      ),
+                      6.horizontalSpace,
+                      Text(
+                        'مراسلة',
+                        style: AppTextStyles.text12w700(color: colors.primary),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
           ],
         ),
         if (productSummary.isNotEmpty) ...[

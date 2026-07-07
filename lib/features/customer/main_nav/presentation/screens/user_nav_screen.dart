@@ -9,6 +9,8 @@ import 'package:base_app/core/widgets/custome_svg_image.dart';
 import 'package:base_app/features/customer/orders/presentation/screens/orders_screen.dart';
 import 'package:base_app/features/customer/profile/presentation/screens/profile_screen.dart';
 import 'package:base_app/features/customer/profile/presentation/riverpod/profile_provider.dart';
+import 'package:base_app/features/customer/home/presentation/riverpod/home_provider.dart';
+import 'package:base_app/features/customer/orders/presentation/riverpod/orders_provider.dart';
 import 'package:base_app/core/localizations/app_strings.g.dart';
 
 class UserNavScreen extends ConsumerStatefulWidget {
@@ -20,6 +22,7 @@ class UserNavScreen extends ConsumerStatefulWidget {
 
 class _UserNavScreenState extends ConsumerState<UserNavScreen> {
   int _selectedIndex = 0;
+  final Map<int, DateTime> _lastRefreshTimes = {};
 
   @override
   void initState() {
@@ -27,6 +30,29 @@ class _UserNavScreenState extends ConsumerState<UserNavScreen> {
     Future.microtask(() => ref.read(profileProvider.notifier).loadProfile());
   }
 
+  void _refreshTabEndpoint(int index) {
+    final now = DateTime.now();
+    final lastRefresh = _lastRefreshTimes[index];
+
+    // Throttle: ignore taps within 2.5 seconds for the same tab
+    if (lastRefresh != null && now.difference(lastRefresh) < const Duration(milliseconds: 2500)) {
+      return;
+    }
+
+    _lastRefreshTimes[index] = now;
+
+    switch (index) {
+      case 0:
+        ref.read(homeProvider.notifier).refreshAllData();
+        break;
+      case 2:
+        ref.read(ordersProvider.notifier).loadOrders();
+        break;
+      case 3:
+        ref.read(profileProvider.notifier).loadProfile();
+        break;
+    }
+  }
 
   final List<Widget> _pages = [
     const HomeScreen(),
@@ -44,6 +70,7 @@ class _UserNavScreenState extends ConsumerState<UserNavScreen> {
         setState(() {
           _selectedIndex = index;
         });
+        _refreshTabEndpoint(index);
       },
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(

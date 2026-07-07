@@ -9,6 +9,7 @@ import 'package:base_app/core/widgets/see_all_widget.dart';
 import 'package:base_app/core/routes/app_routes.dart';
 import 'package:base_app/features/customer/orders/presentation/riverpod/orders_provider.dart';
 import 'package:base_app/features/customer/checkout/data/models/order_models.dart';
+import 'package:base_app/features/customer/profile/presentation/riverpod/profile_provider.dart';
 import 'package:base_app/core/widgets/custom_toast.dart';
 
 class HomeOrderAgain extends ConsumerStatefulWidget {
@@ -55,29 +56,71 @@ class _HomeOrderAgainState extends ConsumerState<HomeOrderAgain> {
     }
   }
 
+  /// نفس منطق orders_screen — اسم المنتج الأول + صورته
+  String _getOrderTitle(OrderDto order) {
+    if (order.offerId != null) return 'طلب عرض خاص #${order.offerId}';
+    if (order.products.isEmpty) return 'طلب جديد';
+    final firstProd = order.products.first;
+    String title = firstProd.productName ?? 'طلب جديد';
+    if (order.products.length > 1) {
+      title += ' و ${order.products.length - 1} منتجات أخرى';
+    }
+    return title;
+  }
+
+  /// نفس منطق orders_screen — صورة المنتج الأول
+  String _getOrderImageUrl(OrderDto order) {
+    if (order.products.isEmpty) return '';
+    final String? photo = order.products.first.photo;
+    if (photo == null || photo.isEmpty) return '';
+    return photo.startsWith('http') ? photo : '${ApiConstants.streamUrl}$photo';
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = AppColors(context);
     final ordersState = ref.watch(ordersProvider);
 
-    // فلتر الأوردرات المكتملة أو المُسلّمة (status=3) لعرض "اطلب مرة أخرى"
-    final completedOrders = ordersState.orders
-        .where((o) => o.status == 3 && o.products.isNotEmpty)
+    // نراقب الـ profile — لو الـ user اتحمّل والطلبات لسه فاضية نعيد التحميل
+    ref.listen(profileProvider, (prev, next) {
+      final wasNull = prev?.user == null;
+      final isNowLoaded = next.user != null;
+      final ordersNeedRetry = ordersState.status == OrdersStatus.error ||
+          ordersState.status == OrdersStatus.initial;
+
+      if (wasNull && isNowLoaded && ordersNeedRetry) {
+        ref.read(ordersProvider.notifier).loadOrders();
+      }
+    });
+
+    // فقط الطلبات المسلّمة Delivered = 7 اللي تستحق "اطلب مرة أخرى"
+    // Cancelled = 8 و Rejected = 9 لا يظهران هنا
+    final pastOrders = ordersState.orders
+        .where((o) => o.status == 7 && o.products.isNotEmpty)
         .toList();
 
-    // إزالة التكرار — عرض أوردر واحد لكل متجر
-    final List<OrderDto> uniqueVendorOrders = [];
-    final Set<int> seenVendorIds = {};
-    for (final order in completedOrders) {
-      if (!seenVendorIds.contains(order.creatorId)) {
-        seenVendorIds.add(order.creatorId);
-        uniqueVendorOrders.add(order);
-      }
+    // Loading state
+    if (ordersState.status == OrdersStatus.loading && pastOrders.isEmpty) {
+      return SizedBox(
+        height: 175.h,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SeeAllWidget(title: 'اطلب مرة أخرى', onTap: () {}),
+            Expanded(
+              child: Center(
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: colors.primary,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
     }
 
-    if (uniqueVendorOrders.isEmpty) {
-      return const SizedBox.shrink();
-    }
+    if (pastOrders.isEmpty) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -87,47 +130,39 @@ class _HomeOrderAgainState extends ConsumerState<HomeOrderAgain> {
           onTap: () {},
         ),
         SizedBox(
-          height: 140.h,
+          height: 155.h,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: EdgeInsets.symmetric(horizontal: 20.w),
-            itemCount: uniqueVendorOrders.length,
+            itemCount: pastOrders.length,
             itemBuilder: (context, index) {
-              final order = uniqueVendorOrders[index];
-              final vendor = order.creator;
-              final String? photoKey = vendor?.photo ?? vendor?.avatar;
-              final String photoUrl = (photoKey != null && photoKey.isNotEmpty)
-                  ? (photoKey.startsWith('http')
-                      ? photoKey
-                      : '${ApiConstants.streamUrl}$photoKey')
-                  : '';
+              final order = pastOrders[index];
+              final String title = _getOrderTitle(order);
+              final String imageUrl = _getOrderImageUrl(order);
               final bool isLoading = _loadingOrderIds.contains(order.id);
 
               return _buildOrderAgainCard(
                 context: context,
                 colors: colors,
-                title: vendor?.name ?? 'متجر',
+                title: title,
                 timeAgo: _getTimeAgo(order.createdOn),
-                imageUrl: photoUrl,
-                isAsset: false,
+                imageUrl: imageUrl,
                 isLoading: isLoading,
                 onTap: () async {
                   if (isLoading) return;
                   setState(() => _loadingOrderIds.add(order.id));
-                  final success = await ref
-                      .read(ordersProvider.notifier)
-                      .reorder(order);
+                  final success =
+                      await ref.read(ordersProvider.notifier).reorder(order);
                   if (!context.mounted) return;
                   setState(() => _loadingOrderIds.remove(order.id));
                   if (success) {
-                    CustomToast.success(context, 'تم إضافة المنتجات إلى السلة! 🛒');
+                    CustomToast.success(
+                        context, 'تم إضافة المنتجات إلى السلة! 🛒');
                     Navigator.of(context).pushNamed(AppRoutes.cartScreen);
                   } else {
                     final err = ref.read(ordersProvider).reorderError;
                     CustomToast.error(
-                      context,
-                      err ?? 'فشل إضافة المنتجات، حاول مرة أخرى',
-                    );
+                        context, err ?? 'فشل إضافة المنتجات، حاول مرة أخرى');
                   }
                 },
               );
@@ -144,19 +179,18 @@ class _HomeOrderAgainState extends ConsumerState<HomeOrderAgain> {
     required String title,
     required String timeAgo,
     required String imageUrl,
-    required bool isAsset,
     required VoidCallback onTap,
     bool isLoading = false,
   }) {
     return Container(
-      width: 110.w,
+      width: 130.w,
       margin: EdgeInsets.only(left: 12.w),
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(16.r),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -174,82 +208,65 @@ class _HomeOrderAgainState extends ConsumerState<HomeOrderAgain> {
         child: Padding(
           padding: EdgeInsets.all(8.w),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Vendor Logo Circle
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  Container(
-                    width: 50.w,
-                    height: 50.w,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: colors.background,
-                      border: Border.all(
-                        color: isLoading ? colors.primary : colors.border,
-                        width: isLoading ? 2 : 1,
-                      ),
-                    ),
-                    child: ClipOval(
-                      child: imageUrl.isNotEmpty
-                          ? (isAsset
-                              ? Image.asset(
-                                  imageUrl,
-                                  fit: BoxFit.contain,
-                                )
-                              : CachedNetworkImage(
-                                  imageUrl: imageUrl,
-                                  fit: BoxFit.cover,
-                                  placeholder: (_, __) => Container(
-                                    color: colors.shimmerBase,
-                                  ),
-                                  errorWidget: (_, __, ___) => Icon(
-                                    Icons.storefront_rounded,
-                                    color: colors.textHint,
-                                    size: 24.sp,
-                                  ),
-                                ))
-                          : Icon(
-                              Icons.storefront_rounded,
-                              color: colors.textHint,
-                              size: 24.sp,
+              // ─── صورة المنتج (مستطيل) — نفس نهج orders_screen ───
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10.r),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      imageUrl.isNotEmpty
+                          ? CachedNetworkImage(
+                              imageUrl: imageUrl,
+                              fit: BoxFit.cover,
+                              placeholder: (_, __) =>
+                                  Container(color: colors.shimmerBase),
+                              errorWidget: (_, __, ___) => Container(
+                                color: colors.background,
+                                child: Icon(Icons.fastfood_rounded,
+                                    color: colors.textHint, size: 28.sp),
+                              ),
+                            )
+                          : Container(
+                              color: colors.background,
+                              child: Icon(Icons.fastfood_rounded,
+                                  color: colors.textHint, size: 28.sp),
                             ),
-                    ),
+                      if (isLoading)
+                        Container(
+                          color: Colors.black.withValues(alpha: 0.4),
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
-                  if (isLoading)
-                    SizedBox(
-                      width: 54.w,
-                      height: 54.w,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        color: colors.primary,
-                      ),
-                    ),
-                ],
-              ),
-              8.verticalSpace,
-              // Vendor Name
-              Text(
-                title,
-                style: AppTextStyles.text11w700(
-                  color: colors.textPrimary,
                 ),
-                textAlign: TextAlign.center,
-                maxLines: 1,
+              ),
+              6.verticalSpace,
+              // ─── اسم المنتج ───
+              Text(
+                isLoading ? 'جاري الطلب...' : title,
+                style: AppTextStyles.text11w700(
+                  color: isLoading ? colors.primary : colors.textPrimary,
+                ),
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
               2.verticalSpace,
-              // Time Elapsed
+              // ─── الوقت ───
               Text(
-                isLoading ? 'جاري الطلب...' : timeAgo,
+                timeAgo,
                 style: TextStyle(
-                  fontSize: 8.sp,
-                  color: isLoading ? colors.primary : colors.textHint,
+                  fontSize: 9.sp,
+                  color: colors.textHint,
                   fontFamily: 'Cairo',
-                  fontWeight: FontWeight.bold,
                 ),
-                textAlign: TextAlign.center,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),

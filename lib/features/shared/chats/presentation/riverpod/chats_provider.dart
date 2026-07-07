@@ -165,9 +165,16 @@ class ChatRoomNotifier extends StateNotifier<ChatRoomState> {
       final token = CacheHelper.getString(CacheKeys.token) ?? '';
       if (token.isNotEmpty) {
         final decoded = JwtDecoder.decode(token);
-        final userIdStr = decoded['UserId'] ?? decoded['id'] ?? '0';
-        final uid = int.parse(userIdStr);
-        state = state.copyWith(currentUserId: uid);
+        final rawVal = decoded['UserId'] ??
+            decoded['userId'] ??
+            decoded['id'] ??
+            decoded['nameid'] ??
+            decoded['sub'] ??
+            decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'];
+        if (rawVal != null) {
+          final uid = int.tryParse(rawVal.toString()) ?? 0;
+          state = state.copyWith(currentUserId: uid);
+        }
       }
     } catch (e) {
       print('❌ Failed to parse user ID from token in ChatRoomNotifier: $e');

@@ -24,7 +24,12 @@ class ChatsApiService {
       data: {
         'pageNumber': pageIndex,
         'pageSize': pageSize,
-        if (closedChatId != null) 'closedChatId': closedChatId,
+        'orderBeforPagination': true,
+        'orderDirection': 1,
+        'includesPath': <String>[],
+        'filters': <String, dynamic>{
+          if (closedChatId != null) 'closedChatId': closedChatId,
+        },
       },
     );
     return AppGetAllChatsResponseModel.fromJson(response.data);
@@ -44,11 +49,13 @@ class ChatsApiService {
       data: {
         'pageNumber': pageIndex,
         'pageSize': pageSize,
-        if (chatId != null) 'chatId': chatId,
-        if (targetUserId != null) 'targetUserId': targetUserId,
-        if (currentUserId != null) 'userId': currentUserId,
-        'sortDirection': sortDirection,
         if (search != null && search.isNotEmpty) 'search': search,
+        'orderBeforPagination': true,
+        'orderDirection': sortDirection,
+        'includesPath': <String>[],
+        'filters': <String, dynamic>{},
+        'chatId': chatId ?? 0,
+        'targetUserId': targetUserId ?? 0,
       },
     );
     return AppChatMessagesResponseModel.fromJson(response.data);
@@ -65,7 +72,7 @@ class ChatsApiService {
     await _dio.post(
       'messages',
       data: {
-        if (chatId != null) 'chatId': chatId,
+        'chatId': chatId ?? 0,
         'recipientId': recipientId,
         'creatorId': creatorId,
         if (content != null) 'content': content,

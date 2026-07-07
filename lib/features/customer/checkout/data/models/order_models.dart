@@ -4,17 +4,26 @@ class CreateOrderProductRequest {
   final int productId;
   final double price;
   final int quantity;
+  final String? productName;
+  final String? photo;
+  final double? totalPrice;
 
   CreateOrderProductRequest({
     required this.productId,
     required this.price,
     required this.quantity,
+    this.productName,
+    this.photo,
+    this.totalPrice,
   });
 
   Map<String, dynamic> toJson() => {
         'productId': productId,
         'price': price,
         'quantity': quantity,
+        'productName': productName,
+        'photo': photo,
+        'totalPrice': totalPrice ?? (price * quantity),
       };
 }
 

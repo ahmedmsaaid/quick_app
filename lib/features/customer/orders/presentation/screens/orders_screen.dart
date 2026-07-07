@@ -115,7 +115,12 @@ class OrdersScreen extends ConsumerWidget {
     }
 
     return ListView.separated(
-      padding: EdgeInsets.all(20.w),
+      padding: EdgeInsets.fromLTRB(
+        20.w,
+        20.w,
+        20.w,
+        20.w + 64.h + 16.h + MediaQuery.of(context).padding.bottom,
+      ),
       itemCount: orders.length,
       separatorBuilder: (context, index) => 15.verticalSpace,
       itemBuilder: (context, index) {
@@ -316,25 +321,25 @@ class OrdersScreen extends ConsumerWidget {
 
   String _getStatusText(int status) {
     switch (status) {
-      case 0:
-        return 'قيد الانتظار';
-      case 1:
-        return 'في انتظار الدفع';
-      case 2:
-        return 'قيد التوصيل';
-      case 3:
+      case 0: // Created
+        return 'جديد';
+      case 1: // PendingForPayment
+        return 'بانتظار الدفع';
+      case 2: // PendingForDelivery
+        return 'بانتظار مندوب';
+      case 3: // Confirmed
         return 'تم التأكيد';
-      case 4:
+      case 4: // Preparing
         return 'جاري التحضير';
-      case 5:
+      case 5: // ReadyForPickup
         return 'جاهز للاستلام';
-      case 6:
+      case 6: // OutForDelivery
         return 'في الطريق';
-      case 7:
+      case 7: // Delivered
         return 'تم التوصيل';
-      case 8:
+      case 8: // Cancelled
         return 'ملغي';
-      case 9:
+      case 9: // Rejected
         return 'مرفوض';
       default:
         return 'قيد المعالجة';
