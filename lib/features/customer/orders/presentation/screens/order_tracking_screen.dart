@@ -552,8 +552,13 @@ class _VendorRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext ctx) {
-    final String storeName = order.userLocation?.name ?? "المتجر";
-    const String photoUrl = '';
+    final String storeName = order.user?.name ?? order.userLocation?.name ?? 'المتجر';
+    final String? rawPhoto = order.user?.photo ?? order.user?.avatar;
+    final String photoUrl = (rawPhoto != null && rawPhoto.isNotEmpty)
+        ? (rawPhoto.startsWith('http')
+            ? rawPhoto
+            : '${ApiConstants.streamUrl}$rawPhoto')
+        : '';
 
     // Build product summary line
     String productSummary = '';
@@ -565,7 +570,7 @@ class _VendorRow extends StatelessWidget {
       productSummary = 'عرض خاص #${order.offerId}';
     }
 
-    final int targetVendorId = order.userLocation?.creatorId ?? order.creatorId;
+    final int targetVendorId = order.userId; // ✅ vendor ID
 
     return Column(
       children: [
