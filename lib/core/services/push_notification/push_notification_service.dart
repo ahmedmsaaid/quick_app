@@ -16,6 +16,7 @@ import 'package:base_app/core/services/local_notification/local_notification_ser
 import 'package:base_app/main.dart'; // to get navigatorKey
 import 'package:base_app/features/delivery/captain/presentation/riverpod/captain_orders_provider.dart';
 import 'package:base_app/features/shared/notifications/presentation/riverpod/notifications_provider.dart';
+import 'package:base_app/features/shared/chat/presentation/riverpod/app_chat_grbc_notifier.dart';
 
 class PushNotificationService {
   final Ref _ref;
@@ -60,6 +61,23 @@ class PushNotificationService {
       if (role == 3) {
         log("🔄 Refreshing captain orders list on foreground notification");
         _ref.read(captainOrdersProvider.notifier).loadAll();
+      }
+
+      // Check if this is a chat message and trigger real-time chat details refresh if active
+      final isChat = message.data['chatId'] != null ||
+          message.data['type'] == 'chat' ||
+          message.data['click_action'] == 'chat' ||
+          (message.notification?.title?.contains('رسالة') ?? false) ||
+          (message.notification?.title?.contains('محادثة') ?? false) ||
+          (message.notification?.body?.contains('شات') ?? false);
+
+      if (isChat) {
+        try {
+          log("💬 Chat message received in foreground. Syncing chat view...");
+          _ref.read(appChatGrbcProvider.notifier).refreshFromPush();
+        } catch (e) {
+          log("⚠️ Error refreshing chat from foreground notification: $e");
+        }
       }
     });
 

@@ -58,6 +58,11 @@ class AuthApiService {
     String? description,
   }) async {
     try {
+      String? cleanPhoto = photo;
+      if (cleanPhoto != null && cleanPhoto.startsWith(ApiConstants.streamUrl)) {
+        cleanPhoto = cleanPhoto.substring(ApiConstants.streamUrl.length);
+      }
+
       final response = await _dio.post(
         ApiConstants.signup,
         data: {
@@ -67,7 +72,7 @@ class AuthApiService {
           'confirmedPassword': confirmedPassword,
           'role': role,
           'email': email,
-          'photo': photo,
+          'photo': cleanPhoto,
           'address': address,
           if (location != null) 'location': location.toJson(),
           'description': description,

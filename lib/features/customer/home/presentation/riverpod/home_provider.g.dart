@@ -41,7 +41,7 @@ final class HomeNotifierProvider
   }
 }
 
-String _$homeNotifierHash() => r'6ab9e7cedf5f0eb3abf2f5e70af5999c0bd9d263';
+String _$homeNotifierHash() => r'd1cafe4b41c95dcf807e54efe5ed3717194b2718';
 
 abstract class _$HomeNotifier extends $Notifier<HomeState> {
   HomeState build();
@@ -111,7 +111,7 @@ final class GetOfferDetailsProvider
   }
 }
 
-String _$getOfferDetailsHash() => r'4618652ad91faad139c54b6fd0305b1037664c4c';
+String _$getOfferDetailsHash() => r'dfc0ec7a751c2e85b8094203b7665d331eae08b4';
 
 final class GetOfferDetailsFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<OfferDto>, int> {

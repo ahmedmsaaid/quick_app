@@ -10,8 +10,9 @@ import 'package:base_app/features/customer/checkout/data/models/order_models.dar
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:base_app/core/network/api_constants.dart';
 import 'package:base_app/features/customer/orders/presentation/riverpod/orders_provider.dart';
-import 'package:base_app/features/shared/chats/presentation/screens/app_chat_screen.dart';
-import 'package:base_app/features/shared/chats/data/enums/role_type_enum.dart';
+import 'package:base_app/core/constans/role_type_enum.dart';
+import 'package:base_app/core/models/app_chat_argument.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 // ─── Order Status Constants ─────────────────────────────────────────────────
 // 0 = Created
@@ -551,13 +552,8 @@ class _VendorRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext ctx) {
-    final vendor = order.creator;
-    final String? photoKey = vendor?.photo ?? vendor?.avatar;
-    final String photoUrl = (photoKey != null && photoKey.isNotEmpty)
-        ? (photoKey.startsWith('http')
-              ? photoKey
-              : '${ApiConstants.streamUrl}$photoKey')
-        : '';
+    final String storeName = order.userLocation?.name ?? "المتجر";
+    const String photoUrl = '';
 
     // Build product summary line
     String productSummary = '';
@@ -568,6 +564,8 @@ class _VendorRow extends StatelessWidget {
     } else if (order.offerId != null) {
       productSummary = 'عرض خاص #${order.offerId}';
     }
+
+    final int targetVendorId = order.userLocation?.creatorId ?? order.creatorId;
 
     return Column(
       children: [
@@ -596,7 +594,7 @@ class _VendorRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    vendor?.name ?? 'المتجر',
+                    storeName,
                     style: AppTextStyles.text14w700(color: colors.textPrimary),
                   ),
                   4.verticalSpace,
@@ -607,53 +605,53 @@ class _VendorRow extends StatelessWidget {
                 ],
               ),
             ),
-            if (vendor != null)
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => AppChatScreen(
-                        appChatArgument: AppChatArgument(
-                          chatId: null,
-                          profileId: vendor.id,
-                          typeEnum: order.type == 0
-                              ? RoleTypeEnum.restaurant
-                              : RoleTypeEnum.market,
-                          recipientId: vendor.id,
-                          recipientName: vendor.name ?? '',
-                          recipientImage: photoUrl,
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                GestureDetector(
+                  onTap: () {
+                    Navigator.of(context).pushNamed(
+                      AppRoutes.chatDetailsScreen,
+                      arguments: AppChatArgument(
+                        chatId: null,
+                        recipientId: targetVendorId,
+                        profileId: targetVendorId,
+                        typeEnum: order.type == 0
+                            ? RoleTypeEnum.restaurant
+                            : RoleTypeEnum.market,
+                        recipientName: storeName,
+                        recipientImage: photoUrl,
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                    decoration: BoxDecoration(
+                      color: colors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12.r),
+                      border: Border.all(
+                        color: colors.primary.withValues(alpha: 0.2),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.chat_bubble_outline_rounded,
+                          color: colors.primary,
+                          size: 16.sp,
                         ),
-                      ),
+                        6.horizontalSpace,
+                        Text(
+                          'مراسلة',
+                          style: AppTextStyles.text12w700(color: colors.primary),
+                        ),
+                      ],
                     ),
-                  );
-                },
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                  decoration: BoxDecoration(
-                    color: colors.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12.r),
-                    border: Border.all(
-                      color: colors.primary.withValues(alpha: 0.2),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.chat_bubble_outline_rounded,
-                        color: colors.primary,
-                        size: 16.sp,
-                      ),
-                      6.horizontalSpace,
-                      Text(
-                        'مراسلة',
-                        style: AppTextStyles.text12w700(color: colors.primary),
-                      ),
-                    ],
                   ),
                 ),
-              ),
+              ],
+            ),
           ],
         ),
         if (productSummary.isNotEmpty) ...[
@@ -753,21 +751,34 @@ class _DriverRow extends StatelessWidget {
                 ],
               ),
             ),
-            // Chat with Captain
-            _ActionBtn(
-              icon: Icons.chat_bubble_outline_rounded,
-              color: colors.primary,
-              onTap: () => Navigator.of(context).pushNamed(
-                AppRoutes.chatDetailsScreen,
-                arguments: AppChatArgument(
-                  chatId: null,
-                  recipientId: order.updatorId!,
-                  profileId: 0,
-                  typeEnum: RoleTypeEnum.captain,
-                  recipientName: driver.name ?? 'السائق',
-                  recipientImage: photoUrl,
+            // Chat & Call Captain
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (driver.phone != null && driver.phone!.isNotEmpty)
+                  _ActionBtn(
+                    icon: Icons.call_rounded,
+                    color: colors.success,
+                    onTap: () => _launchCall(context, driver.phone!),
+                  ),
+                if (driver.phone != null && driver.phone!.isNotEmpty)
+                  6.horizontalSpace,
+                _ActionBtn(
+                  icon: Icons.chat_bubble_outline_rounded,
+                  color: colors.primary,
+                  onTap: () => Navigator.of(context).pushNamed(
+                    AppRoutes.chatDetailsScreen,
+                    arguments: AppChatArgument(
+                      chatId: null,
+                      recipientId: order.updatorId!,
+                      profileId: 0,
+                      typeEnum: RoleTypeEnum.captain,
+                      recipientName: driver.name ?? 'السائق',
+                      recipientImage: photoUrl,
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
           ],
         ),
@@ -786,6 +797,28 @@ class _DriverRow extends StatelessWidget {
         size: 22.sp,
       ),
     );
+  }
+}
+
+// ─── Launch phone call ───────────────────────────────────────────────────────
+Future<void> _launchCall(BuildContext context, String phone) async {
+  final Uri uri = Uri(scheme: 'tel', path: phone);
+  try {
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    } else {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('لا يمكن الاتصال بالرقم $phone')),
+        );
+      }
+    }
+  } catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('خطأ أثناء الاتصال: $e')),
+      );
+    }
   }
 }
 

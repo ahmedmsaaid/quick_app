@@ -8,6 +8,7 @@ import 'package:base_app/core/styles/app_text_style.dart';
 import 'package:base_app/features/shared/auth/presentation/riverpod/auth_provider.dart';
 import 'package:base_app/features/customer/profile/presentation/riverpod/profile_provider.dart';
 import 'package:base_app/core/widgets/lading_button.dart';
+import 'package:base_app/core/network/api_constants.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -52,12 +53,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ElevatedButton(
                 onPressed: () => ref.read(profileProvider.notifier).loadProfile(),
                 child: Text(AppStrings.okText), 
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
-      );
-    }
+            ),
+          );
+        }
+
+    final rawPhoto = user?.photo ?? user?.avatar;
+    final resolvedPhotoUrl = (rawPhoto != null && rawPhoto.isNotEmpty)
+        ? (rawPhoto.startsWith('http') ? rawPhoto : '${ApiConstants.streamUrl}$rawPhoto')
+        : '';
 
     return Scaffold(
       backgroundColor: AppColors(context).background,
@@ -65,7 +71,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         physics: const BouncingScrollPhysics(),
         child: Column(
           children: [
-            _buildProfileHeader(context, user?.name, user?.phone, user?.photo ?? user?.avatar),
+            _buildProfileHeader(context, user?.name, user?.phone, resolvedPhotoUrl),
             20.verticalSpace,
             _buildMenuSection(context, ref),
             SizedBox(height: 64.h + 16.h + MediaQuery.of(context).padding.bottom + 16.h),

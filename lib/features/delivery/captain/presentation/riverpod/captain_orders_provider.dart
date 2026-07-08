@@ -106,6 +106,7 @@ class CaptainOrders extends _$CaptainOrders {
         'OrderProducts.Product',
         'UserLocation',
       ],
+      filters: {'UpdatorId': user?.id},
       pageSize: 100,
     );
 

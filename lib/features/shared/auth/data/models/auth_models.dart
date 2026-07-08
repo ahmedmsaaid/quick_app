@@ -192,6 +192,7 @@ class SendOTPResult {
 
 class LocationDto {
   final int id;
+  final String? name;
   final String? address;
   final double longitude;
   final double latitude;
@@ -201,6 +202,7 @@ class LocationDto {
 
   LocationDto({
     required this.id,
+    this.name,
     this.address,
     required this.longitude,
     required this.latitude,
@@ -211,6 +213,7 @@ class LocationDto {
 
   factory LocationDto.fromJson(Map<String, dynamic> json) => LocationDto(
     id: json['id'] is int ? json['id'] as int : int.tryParse(json['id']?.toString() ?? '0') ?? 0,
+    name: json['name']?.toString(),
     address: json['address']?.toString(),
     longitude: (json['longitude'] as num?)?.toDouble() ?? 0.0,
     latitude: (json['latitude'] as num?)?.toDouble() ?? 0.0,

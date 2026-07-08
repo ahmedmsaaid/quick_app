@@ -200,6 +200,45 @@ class _VendorDetailsScreenState extends ConsumerState<VendorDetailsScreen> {
             ),
           ),
 
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+              child: InkWell(
+                onTap: () => _showVendorRatingsListBottomSheet(context, ref, vendor, colors),
+                borderRadius: BorderRadius.circular(12.r),
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+                  decoration: BoxDecoration(
+                    color: colors.primary.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(12.r),
+                    border: Border.all(color: colors.primary.withValues(alpha: 0.1)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.star_rounded, color: Colors.amber, size: 18.sp),
+                      8.horizontalSpace,
+                      Text(
+                        '${vendor.rating.toStringAsFixed(1)}  •  تقييمات وآراء العملاء',
+                        style: AppTextStyles.text13w600(color: colors.textPrimary),
+                      ),
+                      const Spacer(),
+                      Text(
+                        'عرض الكل',
+                        style: AppTextStyles.text12w600(color: colors.primary),
+                      ),
+                      4.horizontalSpace,
+                      Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        color: colors.primary,
+                        size: 11.sp,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+
           // ─── Categories filter ───
           if (state.categories.isNotEmpty || state.categoriesStatus == VendorDetailsStatus.loading)
             if (isMarket)
@@ -216,96 +255,6 @@ class _VendorDetailsScreenState extends ConsumerState<VendorDetailsScreen> {
                   child: _CategoriesFilter(state: state, notifier: notifier, colors: colors),
                 ),
               ),
-
-          if (true) ...[
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-                child: InkWell(
-                  onTap: () => _showVendorRatingsListBottomSheet(context, ref, vendor, colors),
-                  borderRadius: BorderRadius.circular(16.r),
-                  child: Container(
-                    padding: EdgeInsets.all(16.r),
-                    decoration: BoxDecoration(
-                      color: colors.surface,
-                      borderRadius: BorderRadius.circular(16.r),
-                      border: Border.all(color: colors.primary.withValues(alpha: 0.15)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: colors.shadow.withValues(alpha: 0.05),
-                          blurRadius: 10.r,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        // Large Rating Number
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-                          decoration: BoxDecoration(
-                            color: colors.primary.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(12.r),
-                          ),
-                          child: Column(
-                            children: [
-                              Text(
-                                vendor.rating.toStringAsFixed(1),
-                                style: AppTextStyles.text20w700(color: colors.primary),
-                              ),
-                              4.verticalSpace,
-                              Row(
-                                children: [
-                                  Icon(Icons.star_rounded, color: Colors.amber, size: 14.sp),
-                                  2.horizontalSpace,
-                                  Text(
-                                    "تقييم",
-                                    style: AppTextStyles.text10w500(color: colors.textSecondary),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        16.horizontalSpace,
-                        // Description info
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "تقييمات وآراء العملاء",
-                                style: AppTextStyles.text14w700(color: colors.textPrimary),
-                              ),
-                              4.verticalSpace,
-                              Text(
-                                "شاهد ماذا قال العملاء الآخرون عن تجربتهم هنا",
-                                style: AppTextStyles.text11w400(color: colors.textSecondary),
-                              ),
-                            ],
-                          ),
-                        ),
-                        // Action Icon / Pill
-                        Container(
-                          padding: EdgeInsets.all(8.r),
-                          decoration: BoxDecoration(
-                            color: colors.background,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.arrow_forward_ios_rounded,
-                            color: colors.primary,
-                            size: 14.sp,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            SliverToBoxAdapter(child: 12.verticalSpace),
-          ],
 
           // ─── Content body (Categories or Products) ───
           if (isMarket) ...[
@@ -444,8 +393,8 @@ class _CategoriesHeaderDelegate extends SliverPersistentHeaderDelegate {
     );
   }
 
-  @override double get minExtent => 58;
-  @override double get maxExtent => 58;
+  @override double get minExtent => 52.h;
+  @override double get maxExtent => 52.h;
   @override bool shouldRebuild(covariant _CategoriesHeaderDelegate old) => old.child != child;
 }
 
@@ -457,13 +406,19 @@ class _CategoriesFilter extends StatelessWidget {
   final VendorDetailsNotifier notifier;
   final AppColors colors;
 
+  String _imageUrl(String? path) {
+    if (path == null || path.isEmpty) return '';
+    if (path.startsWith('http')) return path;
+    return '${ApiConstants.streamUrl}$path';
+  }
+
   @override
   Widget build(BuildContext context) {
     if (state.categoriesStatus == VendorDetailsStatus.loading) {
       return SizedBox(
-        height: 58,
+        height: 52.h,
         child: ListView.separated(
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
           scrollDirection: Axis.horizontal,
           itemCount: 5,
           separatorBuilder: (_, __) => 10.horizontalSpace,
@@ -471,10 +426,10 @@ class _CategoriesFilter extends StatelessWidget {
             baseColor: colors.shimmerBase,
             highlightColor: colors.shimmerHighlight,
             child: Container(
-              width: 80.w,
+              width: 100.w,
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(30.r),
+                borderRadius: BorderRadius.circular(25.r),
               ),
             ),
           ),
@@ -482,40 +437,77 @@ class _CategoriesFilter extends StatelessWidget {
       );
     }
 
-    if (state.categories.isEmpty) return const SizedBox(height: 58);
+    if (state.categories.isEmpty) return const SizedBox(height: 52.0);
 
     return SizedBox(
-      height: 58,
+      height: 52.h,
       child: ListView.separated(
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
         scrollDirection: Axis.horizontal,
         itemCount: state.categories.length,
         separatorBuilder: (_, __) => 10.horizontalSpace,
         itemBuilder: (_, i) {
           final CategoryDto cat = state.categories[i];
           final bool selected = state.selectedCategory?.id == cat.id;
+          final String imageUrl = _imageUrl(cat.photo);
+
           return GestureDetector(
             onTap: () => notifier.selectCategory(cat),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 220),
-              padding: EdgeInsets.symmetric(horizontal: 18.w),
-              alignment: Alignment.center,
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
               decoration: BoxDecoration(
-                color: selected ? colors.primary : colors.background,
-                borderRadius: BorderRadius.circular(30.r),
+                color: selected ? colors.primary : colors.surface,
+                borderRadius: BorderRadius.circular(25.r),
                 border: Border.all(
-                  color: selected ? colors.primary : colors.border,
+                  color: selected ? colors.primary : colors.border.withValues(alpha: 0.6),
                   width: 1.5,
                 ),
                 boxShadow: selected
-                    ? [BoxShadow(color: colors.primary.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 3))]
+                    ? [BoxShadow(color: colors.primary.withValues(alpha: 0.25), blurRadius: 6, offset: const Offset(0, 2))]
                     : [],
               ),
-              child: Text(
-                cat.name ?? '',
-                style: AppTextStyles.text14w600(
-                  color: selected ? Colors.white : colors.textSecondary,
-                ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 22.r,
+                    height: 22.r,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: selected ? Colors.white24 : colors.containerBackground,
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(11.r),
+                      child: imageUrl.isNotEmpty
+                          ? CachedNetworkImage(
+                              imageUrl: imageUrl,
+                              fit: BoxFit.cover,
+                              placeholder: (_, __) => Container(color: colors.shimmerBase),
+                              errorWidget: (_, __, ___) => Icon(
+                                Icons.fastfood_rounded,
+                                size: 12.sp,
+                                color: selected ? Colors.white : colors.textSecondary,
+                              ),
+                            )
+                          : Icon(
+                              Icons.fastfood_rounded,
+                              size: 12.sp,
+                              color: selected ? Colors.white : colors.textSecondary,
+                            ),
+                    ),
+                  ),
+                  8.horizontalSpace,
+                  Text(
+                    cat.name ?? '',
+                    style: TextStyle(
+                      fontSize: 12.sp,
+                      fontWeight: selected ? FontWeight.bold : FontWeight.w600,
+                      color: selected ? Colors.white : colors.textSecondary,
+                      fontFamily: 'Cairo',
+                    ),
+                  ),
+                ],
               ),
             ),
           );
@@ -1618,8 +1610,8 @@ class _QuickMarketCategoriesHeaderDelegate extends SliverPersistentHeaderDelegat
     );
   }
 
-  @override double get minExtent => 102.h;
-  @override double get maxExtent => 102.h;
+  @override double get minExtent => 52.h;
+  @override double get maxExtent => 52.h;
   @override bool shouldRebuild(covariant _QuickMarketCategoriesHeaderDelegate old) => old.child != child;
 }
 
@@ -1641,50 +1633,36 @@ class _QuickMarketCategoriesFilter extends StatelessWidget {
   Widget build(BuildContext context) {
     if (state.categoriesStatus == VendorDetailsStatus.loading) {
       return SizedBox(
-        height: 102.h,
+        height: 52.h,
         child: ListView.separated(
           padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
           scrollDirection: Axis.horizontal,
           itemCount: 5,
-          separatorBuilder: (_, __) => 15.horizontalSpace,
+          separatorBuilder: (_, __) => 10.horizontalSpace,
           itemBuilder: (_, __) => Shimmer.fromColors(
             baseColor: colors.shimmerBase,
             highlightColor: colors.shimmerHighlight,
-            child: Column(
-              children: [
-                Container(
-                  width: 50.r,
-                  height: 50.r,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                8.verticalSpace,
-                Container(
-                  width: 60.w,
-                  height: 10.h,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(4.r),
-                  ),
-                ),
-              ],
+            child: Container(
+              width: 100.w,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(25.r),
+              ),
             ),
           ),
         ),
       );
     }
 
-    if (state.categories.isEmpty) return const SizedBox(height: 110.0);
+    if (state.categories.isEmpty) return const SizedBox(height: 52.0);
 
     return SizedBox(
-      height: 102.h,
+      height: 52.h,
       child: ListView.separated(
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
         scrollDirection: Axis.horizontal,
         itemCount: state.categories.length,
-        separatorBuilder: (_, __) => 12.horizontalSpace,
+        separatorBuilder: (_, __) => 10.horizontalSpace,
         itemBuilder: (_, i) {
           final CategoryDto cat = state.categories[i];
           final bool selected = state.selectedCategory?.id == cat.id;
@@ -1693,63 +1671,58 @@ class _QuickMarketCategoriesFilter extends StatelessWidget {
           return GestureDetector(
             onTap: () => notifier.selectCategory(cat),
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 250),
-              curve: Curves.easeInOut,
-              width: 80.w,
-              margin: EdgeInsets.symmetric(vertical: 4.h),
+              duration: const Duration(milliseconds: 220),
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
               decoration: BoxDecoration(
-                color: selected ? colors.primary.withValues(alpha: 0.08) : colors.surface,
-                borderRadius: BorderRadius.circular(16.r),
+                color: selected ? colors.primary : colors.surface,
+                borderRadius: BorderRadius.circular(25.r),
                 border: Border.all(
                   color: selected ? colors.primary : colors.border.withValues(alpha: 0.6),
-                  width: selected ? 2 : 1,
+                  width: 1.5,
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: selected
-                        ? colors.primary.withValues(alpha: 0.12)
-                        : colors.shadow.withValues(alpha: 0.02),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
+                boxShadow: selected
+                    ? [BoxShadow(color: colors.primary.withValues(alpha: 0.25), blurRadius: 6, offset: const Offset(0, 2))]
+                    : [],
               ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    width: 38.r,
-                    height: 38.r,
+                    width: 22.r,
+                    height: 22.r,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: selected
-                          ? colors.primary.withValues(alpha: 0.1)
-                          : colors.containerBackground,
+                      color: selected ? Colors.white24 : colors.containerBackground,
                     ),
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(20.r),
+                      borderRadius: BorderRadius.circular(11.r),
                       child: imageUrl.isNotEmpty
                           ? CachedNetworkImage(
                               imageUrl: imageUrl,
                               fit: BoxFit.cover,
                               placeholder: (_, __) => Container(color: colors.shimmerBase),
-                              errorWidget: (_, __, ___) => Icon(Icons.category_rounded, size: 16.sp, color: colors.textHint),
+                              errorWidget: (_, __, ___) => Icon(
+                                Icons.category_rounded,
+                                size: 12.sp,
+                                color: selected ? Colors.white : colors.textSecondary,
+                              ),
                             )
-                          : Icon(Icons.category_rounded, size: 16.sp, color: colors.textHint),
+                          : Icon(
+                              Icons.category_rounded,
+                              size: 12.sp,
+                              color: selected ? Colors.white : colors.textSecondary,
+                            ),
                     ),
                   ),
-                  6.verticalSpace,
+                  8.horizontalSpace,
                   Text(
                     cat.name ?? '',
                     style: TextStyle(
-                      fontSize: 10.sp,
+                      fontSize: 12.sp,
                       fontWeight: selected ? FontWeight.bold : FontWeight.w600,
-                      color: selected ? colors.primary : colors.textSecondary,
+                      color: selected ? Colors.white : colors.textSecondary,
                       fontFamily: 'Cairo',
                     ),
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),

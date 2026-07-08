@@ -1,11 +1,14 @@
 import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/styles/app_text_style.dart';
 import 'package:base_app/core/widgets/custom_arrow_back.dart';
+import 'package:base_app/core/widgets/cached_network_image.dart';
+import 'package:base_app/core/network/api_constants.dart';
 
 import 'package:base_app/core/exports/exports.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
+  final String? imageUrl;
   final bool showLeading;
   final IconData leadingIcon;
   final VoidCallback? onLeadingTap;
@@ -23,6 +26,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     super.key,
     this.onTitleTap,
     required this.title,
+    this.imageUrl,
     this.showLeading = true,
     this.leadingIcon = Icons.arrow_back_ios_new,
     this.onLeadingTap,
@@ -63,11 +67,27 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       actions: const [],
       title: GestureDetector(
         onTap: onTitleTap,
-        child: Text(
-          title,
-          style: AppTextStyles.text18w700(color: colors.textPrimary),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (imageUrl != null && imageUrl!.isNotEmpty) ...[
+              CustomNetworkImage.circular(
+                imageUrl: imageUrl!.startsWith('http') || imageUrl!.startsWith('/')
+                    ? imageUrl!
+                    : '${ApiConstants.streamUrl}$imageUrl',
+                radius: 36.r,
+              ),
+              8.horizontalSpace,
+            ],
+            Flexible(
+              child: Text(
+                title,
+                style: AppTextStyles.text18w700(color: colors.textPrimary),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
       ),
     );

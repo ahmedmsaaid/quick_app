@@ -1,7 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:base_app/core/network/dio_factory.dart';
-import 'package:base_app/core/network/api_constants.dart';
 import 'package:base_app/core/network/api_result.dart';
 import 'package:base_app/core/error/error_handler.dart';
 import 'package:base_app/features/shared/auth/data/models/auth_models.dart';

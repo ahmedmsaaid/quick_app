@@ -16,6 +16,8 @@ import 'package:base_app/features/customer/profile/data/profile_api_service.dart
 import 'package:base_app/core/providers/image_picker_provider.dart';
 import 'package:dio/dio.dart';
 
+import 'package:base_app/core/network/api_constants.dart';
+
 class PersonalInfoScreen extends ConsumerStatefulWidget {
   const PersonalInfoScreen({super.key});
 
@@ -111,7 +113,10 @@ class _PersonalInfoScreenState extends ConsumerState<PersonalInfoScreen> {
     final isLoading = profileState.status == ProfileStatus.updating || _isUploadingPhoto;
 
     // Determine which photo to show: newly picked > user photo > default
-    final String? networkPhoto = user?.photo ?? user?.avatar;
+    final String? rawPhoto = user?.photo ?? user?.avatar;
+    final String? resolvedPhotoUrl = (rawPhoto != null && rawPhoto.isNotEmpty)
+        ? (rawPhoto.startsWith('http') ? rawPhoto : '${ApiConstants.streamUrl}$rawPhoto')
+        : null;
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -142,8 +147,8 @@ class _PersonalInfoScreenState extends ConsumerState<PersonalInfoScreen> {
                       backgroundColor: colors.divider,
                       backgroundImage: _pickedImage != null
                           ? FileImage(_pickedImage!) as ImageProvider
-                          : (networkPhoto != null && networkPhoto.isNotEmpty
-                              ? NetworkImage(networkPhoto)
+                          : (resolvedPhotoUrl != null && resolvedPhotoUrl.isNotEmpty
+                              ? NetworkImage(resolvedPhotoUrl)
                               : const AssetImage('assets/image/logo.png') as ImageProvider),
                     ),
                     if (_isUploadingPhoto)

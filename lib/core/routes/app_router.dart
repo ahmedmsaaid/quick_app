@@ -34,9 +34,11 @@ import 'package:base_app/features/customer/profile/presentation/screens/settings
 import 'package:base_app/features/customer/profile/presentation/screens/privacy_policy_screen.dart';
 import 'package:base_app/features/customer/profile/presentation/screens/contact_us_screen.dart';
 import 'package:base_app/features/customer/profile/presentation/screens/change_password_screen.dart';
-import 'package:base_app/features/shared/chats/presentation/screens/app_chat_screen.dart';
-import 'package:base_app/features/shared/chats/presentation/screens/app_chats_list_screen.dart';
-import 'package:base_app/features/shared/chats/data/enums/role_type_enum.dart';
+import 'package:base_app/features/shared/chat/presentation/screens/chat_details_screen.dart';
+import 'package:base_app/features/shared/chat/presentation/screens/chats_screen.dart';
+import 'package:base_app/core/constans/role_type_enum.dart';
+import 'package:base_app/core/models/app_chat_argument.dart';
+import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
 import 'package:base_app/features/delivery/captain/presentation/screens/captain_nav_screen.dart';
 import 'package:base_app/features/delivery/captain/presentation/screens/captain_order_details_screen.dart';
 import 'package:base_app/features/delivery/captain/presentation/screens/captain_registration_details_screen.dart';
@@ -134,24 +136,35 @@ abstract class AppRouter {
           settings,
         );
       case AppRoutes.chatsScreen:
-        return _buildAnimatedRoute(const AppChatsListScreen(), settings);
+        return _buildAnimatedRoute(const ChatsScreen(), settings);
       case AppRoutes.chatDetailsScreen:
         final args = settings.arguments;
-        AppChatArgument argument;
+        int? chatId;
+        UserDto creator;
+
         if (args is AppChatArgument) {
-          argument = args;
+          chatId = args.chatId;
+          creator = UserDto(
+            id: args.recipientId,
+            name: args.recipientName,
+            photo: args.recipientImage,
+            role: args.typeEnum.index,
+            status: 1,
+          );
+        } else if (args is Map<String, dynamic>) {
+          chatId = args['chatId'] as int?;
+          creator = args['creator'] as UserDto;
         } else {
           final String title = (args as String?) ?? AppStrings.technicalSupportTitle;
-          argument = AppChatArgument(
-            chatId: null,
-            recipientId: 1, // Default support recipientId
-            profileId: 0,
-            typeEnum: RoleTypeEnum.admin,
-            recipientName: title,
-            recipientImage: '',
+          chatId = null;
+          creator = UserDto(
+            id: 1,
+            name: title,
+            role: 4,
+            status: 1,
           );
         }
-        return _buildAnimatedRoute(AppChatScreen(appChatArgument: argument), settings);
+        return _buildAnimatedRoute(ChatDetailsScreen(chatId: chatId, creator: creator), settings);
       case AppRoutes.cartScreen:
         return _buildAnimatedRoute(const CartScreen(), settings);
       case AppRoutes.cart: // Re-using cart if needed or specifically for Checkout

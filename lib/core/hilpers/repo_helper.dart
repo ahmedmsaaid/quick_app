@@ -1,4 +1,5 @@
 import 'package:base_app/core/error/error_handler.dart';
+import 'package:base_app/core/models/app_result_model.dart';
 import 'package:base_app/core/network/api_result.dart';
 
 /// Extension على Future<T> لتبسيط معالجة الأخطاء في الـ Repository
@@ -67,7 +68,7 @@ class RepositoryHelper {
     }
   }
 
-  /// تنفيذ عملية Repository مع pagination
+  /// تنفيذ عملية Repository مع pagination (PaginatedData)
   static Future<ApiResult<PaginatedResult<R>>> executePaginated<T, R>({
     required Future<PaginatedData<T>> Function() call,
     required R Function(T item) mapper,
@@ -81,6 +82,30 @@ class RepositoryHelper {
           total: result.total,
           skip: result.skip,
           limit: result.limit,
+        ),
+      );
+    } catch (e) {
+      return ApiResult.failure(handleError(e));
+    }
+  }
+
+  /// تنفيذ عملية Repository مع AppResultModel<List<T>> وإرجاع PaginatedResult
+  /// Used by the chat feature for PATCH endpoints that return AppResultModel.
+  static Future<ApiResult<PaginatedResult<R>>> executePaginatedWithAppResultList<T, R>({
+    required Future<AppResultModel<List<T>>> Function() call,
+    required R Function(T item) mapper,
+  }) async {
+    try {
+      final response = await call();
+      final raw = response.result ?? <T>[];
+      final items = raw.map(mapper).toList();
+      final total = response.count ?? items.length;
+      return ApiResult.success(
+        PaginatedResult<R>(
+          items: items,
+          total: total,
+          skip: 0,
+          limit: total,
         ),
       );
     } catch (e) {

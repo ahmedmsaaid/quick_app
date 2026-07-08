@@ -31,4 +31,6 @@ abstract class ApiConstants {
   static const String getNotifications = 'users/notifications';
   static const String countNotifications = 'users/count-notifications';
   static const String readNotification = 'users/read-notifications';
+  static const String chats = 'chats';
+  static const String chatMessages = 'messages';
 }

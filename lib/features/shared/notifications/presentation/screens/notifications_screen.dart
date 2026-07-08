@@ -45,7 +45,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         actions: [
           if (state.unreadCount > 0)
             Padding(
-              padding: EdgeInsets.only(right: 16.w),
+              padding: EdgeInsets.only(right: 16.w,left: 16.w),
               child: Center(
                 child: Container(
                   padding:

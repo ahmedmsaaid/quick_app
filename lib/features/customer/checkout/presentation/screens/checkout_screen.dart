@@ -215,7 +215,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         addressName,
         selectedLocation,
         user,
-        totalRequired,
+        productsPrice,
         deliveryFee,
         serviceFee,
         type,
@@ -566,7 +566,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     String addressName,
     LocationDto? selectedLocation,
     UserDto? user,
-    double totalRequired,
+    double productsPrice,
     double deliveryFee,
     double serviceFee,
     int type,
@@ -595,6 +595,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   return;
                 }
 
+                final vendorId = _getVendorId();
+                if (vendorId == null) {
+                  CustomToast.error(context, "لم يتم تحديد المتجر، الرجاء المحاولة مرة أخرى");
+                  return;
+                }
+
                 final request = CreateOrderRequest(
                   address: addressName,
                   longitude:
@@ -606,11 +612,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       user.location?.latitude ??
                       33.3,
                   paymentMethod: _selectedPayment,
-                  totalPrice: totalRequired,
+                  totalPrice: productsPrice,
                   deliveryFee: deliveryFee,
                   orderFee: serviceFee,
                   type: type,
-                  userId: user.id,
+                  userId: vendorId,        // ✅ ID المطعم/الماركت
                   offerId: offerId,
                   userLocationId: _selectedVendorLocation!.id,
                   products: products,

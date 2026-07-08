@@ -89,11 +89,16 @@ class ProfileApiService {
     LocationModel? location,
   }) async {
     try {
+      String? cleanPhoto = photo;
+      if (cleanPhoto != null && cleanPhoto.startsWith(ApiConstants.streamUrl)) {
+        cleanPhoto = cleanPhoto.substring(ApiConstants.streamUrl.length);
+      }
+
       final Map<String, dynamic> data = {
         'name': name,
         'email': email,
         'address': address,
-        'photo': photo,
+        'photo': cleanPhoto,
         'description': description,
         'location': location?.toJson() ?? {},
       };

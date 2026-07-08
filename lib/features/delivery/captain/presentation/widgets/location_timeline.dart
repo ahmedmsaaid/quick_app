@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:base_app/core/network/api_constants.dart';
 import 'package:base_app/core/routes/app_routes.dart';
 import 'package:base_app/core/localizations/app_strings.g.dart';
 import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/styles/app_text_style.dart';
 import 'package:base_app/features/customer/checkout/data/models/order_models.dart';
-import 'package:base_app/features/shared/chats/presentation/screens/app_chat_screen.dart';
-import 'package:base_app/features/shared/chats/data/enums/role_type_enum.dart';
+import 'package:base_app/core/constans/role_type_enum.dart';
+import 'package:base_app/core/models/app_chat_argument.dart';
 import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
 
 class LocationTimeline extends StatelessWidget {
@@ -23,28 +24,30 @@ class LocationTimeline extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors(context);
-    final storeLat = vendorLocation?.latitude ?? order.userLocation?.latitude ?? order.creator?.location?.latitude;
-    final storeLng = vendorLocation?.longitude ?? order.userLocation?.longitude ?? order.creator?.location?.longitude;
-    final destLat = order.latitude;
-    final destLng = order.longitude;
+    final storeLat = vendorLocation?.latitude ?? order.userLocation?.latitude ?? order.user?.location?.latitude;
+    final storeLng = vendorLocation?.longitude ?? order.userLocation?.longitude ?? order.user?.location?.longitude;
+    final destLat = order.latitude != 0 ? order.latitude : (order.creator?.location?.latitude ?? 0.0);
+    final destLng = order.longitude != 0 ? order.longitude : (order.creator?.location?.longitude ?? 0.0);
 
-    final storeName = order.creator?.name ?? "متجر غير معروف";
+    final storeName = order.user?.name ?? "متجر غير معروف";
     final storeAddress = (vendorLocation?.address != null && vendorLocation!.address!.isNotEmpty)
         ? vendorLocation!.address!
         : (order.userLocation?.address != null && order.userLocation!.address!.isNotEmpty)
             ? order.userLocation!.address!
-            : (order.creator?.address != null && order.creator!.address!.isNotEmpty)
-                ? order.creator!.address!
+            : (order.user?.address != null && order.user!.address!.isNotEmpty)
+                ? order.user!.address!
                 : (storeLat != null && storeLng != null && storeLat != 0 && storeLng != 0)
                     ? "الموقع: ${storeLat.toStringAsFixed(5)}, ${storeLng.toStringAsFixed(5)}"
                     : "عنوان غير متوفر";
 
-    final customerName = order.user?.name ?? "زبون غير معروف";
+    final customerName = order.creator?.name ?? "زبون غير معروف";
     final customerAddress = (order.address != null && order.address!.isNotEmpty)
         ? order.address!
-        : (destLat != 0 && destLng != 0)
-            ? "الموقع: ${destLat.toStringAsFixed(5)}, ${destLng.toStringAsFixed(5)}"
-            : "عنوان غير متوفر";
+        : (order.creator?.address != null && order.creator!.address!.isNotEmpty)
+            ? order.creator!.address!
+            : (destLat != 0 && destLng != 0)
+                ? "الموقع: ${destLat.toStringAsFixed(5)}, ${destLng.toStringAsFixed(5)}"
+                : "عنوان غير متوفر";
 
     return Container(
       padding: EdgeInsets.all(20.r),
@@ -69,13 +72,13 @@ class LocationTimeline extends StatelessWidget {
             storeName,
             storeAddress,
             Colors.blue,
-            avatarUrl: _getImageUrl(order.creator?.photo ?? order.creator?.avatar),
-            phone: order.creator?.phone,
-            recipientId: order.creatorId,
+            avatarUrl: null,
+            phone: order.user?.phone,
+            recipientId: order.userLocation?.creatorId ?? order.userId,
             roleType: order.type == 0 ? RoleTypeEnum.restaurant : RoleTypeEnum.market,
-            showChat: false,
+            showChat: true,
           ),
-          20.verticalSpace,
+          25.verticalSpace,
           _buildTimelineItem(
             context,
             Icons.location_on,
@@ -84,9 +87,9 @@ class LocationTimeline extends StatelessWidget {
             customerAddress,
             colors.error,
             isLast: true,
-            avatarUrl: _getImageUrl(order.user?.photo ?? order.user?.avatar),
-            phone: order.user?.phone,
-            recipientId: order.userId,
+            avatarUrl: _getImageUrl(order.creator?.photo ?? order.creator?.avatar),
+            phone: order.creator?.phone,
+            recipientId: order.creatorId ?? order.userId,
             roleType: RoleTypeEnum.customer,
           ),
         ],
@@ -151,20 +154,25 @@ class LocationTimeline extends StatelessWidget {
           Row(
             children: [
               IconButton(
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (_) => AlertDialog(
-                      title: const Text("رقم الهاتف"),
-                      content: SelectableText(phone),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text("إغلاق"),
-                        ),
-                      ],
-                    ),
-                  );
+                onPressed: () async {
+                  final Uri phoneUri = Uri(scheme: 'tel', path: phone);
+                  try {
+                    if (await canLaunchUrl(phoneUri)) {
+                      await launchUrl(phoneUri);
+                    } else {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text("لا يمكن الاتصال بالرقم $phone")),
+                        );
+                      }
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text("خطأ أثناء محاولة الاتصال: $e")),
+                      );
+                    }
+                  }
                 },
                 icon: Icon(Icons.call, color: colors.success, size: 22.sp),
               ),

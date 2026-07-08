@@ -219,7 +219,7 @@ class _VendorListScreenState extends ConsumerState<VendorListScreen> {
       padding: EdgeInsets.all(20.w),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: 0.95,
+        childAspectRatio: 0.85,
         crossAxisSpacing: 16.w,
         mainAxisSpacing: 16.h,
       ),
@@ -513,121 +513,86 @@ class _CategoryGridItem extends StatelessWidget {
 
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
+      child: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              colors.surface,
-              colors.primary.withValues(alpha: 0.03),
-            ],
-          ),
+          color: colors.surface,
           borderRadius: BorderRadius.circular(20.r),
-          border: Border.all(
-            color: colors.primary.withValues(alpha: 0.12),
-            width: 1.2,
-          ),
           boxShadow: [
             BoxShadow(
-              color: colors.primary.withValues(alpha: 0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-            BoxShadow(
-              color: colors.shadow.withValues(alpha: 0.02),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
+              offset: const Offset(0, 5),
             ),
           ],
         ),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 56.r,
-              height: 56.r,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16.r),
-                color: colors.primary.withValues(alpha: 0.06),
-                boxShadow: [
-                  BoxShadow(
-                    color: colors.primary.withValues(alpha: 0.04),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
+            // Image on top
+            Expanded(
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(16.r),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
                 child: imageUrl.isNotEmpty
                     ? CachedNetworkImage(
                         imageUrl: imageUrl,
+                        width: double.infinity,
+                        height: double.infinity,
                         fit: BoxFit.cover,
                         placeholder: (_, __) => Container(color: colors.shimmerBase),
-                        errorWidget: (_, __, ___) => Center(
-                          child: Icon(Icons.category_rounded, size: 24.sp, color: colors.primary),
+                        errorWidget: (_, __, ___) => Image.asset(
+                          'assets/image/logo.png',
+                          width: double.infinity,
+                          height: double.infinity,
+                          fit: BoxFit.cover,
                         ),
                       )
-                    : Center(
-                        child: Icon(Icons.category_rounded, size: 24.sp, color: colors.primary),
+                    : Image.asset(
+                        'assets/image/logo.png',
+                        width: double.infinity,
+                        height: double.infinity,
+                        fit: BoxFit.cover,
                       ),
               ),
             ),
-            8.verticalSpace,
-            Text(
-              category.name ?? '',
-              style: TextStyle(
-                fontSize: 12.sp,
-                fontWeight: FontWeight.bold,
-                color: colors.textPrimary,
-                fontFamily: 'Cairo',
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            8.verticalSpace,
-            // Premium design button for "تسوّق الآن" (Shop Now)
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 5.h),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    colors.primary,
-                    colors.primary.withValues(alpha: 0.85),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(30.r),
-                boxShadow: [
-                  BoxShadow(
-                    color: colors.primary.withValues(alpha: 0.3),
-                    blurRadius: 6,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
+            // Content on bottom (Name & Shop Now action)
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "تسوّق الآن",
+                    category.name ?? '',
                     style: TextStyle(
-                      fontSize: 10.sp,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
+                      fontSize: 13.sp,
+                      fontWeight: FontWeight.bold,
+                      color: colors.textPrimary,
                       fontFamily: 'Cairo',
-                      height: 1.1,
+                      height: 1.2,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  4.horizontalSpace,
-                  Icon(
-                    Icons.arrow_forward_rounded,
-                    size: 10.sp,
-                    color: Colors.white,
+                  4.verticalSpace,
+                  // Minimalist Premium Shop Now text button
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        "تسوق الآن",
+                        style: TextStyle(
+                          fontSize: 9.sp,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFFEE9C20),
+                          fontFamily: 'Cairo',
+                        ),
+                      ),
+                      4.horizontalSpace,
+                      Icon(
+                        Icons.arrow_forward_rounded,
+                        size: 10.sp,
+                        color: const Color(0xFFEE9C20),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -639,7 +604,7 @@ class _CategoryGridItem extends StatelessWidget {
   }
 }
 
-/// A clean Market Banner widget.
+/// A clean Market Banner widget matching the design of the user provided screenshot.
 class _MarketBanner extends StatelessWidget {
   const _MarketBanner({required this.vendors});
 
@@ -676,98 +641,190 @@ class _MarketBanner extends StatelessWidget {
         child: Container(
           margin: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
           width: double.infinity,
-          height: 110.h,
+          height: 185.h,
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               colors: [
-                AppColors.brandTeal,
-                Color(0xFF00B0B0),
+                Color(0xFF033E3B),
+                Color(0xFF09524D),
               ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+              begin: Alignment.topRight,
+              end: Alignment.bottomLeft,
             ),
             borderRadius: BorderRadius.circular(20.r),
             boxShadow: [
               BoxShadow(
-                color: AppColors.brandTeal.withValues(alpha: 0.2),
+                color: const Color(0xFF033E3B).withValues(alpha: 0.25),
                 blurRadius: 15,
-                offset: const Offset(0, 6),
+                offset: const Offset(0, 8),
               ),
             ],
           ),
-          child: Stack(
-            children: [
-              Positioned(
-                right: -20.w,
-                top: -20.h,
-                child: CircleAvatar(
-                  radius: 60.r,
-                  backgroundColor: Colors.white.withValues(alpha: 0.08),
-                ),
-              ),
-              Positioned(
-                left: -10.w,
-                bottom: -30.h,
-                child: CircleAvatar(
-                  radius: 50.r,
-                  backgroundColor: Colors.white.withValues(alpha: 0.05),
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20.w),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            isArabic ? 'كويك ماركت' : 'Quick Market',
-                            style: TextStyle(
-                              fontSize: 22.sp,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
-                              fontFamily: 'Cairo',
-                              height: 1.2,
-                            ),
-                          ),
-                          6.verticalSpace,
-                          Text(
-                            isArabic ? 'كل احتياجاتك اليومية في مكان واحد' : 'All your daily needs in one place',
-                            style: TextStyle(
-                              fontSize: 12.sp,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.white.withValues(alpha: 0.9),
-                              fontFamily: 'Cairo',
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20.r),
+            child: Stack(
+              children: [
+                // Soft gradient wave background elements to match the image style
+                Positioned(
+                  right: -40.w,
+                  bottom: -60.h,
+                  child: Container(
+                    width: 180.w,
+                    height: 180.h,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          const Color(0xFFEE9C20).withValues(alpha: 0.18),
+                          Colors.transparent,
                         ],
                       ),
                     ),
-                    10.horizontalSpace,
-                    Container(
-                      padding: EdgeInsets.all(8.r),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(16.r),
-                      ),
-                      child: Image.asset(
-                        'assets/image/logo.png',
-                        width: 50.w,
-                        height: 50.h,
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ],
+                Positioned(
+                  left: -30.w,
+                  top: -30.h,
+                  child: CircleAvatar(
+                    radius: 70.r,
+                    backgroundColor: Colors.white.withValues(alpha: 0.03),
+                  ),
+                ),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+                  child: Column(
+                    children: [
+                      // Top Row (Logo + Title & Subtitle)
+                      Expanded(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            // Logo Box on Left
+                            Container(
+                              padding: EdgeInsets.all(6.r),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(16.r),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.08),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Image.asset(
+                                'assets/image/logo.png',
+                                width: 48.w,
+                                height: 48.h,
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                            const Spacer(),
+                            // Text on Right (Arabic layout)
+                            Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  isArabic ? 'كويك ماركت' : 'Quick Market',
+                                  style: TextStyle(
+                                    fontSize: 22.sp,
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.white,
+                                    fontFamily: 'Cairo',
+                                    height: 1.2,
+                                  ),
+                                ),
+                                4.verticalSpace,
+                                Text(
+                                  isArabic 
+                                      ? 'كل احتياجاتك اليومية في مكان واحد' 
+                                      : 'All your daily needs in one place',
+                                  style: TextStyle(
+                                    fontSize: 11.sp,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.white.withValues(alpha: 0.85),
+                                    fontFamily: 'Cairo',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      
+                      // Divider line above features
+                      Container(
+                        margin: EdgeInsets.symmetric(vertical: 10.h),
+                        height: 1.h,
+                        color: Colors.white.withValues(alpha: 0.08),
+                      ),
+
+                      // Features row (Bottom)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _buildFeatureItem(
+                            icon: Icons.verified_user, 
+                            label: isArabic ? 'جودة\nنضمنها' : 'Quality\nGuaranteed'
+                          ),
+                          _buildDivider(),
+                          _buildFeatureItem(
+                            icon: Icons.shopping_bag, 
+                            label: isArabic ? 'منتجات\nمتنوعة' : 'Diverse\nProducts'
+                          ),
+                          _buildDivider(),
+                          _buildFeatureItem(
+                            icon: Icons.percent, 
+                            label: isArabic ? 'عروض\nحصرية' : 'Exclusive\nOffers'
+                          ),
+                          _buildDivider(),
+                          _buildFeatureItem(
+                            icon: Icons.motorcycle, 
+                            label: isArabic ? 'توصيل\nسريع' : 'Fast\nDelivery'
+                          ),
+                        ].reversed.toList(), // Reversed for Arabic RTL matching the visual
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildDivider() {
+    return Container(
+      width: 1.w,
+      height: 25.h,
+      color: Colors.white.withValues(alpha: 0.15),
+    );
+  }
+
+  Widget _buildFeatureItem({required IconData icon, required String label}) {
+    return Expanded(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon, 
+            color: const Color(0xFFEE9C20), 
+            size: 18.sp
+          ),
+          4.verticalSpace,
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 9.sp,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              fontFamily: 'Cairo',
+              height: 1.2,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }
