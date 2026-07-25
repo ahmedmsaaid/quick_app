@@ -1,4 +1,6 @@
 import 'package:base_app/core/localizations/app_strings.g.dart';
+import 'package:base_app/core/utils/assets/app_icons.dart';
+import 'package:base_app/core/widgets/custome_svg_image.dart';
 import 'package:base_app/features/customer/profile/presentation/screens/profile_screen.dart';
 import 'package:base_app/features/delivery/wallet/presentation/screens/captain_wallet_screen.dart';
 import 'package:flutter/material.dart';
@@ -27,6 +29,133 @@ class _CaptainNavScreenState extends ConsumerState<CaptainNavScreen> {
     const ProfileScreen(),
   ];
 
+  Widget _buildNavItem(int index, AppColors colors, bool isActivated) {
+    final isSelected = _selectedIndex == index;
+    final String label = _getLabel(index);
+
+    return GestureDetector(
+      onTap: isActivated
+          ? () {
+              setState(() {
+                _selectedIndex = index;
+              });
+              if (index == 1) {
+                ref.read(captainMyOrdersProvider.notifier).loadOrders();
+              } else if (index == 0) {
+                ref.read(captainOrdersProvider.notifier).loadAll();
+              } else if (index == 3) {
+                ref.read(profileProvider.notifier).loadProfile();
+              }
+            }
+          : null,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+        padding: isSelected
+            ? EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h)
+            : EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+        decoration: isSelected
+            ? BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20.r),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 6,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              )
+            : null,
+        child: isSelected
+            ? Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildIcon(index, true, colors),
+                  6.horizontalSpace,
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: colors.secondary, // Active Orange
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.w900,
+                      fontFamily: 'Cairo',
+                    ),
+                  ),
+                ],
+              )
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildIcon(index, false, colors),
+                  4.verticalSpace,
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: isActivated ? 0.85 : 0.4),
+                      fontSize: 9.sp,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Cairo',
+                    ),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+
+  String _getLabel(int index) {
+    switch (index) {
+      case 0:
+        return AppStrings.mainTab;
+      case 1:
+        return AppStrings.ordersTab;
+      case 2:
+        return AppStrings.walletTab;
+      case 3:
+        return AppStrings.myAccountTab;
+      default:
+        return '';
+    }
+  }
+
+  Widget _buildIcon(int index, bool isSelected, AppColors colors) {
+    final color = isSelected ? colors.secondary : Colors.white;
+    switch (index) {
+      case 0:
+        return CustomSVGImage(
+          asset: AppIcons.homeIcon,
+          height: 20.h,
+          color: color,
+        );
+      case 1:
+        return CustomSVGImage(
+          asset: AppIcons.bookNavIcon,
+          height: 20.h,
+          color: color,
+        );
+      case 2:
+        return Icon(
+          isSelected
+              ? Icons.account_balance_wallet_rounded
+              : Icons.account_balance_wallet_outlined,
+          size: 20.sp,
+          color: color,
+        );
+      case 3:
+        return CustomSVGImage(
+          asset: AppIcons.personIcon,
+          height: 20.h,
+          color: color,
+        );
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = AppColors(context);
@@ -35,71 +164,28 @@ class _CaptainNavScreenState extends ConsumerState<CaptainNavScreen> {
     final bool isActivated = userStatus == 1;
 
     return Scaffold(
+      extendBody: true,
       body: _pages[_selectedIndex],
       bottomNavigationBar: AbsorbPointer(
         absorbing: !isActivated,
         child: Container(
-          height: 85.h,
+          height: 64.h,
+          margin: EdgeInsets.fromLTRB(16.w, 0, 16.w, 8.h),
+          padding: EdgeInsets.symmetric(horizontal: 12.w),
           decoration: BoxDecoration(
-            color: colors.surface,
+            color: isActivated ? colors.primary : colors.primary.withValues(alpha: 0.6),
+            borderRadius: BorderRadius.circular(24.r),
             boxShadow: [
               BoxShadow(
-                color: colors.shadow,
-                blurRadius: 15,
-                offset: const Offset(0, -4),
+                color: colors.primary.withValues(alpha: 0.25),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
-          child: BottomNavigationBar(
-            currentIndex: _selectedIndex,
-            onTap: isActivated
-                ? (index) {
-                    setState(() {
-                      _selectedIndex = index;
-                    });
-                    if (index == 1) {
-                      ref.read(captainMyOrdersProvider.notifier).loadOrders();
-                    }
-                  }
-                : null,
-            type: BottomNavigationBarType.fixed,
-            backgroundColor: colors.surface,
-            selectedItemColor: isActivated ? colors.primary : colors.primary.withValues(alpha: 0.5),
-            unselectedItemColor: isActivated ? colors.textHint : colors.textHint.withValues(alpha: 0.5),
-            showSelectedLabels: true,
-            showUnselectedLabels: true,
-            selectedLabelStyle: TextStyle(
-              fontSize: 12.sp,
-              fontWeight: FontWeight.w700,
-              fontFamily: 'Cairo',
-            ),
-            unselectedLabelStyle: TextStyle(
-              fontSize: 11.sp,
-              fontWeight: FontWeight.w500,
-              fontFamily: 'Cairo',
-            ),
-            items: [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.dashboard_outlined, size: 24.sp),
-                activeIcon: Icon(Icons.dashboard, size: 24.sp),
-                label: AppStrings.mainTab,
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.list_alt_outlined, size: 24.sp),
-                activeIcon: Icon(Icons.list_alt, size: 24.sp),
-                label: AppStrings.ordersTab,
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.account_balance_wallet_outlined, size: 24.sp),
-                activeIcon: Icon(Icons.account_balance_wallet, size: 24.sp),
-                label: AppStrings.walletTab,
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.person_outline, size: 24.sp),
-                activeIcon: Icon(Icons.person, size: 24.sp),
-                label: AppStrings.myAccountTab,
-              ),
-            ],
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: List.generate(4, (index) => _buildNavItem(index, colors, isActivated)),
           ),
         ),
       ),

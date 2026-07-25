@@ -21,9 +21,7 @@ class CreateOrderProductRequest {
         'productId': productId,
         'price': price,
         'quantity': quantity,
-        'productName': productName,
-        'photo': photo,
-        'totalPrice': totalPrice ?? (price * quantity),
+        // Note: productName, photo, totalPrice are for local display only — NOT sent to API
       };
 }
 
@@ -128,8 +126,8 @@ class OrderDto {
   final List<OrderProductDto> products;
   final UserDto? user;
   final UserDto? creator;
-  final UserDto? updator;
-  final int? updatorId;
+  final UserDto? delivery;
+  final int? deliveryId;
   final String? rowVersion;
   final int? userLocationId;
   final LocationDto? userLocation;
@@ -152,8 +150,8 @@ class OrderDto {
     required this.products,
     this.user,
     this.creator,
-    this.updator,
-    this.updatorId,
+    this.delivery,
+    this.deliveryId,
     this.rowVersion,
     this.userLocationId,
     this.userLocation,
@@ -183,8 +181,18 @@ class OrderDto {
       products: products,
       user: json['user'] != null ? UserDto.fromJson(json['user'] as Map<String, dynamic>) : null,
       creator: json['creator'] != null ? UserDto.fromJson(json['creator'] as Map<String, dynamic>) : null,
-      updator: json['updator'] != null ? UserDto.fromJson(json['updator'] as Map<String, dynamic>) : null,
-      updatorId: json['updatorId'] as int?,
+      delivery: json['delivery'] != null
+          ? UserDto.fromJson(json['delivery'] as Map<String, dynamic>)
+          : (json['Delivery'] != null
+              ? UserDto.fromJson(json['Delivery'] as Map<String, dynamic>)
+              : (json['updator'] != null
+                  ? UserDto.fromJson(json['updator'] as Map<String, dynamic>)
+                  : null)),
+      deliveryId: json['deliveryId'] is int
+          ? json['deliveryId'] as int
+          : (json['DeliveryId'] is int
+              ? json['DeliveryId'] as int
+              : (json['updatorId'] is int ? json['updatorId'] as int : null)),
       rowVersion: json['rowVersion']?.toString(),
       userLocationId: json['userLocationId'] as int?,
       userLocation: json['userLocation'] != null

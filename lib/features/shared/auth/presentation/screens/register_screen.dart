@@ -19,6 +19,7 @@ import 'package:base_app/core/widgets/custom_button.dart';
 import 'package:base_app/core/widgets/custom_text_field.dart';
 import 'package:base_app/core/widgets/lading_button.dart';
 import 'package:base_app/features/shared/auth/presentation/widgets/custom_password_text_field.dart';
+import 'package:base_app/features/shared/auth/presentation/widgets/custom_password_guidelines_widget.dart';
 import 'package:base_app/features/shared/auth/presentation/widgets/custom_phone_text_field.dart';
 import 'package:base_app/features/shared/auth/presentation/riverpod/auth_provider.dart';
 import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
@@ -409,6 +410,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                               _isUploadingImage = false;
                               _uploadSuccess = true;
                             });
+                            if (!context.mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text("تم رفع الصورة الشخصية بنجاح!"),
@@ -421,6 +423,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                               _isUploadingImage = false;
                               _uploadSuccess = false;
                             });
+                            if (!context.mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text("فشل رفع الصورة: ${error.message}"),
@@ -434,6 +437,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           _isUploadingImage = false;
                           _uploadSuccess = false;
                         });
+                        if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text("حدث خطأ أثناء رفع الصورة: $e"),
@@ -469,7 +473,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             ? Icon(
                                 Icons.person,
                                 size: 80.w,
-                                color: colors.textSecondary.withOpacity(0.5),
+                                color: colors.textSecondary.withValues(alpha: 0.5),
                               )
                             : null,
                       ),
@@ -566,9 +570,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   child: Container(
                     padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
                     decoration: BoxDecoration(
-                      border: Border.all(color: colors.primary.withOpacity(0.5)),
+                      border: Border.all(color: colors.primary.withValues(alpha: 0.5)),
                       borderRadius: BorderRadius.circular(12.r),
-                      color: colors.primary.withOpacity(0.05),
+                      color: colors.primary.withValues(alpha: 0.05),
                     ),
                     child: Row(
                       children: [
@@ -623,13 +627,19 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     return null;
                   },
                 ),
-                20.verticalSpace,
+                CustomPasswordGuidelinesWidget(
+                  controller: _passwordController,
+                ),
+                10.verticalSpace,
                 CustomPasswordTextField(
                   controller: _confirmPasswordController,
                   hintText: AppStrings.confirmPassword,
                   validator: (val) {
                     if (val == null || val.isEmpty) {
                       return AppStrings.pleaseEnterPassword;
+                    }
+                    if (val != _passwordController.text) {
+                      return AppStrings.passwordNotMatch;
                     }
                     return null;
                   },
@@ -639,7 +649,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   const LoadingButton()
                 else
                   CustomAppButton(
-                    text: AppStrings.completeRegistration,
+                    text: 'إنشاء الحساب',
+                    icon: Icon(Icons.person_add_alt_1_rounded, size: 20.sp, color: Colors.white),
                     onPressed: _handleRegister,
                   ),
                 30.verticalSpace,

@@ -253,6 +253,8 @@
   "pleaseEnterEmail": "Lütfen e-posta adresinizi girin",
   "emailInvalid": "Geçersiz e-posta adresi",
   "pleaseEnterPassword": "Lütfen şifrenizi girin",
+  "passwordGuidelinesTitle": "Şifre Kuralları:",
+  "min6Characters": "En az 6 karakter",
   "passwordTooShort": "Şifre en az 8 karakter olmalıdır",
   "passwordNeedUppercase": "Büyük harf içermelidir",
   "passwordNeedLowercase": "Küçük harf içermelidir",
@@ -514,5 +516,9 @@
   "catSandwich": "Sandwich",
   "catPizza": "Pizza",
   "catBurger": "Burger",
-  "catDrinks": "Drinks"
+  "catDrinks": "Drinks",
+  "termsAndConditions": "Şartlar ve Koşullar",
+  "termsAndConditionsPlaceholderTitle": "Kullanım Şartları ve Koşulları",
+  "termsAndConditionsPlaceholderDesc": "Uygulamayı kullanarak, hizmetleri, siparişleri, teslimatı ve ödemeleri düzenleyen tüm şart ve koşulları kabul etmiş olursunuz.",
+  "aboutUsPlaceholderDesc": "Quick Service Uygulaması, Krallık'taki doğrudan, hızlı teslimat ve mağaza, restoran ve tedarik hizmetleri için önde gelen platformdur."
 }

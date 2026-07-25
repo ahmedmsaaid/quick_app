@@ -8,28 +8,28 @@ import 'package:base_app/core/widgets/custom_arrow_back.dart';
 import 'package:base_app/core/services/cms_api_service.dart';
 import 'package:base_app/core/models/cms_models.dart';
 
-class PrivacyPolicyScreen extends ConsumerStatefulWidget {
-  const PrivacyPolicyScreen({super.key});
+class AboutUsScreen extends ConsumerStatefulWidget {
+  const AboutUsScreen({super.key});
 
   @override
-  ConsumerState<PrivacyPolicyScreen> createState() => _PrivacyPolicyScreenState();
+  ConsumerState<AboutUsScreen> createState() => _AboutUsScreenState();
 }
 
-class _PrivacyPolicyScreenState extends ConsumerState<PrivacyPolicyScreen> {
+class _AboutUsScreenState extends ConsumerState<AboutUsScreen> {
   bool _isLoading = true;
-  CmsPolicyResponse? _policyResponse;
+  CmsAboutUsResponse? _aboutUsResponse;
 
   @override
   void initState() {
     super.initState();
-    _fetchPolicy();
+    _fetchAboutUs();
   }
 
-  Future<void> _fetchPolicy() async {
-    final res = await ref.read(cmsApiServiceProvider).getPolicies();
+  Future<void> _fetchAboutUs() async {
+    final res = await ref.read(cmsApiServiceProvider).getAboutUs();
     if (mounted) {
       setState(() {
-        _policyResponse = res;
+        _aboutUsResponse = res;
         _isLoading = false;
       });
     }
@@ -38,7 +38,7 @@ class _PrivacyPolicyScreenState extends ConsumerState<PrivacyPolicyScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors(context);
-    final sections = _policyResponse?.policySections;
+    final sections = _aboutUsResponse?.aboutUsSections;
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -47,7 +47,7 @@ class _PrivacyPolicyScreenState extends ConsumerState<PrivacyPolicyScreen> {
         elevation: 0,
         leading: const CustomArrowBack(),
         title: Text(
-          AppStrings.privacyPolicy,
+          AppStrings.aboutUs,
           style: AppTextStyles.text18w700(color: colors.textPrimary),
         ),
         centerTitle: true,
@@ -64,7 +64,7 @@ class _PrivacyPolicyScreenState extends ConsumerState<PrivacyPolicyScreen> {
                       final title = sec.titleAr ?? sec.titleEn ?? '';
                       final content = sec.contentAr ?? sec.contentEn ?? '';
                       return Padding(
-                        padding: EdgeInsets.only(bottom: 20.h),
+                        padding: EdgeInsets.only(bottom: 16.h),
                         child: Container(
                           width: double.infinity,
                           padding: EdgeInsets.all(16.r),
@@ -100,24 +100,29 @@ class _PrivacyPolicyScreenState extends ConsumerState<PrivacyPolicyScreen> {
                       );
                     }),
                   ] else ...[
-                    Text(
-                      AppStrings.quickPolicyTitle,
-                      style: AppTextStyles.text16w700(color: colors.textPrimary),
-                    ),
-                    15.verticalSpace,
-                    Text(
-                      AppStrings.policyContentMsg,
-                      style: AppTextStyles.text14w400(color: colors.textSecondary),
-                    ),
-                    20.verticalSpace,
-                    Text(
-                      AppStrings.dataCollectionTitle,
-                      style: AppTextStyles.text16w700(color: colors.textPrimary),
-                    ),
-                    10.verticalSpace,
-                    Text(
-                      AppStrings.dataCollectionMsg,
-                      style: AppTextStyles.text14w400(color: colors.textSecondary),
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.all(20.r),
+                      decoration: BoxDecoration(
+                        color: colors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(16.r),
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(Icons.info_outline, size: 50.sp, color: colors.primary),
+                          16.verticalSpace,
+                          Text(
+                            AppStrings.appName,
+                            style: AppTextStyles.text20w700(color: colors.primary),
+                          ),
+                          10.verticalSpace,
+                          Text(
+                            AppStrings.aboutUsPlaceholderDesc,
+                            textAlign: TextAlign.center,
+                            style: AppTextStyles.text14w400(color: colors.textPrimary),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ],

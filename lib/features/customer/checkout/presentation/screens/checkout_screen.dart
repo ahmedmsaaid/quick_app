@@ -114,14 +114,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final int type;
 
     if (widget.offer != null) {
-      if (widget.offer!.offerType == 1 && widget.offer!.products != null) {
+      final offer = widget.offer!;
+      if (offer.offerType == 1 && offer.products != null && offer.products!.isNotEmpty) {
+        // offerType == 1: editable bundle → send products only, NO offerId
         double sum = 0.0;
-        for (final p in widget.offer!.products!) {
+        for (final p in offer.products!) {
           sum += p.price * p.quantity;
         }
-        productsPrice = sum > 0 ? sum : widget.offer!.price;
-        offerId = null; // Set offerId to null so the backend treats it as a normal order of products
-        products = widget.offer!.products!
+        productsPrice = sum > 0 ? sum : offer.price;
+        offerId = null;                               // ← server rejects both offerId+products together
+        products = offer.products!
             .map((p) => CreateOrderProductRequest(
                   productId: p.id,
                   price: p.price,
@@ -131,12 +133,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   totalPrice: p.price * p.quantity,
                 ))
             .toList();
-        type = widget.offer!.type;
+        type = offer.type;
       } else {
-        productsPrice = widget.offer!.price;
-        offerId = widget.offer!.id;
+        // offerType == 0: non-editable → send offerId only, no products list
+        productsPrice = offer.price;
+        offerId = offer.id;
         products = null;
-        type = widget.offer!.type;
+        type = offer.type;
       }
     } else {
       final cart = ref.watch(cartProvider);

@@ -706,7 +706,7 @@ class _DriverRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final driver = order.updator;
+    final driver = order.delivery;
     if (driver == null) return const SizedBox.shrink();
 
     final String? photoKey = driver.photo ?? driver.avatar;
@@ -775,7 +775,7 @@ class _DriverRow extends StatelessWidget {
                     AppRoutes.chatDetailsScreen,
                     arguments: AppChatArgument(
                       chatId: null,
-                      recipientId: order.updatorId!,
+                      recipientId: order.deliveryId!,
                       profileId: 0,
                       typeEnum: RoleTypeEnum.captain,
                       recipientName: driver.name ?? 'السائق',

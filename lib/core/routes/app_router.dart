@@ -33,10 +33,11 @@ import 'package:base_app/features/customer/profile/presentation/screens/wallet_s
 import 'package:base_app/features/customer/profile/presentation/screens/settings_screen.dart';
 import 'package:base_app/features/customer/profile/presentation/screens/privacy_policy_screen.dart';
 import 'package:base_app/features/customer/profile/presentation/screens/contact_us_screen.dart';
+import 'package:base_app/features/customer/profile/presentation/screens/about_us_screen.dart';
+import 'package:base_app/features/customer/profile/presentation/screens/terms_and_conditions_screen.dart';
 import 'package:base_app/features/customer/profile/presentation/screens/change_password_screen.dart';
 import 'package:base_app/features/shared/chat/presentation/screens/chat_details_screen.dart';
 import 'package:base_app/features/shared/chat/presentation/screens/chats_screen.dart';
-import 'package:base_app/core/constans/role_type_enum.dart';
 import 'package:base_app/core/models/app_chat_argument.dart';
 import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
 import 'package:base_app/features/delivery/captain/presentation/screens/captain_nav_screen.dart';
@@ -45,7 +46,6 @@ import 'package:base_app/features/delivery/captain/presentation/screens/captain_
 
 import 'package:base_app/features/customer/home/presentation/screens/special_offer_details_screen.dart';
 import 'package:base_app/features/customer/favorites/presentation/screens/favorites_screen.dart';
-import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
 import 'package:base_app/features/customer/checkout/data/models/order_models.dart';
 import 'package:base_app/features/customer/home/data/models/offer_model.dart';
 import 'package:base_app/features/customer/home/data/models/category_model.dart';
@@ -206,6 +206,10 @@ abstract class AppRouter {
         return _buildAnimatedRoute(const SettingsScreen(), settings);
       case AppRoutes.privacyPolicy:
         return _buildAnimatedRoute(const PrivacyPolicyScreen(), settings);
+      case AppRoutes.aboutUs:
+        return _buildAnimatedRoute(const AboutUsScreen(), settings);
+      case AppRoutes.termsAndConditions:
+        return _buildAnimatedRoute(const TermsAndConditionsScreen(), settings);
       case AppRoutes.contactUs:
         return _buildAnimatedRoute(const ContactUsScreen(), settings);
       case AppRoutes.changePassword:

@@ -1,62 +1,62 @@
 import 'package:base_app/core/localizations/app_strings.g.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
+import 'package:latlong2/latlong.dart';
 
-/// MapService handles all map-related operations.
-/// 
-/// Strategy:
-/// 1. Use Google Maps for visual rendering (Widget).
-/// 2. Use Free APIs (like OpenStreetMap/Nominatim) for Geocoding and Search to save costs.
+/// MapService handles all map-related operations using OpenStreetMap / Nominatim.
 class MapService {
-  static const String googleMapsApiKey = "YOUR_GOOGLE_MAPS_API_KEY_HERE";
+  static const defaultCenter = LatLng(33.3152, 44.3661);
+  static const double defaultZoom = 12.0;
 
-  // --- Visuals (Google Maps) ---
-  
-  static CameraPosition getInitialCameraPosition() {
-    // Default to Baghdad/Iraq center for Quick App
-    return const CameraPosition(
-      target: LatLng(33.3152, 44.3661),
-      zoom: 12,
-    );
-  }
-
-  // --- Free Alternatives (OpenStreetMap / Nominatim) ---
+  static final Dio _dio = Dio(
+    BaseOptions(
+      headers: {'User-Agent': 'QuickApp'},
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 10),
+    ),
+  );
 
   /// Search for a place by name using OpenStreetMap (Free)
   static Future<List<dynamic>> searchPlacesFree(String query) async {
-    final url = Uri.parse('https://nominatim.openstreetmap.org/search?q=$query&format=json&limit=5&addressdetails=1');
-    
+    final url =
+        'https://nominatim.openstreetmap.org/search?q=$query&format=json&limit=5&addressdetails=1';
+
     try {
-      final response = await http.get(url, headers: {'User-Agent': 'QuickApp'});
+      final response = await _dio.get(url);
       if (response.statusCode == 200) {
-        return json.decode(response.body);
+        if (response.data is List) {
+          return response.data as List<dynamic>;
+        }
       }
     } catch (e) {
-      print('Map Search Error: $e');
+      debugPrint('Map Search Error: $e');
     }
     return [];
   }
 
   /// Get address from Coordinates using OpenStreetMap (Free)
-  static Future<String> getAddressFromCoordsFree(double lat, double lng) async {
-    final url = Uri.parse('https://nominatim.openstreetmap.org/reverse?lat=$lat&lon=$lng&format=json');
-    
+  static Future<String> getAddressFromCoordsFree(
+      double lat, double lng) async {
+    final url =
+        'https://nominatim.openstreetmap.org/reverse?lat=$lat&lon=$lng&format=json';
+
     try {
-      final response = await http.get(url, headers: {'User-Agent': 'QuickApp'});
+      final response = await _dio.get(url);
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        return data['display_name'] ?? AppStrings.unknownAddressLabel;
+        final data = response.data;
+        if (data is Map) {
+          return data['display_name'] ?? AppStrings.unknownAddressLabel;
+        }
       }
     } catch (e) {
-      print('Geocoding Error: $e');
+      debugPrint('Geocoding Error: $e');
     }
     return AppStrings.failedToDetermineAddress;
   }
 
-  /// Calculate distance between two points (Simple Mathematical Haversine) - Free
+  /// Calculate distance between two points in kilometers
   static double calculateDistance(LatLng start, LatLng end) {
-    // Logic for straight line distance calculation
-    return 0.0; // Placeholder for logic
+    const Distance distance = Distance();
+    return distance.as(LengthUnit.Kilometer, start, end);
   }
 }

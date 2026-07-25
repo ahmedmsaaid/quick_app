@@ -1,35 +1,35 @@
+import 'package:base_app/core/localizations/app_strings.g.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:base_app/core/localizations/app_strings.g.dart';
 import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/styles/app_text_style.dart';
 import 'package:base_app/core/widgets/custom_arrow_back.dart';
 import 'package:base_app/core/services/cms_api_service.dart';
 import 'package:base_app/core/models/cms_models.dart';
 
-class PrivacyPolicyScreen extends ConsumerStatefulWidget {
-  const PrivacyPolicyScreen({super.key});
+class TermsAndConditionsScreen extends ConsumerStatefulWidget {
+  const TermsAndConditionsScreen({super.key});
 
   @override
-  ConsumerState<PrivacyPolicyScreen> createState() => _PrivacyPolicyScreenState();
+  ConsumerState<TermsAndConditionsScreen> createState() => _TermsAndConditionsScreenState();
 }
 
-class _PrivacyPolicyScreenState extends ConsumerState<PrivacyPolicyScreen> {
+class _TermsAndConditionsScreenState extends ConsumerState<TermsAndConditionsScreen> {
   bool _isLoading = true;
-  CmsPolicyResponse? _policyResponse;
+  CmsPolicyResponse? _termsResponse;
 
   @override
   void initState() {
     super.initState();
-    _fetchPolicy();
+    _fetchTerms();
   }
 
-  Future<void> _fetchPolicy() async {
+  Future<void> _fetchTerms() async {
     final res = await ref.read(cmsApiServiceProvider).getPolicies();
     if (mounted) {
       setState(() {
-        _policyResponse = res;
+        _termsResponse = res;
         _isLoading = false;
       });
     }
@@ -38,7 +38,7 @@ class _PrivacyPolicyScreenState extends ConsumerState<PrivacyPolicyScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors(context);
-    final sections = _policyResponse?.policySections;
+    final sections = _termsResponse?.policySections;
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -47,7 +47,7 @@ class _PrivacyPolicyScreenState extends ConsumerState<PrivacyPolicyScreen> {
         elevation: 0,
         leading: const CustomArrowBack(),
         title: Text(
-          AppStrings.privacyPolicy,
+          AppStrings.termsAndConditions,
           style: AppTextStyles.text18w700(color: colors.textPrimary),
         ),
         centerTitle: true,
@@ -64,7 +64,7 @@ class _PrivacyPolicyScreenState extends ConsumerState<PrivacyPolicyScreen> {
                       final title = sec.titleAr ?? sec.titleEn ?? '';
                       final content = sec.contentAr ?? sec.contentEn ?? '';
                       return Padding(
-                        padding: EdgeInsets.only(bottom: 20.h),
+                        padding: EdgeInsets.only(bottom: 16.h),
                         child: Container(
                           width: double.infinity,
                           padding: EdgeInsets.all(16.r),
@@ -101,22 +101,12 @@ class _PrivacyPolicyScreenState extends ConsumerState<PrivacyPolicyScreen> {
                     }),
                   ] else ...[
                     Text(
-                      AppStrings.quickPolicyTitle,
+                      AppStrings.termsAndConditionsPlaceholderTitle,
                       style: AppTextStyles.text16w700(color: colors.textPrimary),
                     ),
                     15.verticalSpace,
                     Text(
-                      AppStrings.policyContentMsg,
-                      style: AppTextStyles.text14w400(color: colors.textSecondary),
-                    ),
-                    20.verticalSpace,
-                    Text(
-                      AppStrings.dataCollectionTitle,
-                      style: AppTextStyles.text16w700(color: colors.textPrimary),
-                    ),
-                    10.verticalSpace,
-                    Text(
-                      AppStrings.dataCollectionMsg,
+                      AppStrings.termsAndConditionsPlaceholderDesc,
                       style: AppTextStyles.text14w400(color: colors.textSecondary),
                     ),
                   ],

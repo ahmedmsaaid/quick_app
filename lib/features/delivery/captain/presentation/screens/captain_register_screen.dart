@@ -13,6 +13,7 @@ import 'package:base_app/core/widgets/custom_button.dart';
 import 'package:base_app/core/widgets/custom_text_field.dart';
 import 'package:base_app/core/widgets/lading_button.dart';
 import 'package:base_app/features/shared/auth/presentation/widgets/custom_password_text_field.dart';
+import 'package:base_app/features/shared/auth/presentation/widgets/custom_password_guidelines_widget.dart';
 import 'package:base_app/features/shared/auth/presentation/widgets/custom_phone_text_field.dart';
 import 'package:base_app/features/delivery/captain/presentation/riverpod/captain_register_provider.dart';
 
@@ -438,7 +439,10 @@ class _CaptainRegisterScreenState
               return null;
             },
           ),
-          14.verticalSpace,
+          CustomPasswordGuidelinesWidget(
+            controller: _passwordCtrl,
+          ),
+          10.verticalSpace,
 
           CustomPasswordTextField(
             controller: _confirmPwCtrl,

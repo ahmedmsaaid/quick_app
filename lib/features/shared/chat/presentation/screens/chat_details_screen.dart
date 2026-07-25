@@ -38,6 +38,12 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
   }
 
   @override
+  void dispose() {
+    _chatNotifier.disconnect();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colors = AppColors(context);
 
@@ -73,6 +79,7 @@ class _ChatDetailsScreenState extends ConsumerState<ChatDetailsScreen> {
                     chatNotifier.sendTextMessage(
                       recipientId: widget.creator.id,
                       message: text,
+                      chatId: widget.chatId,
                     );
                   }
                 },

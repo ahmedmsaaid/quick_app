@@ -42,7 +42,7 @@ final class AppChatGrbcNotifierProvider
 }
 
 String _$appChatGrbcNotifierHash() =>
-    r'a33f8738aec7a2a61152d9325e16638aa26ad207';
+    r'0990a5d7e8249375ac73e98244406eecab130cab';
 
 abstract class _$AppChatGrbcNotifier extends $Notifier<AppChatGrbcState> {
   AppChatGrbcState build();

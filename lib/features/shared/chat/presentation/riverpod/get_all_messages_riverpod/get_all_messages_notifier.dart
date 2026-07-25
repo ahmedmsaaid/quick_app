@@ -81,7 +81,10 @@ class GetAllMessagesNotifier
     } catch (e) {
       print('❌ Failed to extract user ID from token: $e');
     }
-    _params = _params.copyWith(chatId: chatId, targetUserId: targetUserId);
+    _params = GetMessagesChatParameters(
+      chatId: chatId,
+      targetUserId: targetUserId,
+    );
 
     await loadInitial();
   }

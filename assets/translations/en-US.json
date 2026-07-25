@@ -268,6 +268,8 @@
   "pleaseEnterEmail": "Please enter email",
   "emailInvalid": "Invalid email",
   "pleaseEnterPassword": "Please enter password",
+  "passwordGuidelinesTitle": "Password Guidelines:",
+  "min6Characters": "At least 6 characters",
   "passwordTooShort": "Password too short",
   "passwordNeedUppercase": "Need uppercase",
   "passwordNeedLowercase": "Need lowercase",
@@ -759,5 +761,9 @@
   "catSandwich": "Sandwich",
   "catPizza": "Pizza",
   "catBurger": "Burger",
-  "catDrinks": "Drinks"
+  "catDrinks": "Drinks",
+  "termsAndConditions": "Terms & Conditions",
+  "termsAndConditionsPlaceholderTitle": "Terms and Conditions of Use",
+  "termsAndConditionsPlaceholderDesc": "By using the app, you agree to all terms and conditions governing services, orders, delivery, and settlements.",
+  "aboutUsPlaceholderDesc": "Quick Service App is the premier platform for direct, fast delivery and store, restaurant, and supply services in the Kingdom."
 }

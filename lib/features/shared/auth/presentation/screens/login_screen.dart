@@ -89,185 +89,242 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return Scaffold(
       backgroundColor: colors.background,
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20.w),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  40.verticalSpace,
-                  Image.asset(AppIcons.appIcon),
-                  16.verticalSpace,
-                  RichText(
-                    text: TextSpan(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: constraints.maxHeight - 20.h,
+                ),
+                child: IntrinsicHeight(
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        if (AppStrings.welcomeToStylePart1.isNotEmpty)
-                          TextSpan(
-                            text: '${AppStrings.welcomeToStylePart1} ',
-                            style: AppTextStyles.text20w500(
-                              color: colors.textPrimary,
-                            ),
-                          ),
-                        TextSpan(
-                          text: AppStrings.appName,
-                          style: AppTextStyles.text20w700(
-                            color: colors.primary,
-                          ),
+                        8.verticalSpace,
+                        // Logo
+                        Image.asset(
+                          AppIcons.appIcon,
+                          height: 250.h,
+                          fit: BoxFit.contain,
                         ),
-                        TextSpan(
-                          text: ' ${AppStrings.welcomeToStylePart2}',
-                          style: AppTextStyles.text20w500(
-                            color: colors.textPrimary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Text(
-                    AppStrings.chooseYourLoginMethod,
-                    style: AppTextStyles.text18w500(
-                      color: colors.textPrimary,
-                    ),
-                  ),
-                  60.verticalSpace,
-                  CustomPhoneTextField(
-                    controller: _phoneController,
-                    onCountryChanged: (country) {
-                      _countryCode = country.phoneCode;
-                    },
-                    validator: (val) {
-                      if (val == null || val.trim().isEmpty) {
-                        return AppStrings.pleaseEnterPhone;
-                      }
-                      return null;
-                    },
-                  ),
-                  20.verticalSpace,
-                  CustomPasswordTextField(
-                    controller: _passwordController,
-                    hintText: AppStrings.password,
-                    validator: (val) {
-                      if (val == null || val.isEmpty) {
-                        return AppStrings.pleaseEnterPassword;
-                      }
-                      return null;
-                    },
-                  ),
-                  Align(
-                    alignment: AlignmentDirectional.bottomEnd,
-                    child: TextButton(
-                      onPressed: () {
-                        context.pushNamedAndRemoveUntil(
-                          AppRoutes.forgetPasswordScreen,
-                          arguments: widget.isUser,
-                        );
-                      },
-                      child: Text(
-                        AppStrings.forgotPassword,
-                        style: AppTextStyles.text12w500(
-                          color: colors.textPrimary,
-                        ),
-                      ),
-                    ),
-                  ),
-                  40.verticalSpace,
-                  if (authState.status == AuthStatus.loading)
-                    const LoadingButton()
-                  else
-                    CustomAppButton(
-                      text: AppStrings.login,
-                      onPressed: _handleLogin,
-                    ),
-                  30.verticalSpace,
-                  Row(
-                    children: [
-                      Expanded(child: Divider(color: colors.divider)),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 10.w),
-                        child: Text(
-                          AppStrings.orContinueWith,
-                          style: AppTextStyles.text12w400(color: colors.textSecondary),
-                        ),
-                      ),
-                      Expanded(child: Divider(color: colors.divider)),
-                    ],
-                  ),
-                  20.verticalSpace,
-                  OutlinedButton.icon(
-                    onPressed: () {},
-                    icon: Icon(FontAwesomeIcons.google, color: Colors.red, size: 20.sp),
-                    label: Text(
-                      AppStrings.loginWithGoogle,
-                      style: AppTextStyles.text14w600(color: colors.textPrimary),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: Size(double.infinity, 50.h),
-                      side: BorderSide(color: colors.divider),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
-                    ),
-                  ),
-                  20.verticalSpace,
-                  if (widget.isUser)
-                    RichText(
-                      text: TextSpan(
-                        children: [
-                          TextSpan(
-                            text: AppStrings.dontHaveAccount,
-                            style: AppTextStyles.text12w400(
-                              color: colors.textPrimary,
-                            ),
+                        6.verticalSpace,
+                        RichText(
+                          textAlign: TextAlign.center,
+                          text: TextSpan(
                             children: [
-                              WidgetSpan(
-                                child: InkWell(
-                                  onTap: () {
-                                    context.pushNamed(
-                                      AppRoutes.registerScreen,
-                                      arguments: widget.isUser,
-                                    );
-                                  },
-                                  child: Text(
-                                    ' ${AppStrings.registerNow}',
-                                    style: AppTextStyles.text12w500(
-                                      color: colors.primary,
-                                    ),
+                              if (AppStrings.welcomeToStylePart1.isNotEmpty)
+                                TextSpan(
+                                  text: '${AppStrings.welcomeToStylePart1} ',
+                                  style: AppTextStyles.text18w500(
+                                    color: colors.textPrimary,
                                   ),
+                                ),
+                              TextSpan(
+                                text: AppStrings.appName,
+                                style: AppTextStyles.text18w700(
+                                  color: colors.primary,
+                                ),
+                              ),
+                              TextSpan(
+                                text: ' ${AppStrings.welcomeToStylePart2}',
+                                style: AppTextStyles.text18w500(
+                                  color: colors.textPrimary,
                                 ),
                               ),
                             ],
                           ),
-                        ],
-                      ),
-                    )
-                  else
-                    Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12.h),
-                      child: InkWell(
-                        onTap: () => context.pushNamed(AppRoutes.captainRegisterScreen),
-                        borderRadius: BorderRadius.circular(8.r),
-                        child: RichText(
-                          text: TextSpan(
-                            children: [
-                              TextSpan(
-                                text: 'ليس لديك حساب؟ ',
-                                style: AppTextStyles.text12w400(
-                                    color: colors.textSecondary),
+                        ),
+                        2.verticalSpace,
+                        Text(
+                          AppStrings.chooseYourLoginMethod,
+                          style: AppTextStyles.text14w500(
+                            color: colors.textSecondary,
+                          ),
+                        ),
+                        16.verticalSpace,
+
+                        // Phone Field
+                        CustomPhoneTextField(
+                          controller: _phoneController,
+                          onCountryChanged: (country) {
+                            _countryCode = country.phoneCode;
+                          },
+                          validator: (val) {
+                            if (val == null || val.trim().isEmpty) {
+                              return AppStrings.pleaseEnterPhone;
+                            }
+                            return null;
+                          },
+                        ),
+                        12.verticalSpace,
+
+                        // Password Field
+                        CustomPasswordTextField(
+                          controller: _passwordController,
+                          hintText: AppStrings.password,
+                          validator: (val) {
+                            if (val == null || val.isEmpty) {
+                              return AppStrings.pleaseEnterPassword;
+                            }
+                            return null;
+                          },
+                        ),
+                        Align(
+                          alignment: AlignmentDirectional.centerEnd,
+                          child: TextButton(
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            onPressed: () {
+                              context.pushNamedAndRemoveUntil(
+                                AppRoutes.forgetPasswordScreen,
+                                arguments: widget.isUser,
+                              );
+                            },
+                            child: Text(
+                              AppStrings.forgotPassword,
+                              style: AppTextStyles.text12w500(
+                                color: colors.primary,
                               ),
-                              TextSpan(
-                                text: 'إنشاء حساب كابتن',
-                                style: AppTextStyles.text12w600(
-                                    color: colors.primary),
+                            ),
+                          ),
+                        ),
+                        14.verticalSpace,
+
+                        // Login Button
+                        if (authState.status == AuthStatus.loading)
+                          const LoadingButton()
+                        else
+                          CustomAppButton(
+                            text: AppStrings.login,
+                            height: 46,
+                            onPressed: _handleLogin,
+                          ),
+                        12.verticalSpace,
+
+                        // Divider
+                        Row(
+                          children: [
+                            Expanded(child: Divider(color: colors.divider)),
+                            Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 10.w),
+                              child: Text(
+                                AppStrings.orContinueWith,
+                                style: AppTextStyles.text12w400(color: colors.textSecondary),
+                              ),
+                            ),
+                            Expanded(child: Divider(color: colors.divider)),
+                          ],
+                        ),
+                        10.verticalSpace,
+
+                        // Google Login Button
+                        OutlinedButton.icon(
+                          onPressed: () {},
+                          icon: Icon(FontAwesomeIcons.google, color: Colors.red, size: 18.sp),
+                          label: Text(
+                            AppStrings.loginWithGoogle,
+                            style: AppTextStyles.text14w600(color: colors.textPrimary),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: Size(double.infinity, 44.h),
+                            side: BorderSide(color: colors.divider),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+                          ),
+                        ),
+                        
+                        const Spacer(),
+                        10.verticalSpace,
+
+                        // Create Account Section - Both Customer & Captain buttons
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
+                          decoration: BoxDecoration(
+                            color: colors.primary.withValues(alpha: 0.05),
+                            borderRadius: BorderRadius.circular(14.r),
+                            border: Border.all(
+                              color: colors.primary.withValues(alpha: 0.2),
+                              width: 1.w,
+                            ),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.person_add_alt_1_rounded, size: 18.sp, color: colors.primary),
+                                  6.horizontalSpace,
+                                  Text(
+                                    'ليس لديك حساب حتى الآن؟',
+                                    style: AppTextStyles.text13w600(color: colors.textPrimary),
+                                  ),
+                                ],
+                              ),
+                              10.verticalSpace,
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      onPressed: () {
+                                        context.pushNamed(
+                                          AppRoutes.registerScreen,
+                                          arguments: true,
+                                        );
+                                      },
+                                      icon: Icon(Icons.person_add_rounded, size: 16.sp, color: Colors.white),
+                                      label: Text(
+                                        'حساب عميل',
+                                        style: AppTextStyles.text12w600(color: Colors.white),
+                                      ),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: colors.primary,
+                                        padding: EdgeInsets.symmetric(vertical: 10.h),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(10.r),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  10.horizontalSpace,
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      onPressed: () {
+                                        context.pushNamed(AppRoutes.captainRegisterScreen);
+                                      },
+                                      icon: Icon(Icons.two_wheeler_rounded, size: 16.sp, color: colors.primary),
+                                      label: Text(
+                                        'حساب كابتن/طيار',
+                                        style: AppTextStyles.text12w600(color: colors.primary),
+                                      ),
+                                      style: OutlinedButton.styleFrom(
+                                        padding: EdgeInsets.symmetric(vertical: 10.h),
+                                        side: BorderSide(color: colors.primary),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(10.r),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
                         ),
-                      ),
+                        4.verticalSpace,
+                      ],
                     ),
-                ],
+                  ),
+                ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ),
     );

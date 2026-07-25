@@ -272,6 +272,8 @@ abstract class  LocaleKeys {
   static const pleaseEnterEmail = 'pleaseEnterEmail';
   static const emailInvalid = 'emailInvalid';
   static const pleaseEnterPassword = 'pleaseEnterPassword';
+  static const passwordGuidelinesTitle = 'passwordGuidelinesTitle';
+  static const min6Characters = 'min6Characters';
   static const passwordTooShort = 'passwordTooShort';
   static const passwordNeedUppercase = 'passwordNeedUppercase';
   static const passwordNeedLowercase = 'passwordNeedLowercase';
@@ -764,5 +766,9 @@ abstract class  LocaleKeys {
   static const catPizza = 'catPizza';
   static const catBurger = 'catBurger';
   static const catDrinks = 'catDrinks';
+  static const termsAndConditions = 'termsAndConditions';
+  static const termsAndConditionsPlaceholderTitle = 'termsAndConditionsPlaceholderTitle';
+  static const termsAndConditionsPlaceholderDesc = 'termsAndConditionsPlaceholderDesc';
+  static const aboutUsPlaceholderDesc = 'aboutUsPlaceholderDesc';
 
 }

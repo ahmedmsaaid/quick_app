@@ -98,15 +98,10 @@ class CaptainOrders extends _$CaptainOrders {
 
     final apiService = ref.read(ordersApiServiceProvider);
 
-    // ✅ call واحدة بس — بدون فلتر UpdatorId عشان تجيب الكل
+    // ✅ call واحدة بس — بفلتر DeliveryId وعناصر أساسية فقط لتقليل حجم الريسبونس في الهوم
     final result = await apiService.getOrdersWithFilters(
-      includesPath: [
-        'User',
-        'Creator',
-        'OrderProducts.Product',
-        'UserLocation',
-      ],
-      filters: {'UpdatorId': user?.id},
+      includesPath: const ['Creator'],
+      filters: {'DeliveryId': user?.id},
       pageSize: 100,
     );
 
@@ -123,12 +118,12 @@ class CaptainOrders extends _$CaptainOrders {
 
         final active = list
             .where(
-              (o) => o.updatorId == user.id && o.status >= 2 && o.status <= 6,
+              (o) => o.deliveryId == user.id && o.status >= 2 && o.status <= 6,
             )
             .toList();
 
         final finished = list
-            .where((o) => o.updatorId == user.id && o.status == 7)
+            .where((o) => o.deliveryId == user.id && o.status == 7)
             .toList();
 
         // إحصائيات اليوم
@@ -207,6 +202,25 @@ class CaptainOrders extends _$CaptainOrders {
       failure: (_) => false,
     );
   }
+  /// ميثود خاصة للتفاصيل — بتجيب كل البيانات في الـ includesPath
+  Future<OrderDto?> getOrderDetails(int orderId) async {
+    final apiService = ref.read(ordersApiServiceProvider);
+    final result = await apiService.getOrderById(
+      orderId: orderId,
+      includesPath: const [
+        'User',
+        'Creator',
+        'OrderProducts.Product',
+        'UserLocation',
+        'Delivery',
+      ],
+    );
+    return result.when(
+      success: (response) =>
+          response.success && response.result != null ? response.result : null,
+      failure: (_) => null,
+    );
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -267,15 +281,10 @@ class CaptainMyOrders extends _$CaptainMyOrders {
 
     final apiService = ref.read(ordersApiServiceProvider);
 
-    // جيب طلبات الكابتن بفلتر updatorId
+    // جيب طلبات الكابتن بفلتر deliveryId والبيانات الأساسية فقط لتقليل حجم الريسبونس
     final result = await apiService.getOrdersWithFilters(
-      filters: {'updatorId': user.id},
-      includesPath: [
-        'User',
-        'Creator',
-        'OrderProducts.Product',
-        'UserLocation',
-      ],
+      filters: {'DeliveryId': user.id},
+      includesPath: const ['Creator'],
       pageSize: 100,
     );
     if (!ref.mounted) return;
@@ -287,7 +296,7 @@ class CaptainMyOrders extends _$CaptainMyOrders {
     result.when(
       success: (response) {
         final list = response.result ?? [];
-        final filteredList = list.where((o) => o.updatorId == user.id).toList();
+        final filteredList = list.where((o) => o.deliveryId == user.id).toList();
         active = filteredList.where((o) => o.status >= 2 && o.status <= 6).toList();
         finished = filteredList.where((o) => o.status == 7).toList();
       },
@@ -326,6 +335,25 @@ class CaptainMyOrders extends _$CaptainMyOrders {
         return false;
       },
       failure: (_) => false,
+    );
+  }
+  /// ميثود خاصة للتفاصيل — بتجيب كل البيانات في الـ includesPath
+  Future<OrderDto?> getOrderDetails(int orderId) async {
+    final apiService = ref.read(ordersApiServiceProvider);
+    final result = await apiService.getOrderById(
+      orderId: orderId,
+      includesPath: const [
+        'User',
+        'Creator',
+        'OrderProducts.Product',
+        'UserLocation',
+        'Delivery',
+      ],
+    );
+    return result.when(
+      success: (response) =>
+          response.success && response.result != null ? response.result : null,
+      failure: (_) => null,
     );
   }
 }

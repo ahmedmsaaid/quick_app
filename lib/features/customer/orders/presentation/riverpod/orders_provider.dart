@@ -185,7 +185,7 @@ Stream<OrderDto> trackOrder(Ref ref, int orderId) async* {
   while (true) {
     final result = await apiService.getOrderById(
       orderId: orderId,
-      includesPath: const ["User", "Creator", "OrderProducts.Product", "Updator", "UserLocation"],
+      includesPath: const ["User", "Creator", "OrderProducts.Product", "Delivery", "UserLocation"],
     );
     
     final order = result.when(

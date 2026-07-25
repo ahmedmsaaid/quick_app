@@ -274,6 +274,8 @@ abstract class  AppStrings {
   static String get pleaseEnterEmail => 'pleaseEnterEmail'.tr();
   static String get emailInvalid => 'emailInvalid'.tr();
   static String get pleaseEnterPassword => 'pleaseEnterPassword'.tr();
+  static String get passwordGuidelinesTitle => 'passwordGuidelinesTitle'.tr();
+  static String get min6Characters => 'min6Characters'.tr();
   static String get passwordTooShort => 'passwordTooShort'.tr();
   static String get passwordNeedUppercase => 'passwordNeedUppercase'.tr();
   static String get passwordNeedLowercase => 'passwordNeedLowercase'.tr();
@@ -766,5 +768,9 @@ abstract class  AppStrings {
   static String get catPizza => 'catPizza'.tr();
   static String get catBurger => 'catBurger'.tr();
   static String get catDrinks => 'catDrinks'.tr();
+  static String get termsAndConditions => 'termsAndConditions'.tr();
+  static String get termsAndConditionsPlaceholderTitle => 'termsAndConditionsPlaceholderTitle'.tr();
+  static String get termsAndConditionsPlaceholderDesc => 'termsAndConditionsPlaceholderDesc'.tr();
+  static String get aboutUsPlaceholderDesc => 'aboutUsPlaceholderDesc'.tr();
 
 }

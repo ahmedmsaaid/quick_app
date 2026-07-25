@@ -50,4 +50,6 @@ class AppRoutes {
   static const String favorites = '/favorites';
   static const String allCategoriesScreen = '/allCategoriesScreen';
   static const String captainRegisterScreen = '/captainRegisterScreen';
+  static const String termsAndConditions = '/termsAndConditions';
+  static const String aboutUs = '/aboutUs';
 }

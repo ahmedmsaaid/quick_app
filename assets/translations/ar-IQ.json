@@ -268,6 +268,8 @@
   "pleaseEnterEmail": "يا ريت تدخل البريد الإلكتروني",
   "emailInvalid": "البريد الإلكتروني مش صح",
   "pleaseEnterPassword": "يا ريت تدخل كلمة السر",
+  "passwordGuidelinesTitle": "إرشادات كلمة المرور:",
+  "min6Characters": "6 أحرف على الأقل",
   "passwordTooShort": "كلمة السر قصيرة أوي",
   "passwordNeedUppercase": "لازم يكون فيها حرف كبير",
   "passwordNeedLowercase": "لازم يكون فيها حرف صغير",
@@ -759,5 +761,9 @@
   "catSandwich": "ساندوتش",
   "catPizza": "بيتزا",
   "catBurger": "برجر",
-  "catDrinks": "مشروبات"
+  "catDrinks": "مشروبات",
+  "termsAndConditions": "الشروط والأحكام",
+  "termsAndConditionsPlaceholderTitle": "شروط وأحكام الاستخدام",
+  "termsAndConditionsPlaceholderDesc": "باستخدامك للتطبيق، فإنك توافق على كافة الشروط والأحكام المنظمة للخدمات والطلبات والتوصيل والتسويات.",
+  "aboutUsPlaceholderDesc": "تطبيق كويك سرفيس هو المنصة الأولى للتوصيل المباشر والسريع وخدمات المتاجر والمطاعم والمستلزمات في المملكة."
 }

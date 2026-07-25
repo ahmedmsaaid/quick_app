@@ -111,7 +111,7 @@ final class TrackOrderProvider
   }
 }
 
-String _$trackOrderHash() => r'5b77bee92364d8155c1797d6e72bf2337b9dad67';
+String _$trackOrderHash() => r'd2944a5ff37eca3d2f594435c64e85da639462cd';
 
 final class TrackOrderFamily extends $Family
     with $FunctionalFamilyOverride<Stream<OrderDto>, int> {

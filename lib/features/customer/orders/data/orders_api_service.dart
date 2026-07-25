@@ -33,7 +33,7 @@ class OrdersApiService {
           'pageSize': pageSize,
           'enablePagination': true,
           "includesPath": ["User", "Creator", "OrderProducts.Product"],
-          "filters": {"userId": userId},
+          "filters": {"CreatorId": userId},
         },
       );
       final apiResponse = ApiResponse<List<OrderDto>>.fromJson(response.data, (

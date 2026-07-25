@@ -43,7 +43,7 @@ class _CaptainOrderDetailsScreenState extends ConsumerState<CaptainOrderDetailsS
   }
 
   void _initializeOrderState() {
-    if (_order.updatorId == null || _order.status == 2) {
+    if (_order.deliveryId == null || _order.status == 2) {
       _orderState = 0; // Available to accept
     } else if (_order.status == 3) {
       _orderState = 1; // Accepted / Going to store
@@ -58,45 +58,30 @@ class _CaptainOrderDetailsScreenState extends ConsumerState<CaptainOrderDetailsS
 
   Future<void> _fetchOrderDetails() async {
     setState(() => _isFetchingDetails = true);
-    final apiService = ref.read(ordersApiServiceProvider);
-    final result = await apiService.getOrderById(
-      orderId: widget.order.id,
-      includesPath: ["User", "Creator", "OrderProducts.Product", "UserLocation"],
-    );
-    
-    OrderDto? updatedOrder;
+    final updatedOrder = await ref.read(captainOrdersProvider.notifier).getOrderDetails(widget.order.id);
 
-    switch (result) {
-      case Success(data: final response):
-        if (response.success && response.result != null) {
-          updatedOrder = response.result!;
-          
-          if (updatedOrder.userLocationId != null) {
-            final locResult = await ref.read(profileApiServiceProvider).getLocationById(updatedOrder.userLocationId!);
-            switch (locResult) {
-              case Success(data: final locResponse):
-                if (locResponse.success && locResponse.result != null) {
-                  if (mounted) {
-                    setState(() {
-                      _vendorLocation = locResponse.result;
-                    });
-                  }
-                }
-                break;
-              case Failure(appError: final error):
-                debugPrint("Error fetching location by ID: ${error.message}");
-                break;
+    if (updatedOrder != null) {
+      if (updatedOrder.userLocationId != null) {
+        final locResult = await ref.read(profileApiServiceProvider).getLocationById(updatedOrder.userLocationId!);
+        switch (locResult) {
+          case Success(data: final locResponse):
+            if (locResponse.success && locResponse.result != null) {
+              if (mounted) {
+                setState(() {
+                  _vendorLocation = locResponse.result;
+                });
+              }
             }
-          }
+            break;
+          case Failure(appError: final error):
+            debugPrint("Error fetching location by ID: ${error.message}");
+            break;
         }
-        break;
-      case Failure(appError: final error):
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(error.message)),
-          );
-        }
-        break;
+      }
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("فشل جلب تفاصيل الطلب")),
+      );
     }
 
     if (updatedOrder != null && mounted) {

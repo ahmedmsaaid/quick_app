@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:base_app/core/localizations/app_strings.g.dart';
+import 'package:base_app/core/network/api_constants.dart';
 import 'package:base_app/core/widgets/lading_button.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -147,7 +149,6 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      // Refresh captain orders and unread notification badge count when app comes back to foreground
       ref.read(captainOrdersProvider.notifier).loadAll();
       ref.read(notificationsProvider.notifier).fetchUnreadCount();
     }
@@ -166,7 +167,6 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
     final profileState = ref.watch(profileProvider);
     final ordersState = ref.watch(captainOrdersProvider);
 
-    // Synchronize initial loaded active status
     if (profileState.status == ProfileStatus.loaded && profileState.user != null) {
       final nextActive = profileState.user!.active ?? false;
       if (_isOnline != nextActive && _breakTimer == null) {
@@ -183,7 +183,6 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
       }
     }
 
-    // Listen to live profile status changes to update break/online status dynamically
     ref.listen(profileProvider, (previous, next) {
       if (next.status == ProfileStatus.loaded && next.user != null) {
         final nextActive = next.user!.active ?? false;
@@ -201,7 +200,6 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
       }
     });
 
-    // Show loading while profile is being fetched
     if (profileState.status == ProfileStatus.loading ||
         profileState.status == ProfileStatus.initial) {
       return Scaffold(
@@ -212,7 +210,6 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
       );
     }
 
-    // Check user activation status (status == 0 means pending, status == 2 means rejected/blocked)
     final userStatus = profileState.user?.status ?? 0;
     if (userStatus == 0) {
       return _buildPendingApprovalScreen(colors);
@@ -220,82 +217,64 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
       return _buildRejectedScreen(colors);
     }
 
-    // Normal home screen
     return Scaffold(
       backgroundColor: colors.background,
-      appBar: AppBar(
-        backgroundColor: colors.surface,
-        elevation: 0,
-        leading: const _NotificationBell(),
-        title: Text(
-          AppStrings.controlPanelTitle,
-          style: AppTextStyles.text18w700(color: colors.textPrimary),
-        ),
-        centerTitle: true,
-        actions: [
-          Row(
-            children: [
-              Text(
-                _isOnline ? AppStrings.onlineNowStatus : AppStrings.breakLabel.split(' ')[0],
-                style: AppTextStyles.text12w600(color: _isOnline ? AppColors(context).success : AppColors(context).warning),
-              ),
-              Switch(
-                value: _isOnline,
-                onChanged: _toggleStatus,
-                activeThumbColor: AppColors(context).success,
-                inactiveThumbColor: AppColors(context).warning,
-                inactiveTrackColor: AppColors(context).warning.withOpacity(0.3),
-              ),
-            ],
-          ),
-          10.horizontalSpace,
-        ],
-      ),
       body: RefreshIndicator(
+        color: colors.secondary,
+        backgroundColor: colors.cardBackground,
+        strokeWidth: 2.5,
         onRefresh: () async {
           await ref.read(captainOrdersProvider.notifier).loadAll();
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.all(20.w),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildStatusCard(context),
-              20.verticalSpace,
-              _buildStatsGrid(context, ordersState),
-              20.verticalSpace,
-              _buildSectionHeader(context, AppStrings.availableOrdersNow, ref),
-              10.verticalSpace,
-              if (_isOnline) ...[
-                if (ordersState.status == CaptainOrdersStatus.loading)
-                  Padding(
-                    padding: EdgeInsets.symmetric(vertical: 40.h),
-                    child: Center(child: LoadingButton(color: colors.primary)),
-                  )
-                else if (ordersState.status == CaptainOrdersStatus.error)
-                  Padding(
-                    padding: EdgeInsets.symmetric(vertical: 40.h),
-                    child: Center(
-                      child: Column(
-                        children: [
-                          Text(
-                            ordersState.errorMessage ?? 'حدث خطأ ما',
-                            style: AppTextStyles.text14w600(color: colors.error),
+              _buildSpeedHeader(context, profileState),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildStatsGrid(context, ordersState),
+                    24.verticalSpace,
+                    _buildSectionHeader(context, AppStrings.availableOrdersNow, ref),
+                    14.verticalSpace,
+                    if (_isOnline) ...[
+                      if (ordersState.status == CaptainOrdersStatus.loading)
+                        Padding(
+                          padding: EdgeInsets.symmetric(vertical: 40.h),
+                          child: Center(child: LoadingButton(color: colors.primary)),
+                        )
+                      else if (ordersState.status == CaptainOrdersStatus.error)
+                        Padding(
+                          padding: EdgeInsets.symmetric(vertical: 40.h),
+                          child: Center(
+                            child: Column(
+                              children: [
+                                Text(
+                                  ordersState.errorMessage ?? 'حدث خطأ ما',
+                                  style: AppTextStyles.text14w600(color: colors.error),
+                                ),
+                                10.verticalSpace,
+                                ElevatedButton(
+                                  onPressed: () => ref.read(captainOrdersProvider.notifier).loadAll(),
+                                  style: ElevatedButton.styleFrom(backgroundColor: colors.primary),
+                                  child: Text('إعادة المحاولة', style: AppTextStyles.text12w600(color: Colors.white)),
+                                ),
+                              ],
+                            ),
                           ),
-                          10.verticalSpace,
-                          ElevatedButton(
-                            onPressed: () => ref.read(captainOrdersProvider.notifier).loadAll(),
-                            style: ElevatedButton.styleFrom(backgroundColor: colors.primary),
-                            child: Text('إعادة المحاولة', style: AppTextStyles.text12w600(color: Colors.white)),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                else
-                  _buildAvailableOrdersList(context, ordersState.activeOrders)
-              ] else
-                _buildBreakMessage(context),
+                        )
+                      else
+                        _buildAvailableOrdersList(context, ordersState.activeOrders)
+                    ] else
+                      _buildBreakMessage(context),
+                    40.verticalSpace,
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -303,7 +282,557 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
     );
   }
 
-  // ─── Pending Approval Screen ──────────────────────────────────────────────
+  Widget _buildSpeedHeader(BuildContext context, ProfileState profileState) {
+    final colors = AppColors(context);
+    final user = profileState.user;
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            colors.primary,
+            colors.primary.withValues(alpha: 0.92),
+          ],
+        ),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24.r)),
+        border: Border(
+          bottom: BorderSide(
+            color: colors.secondary, // Bright orange speed trail bottom line
+            width: 2.5.h,
+          ),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: colors.primary.withValues(alpha: 0.15),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          // Visual Speed Lines in the background
+          Positioned(
+            right: -30.w,
+            top: 25.h,
+            child: Container(
+              width: 160.w,
+              height: 1.5.h,
+              color: Colors.white.withValues(alpha: 0.12),
+            ),
+          ),
+          Positioned(
+            left: -40.w,
+            top: 65.h,
+            child: Container(
+              width: 220.w,
+              height: 2.h,
+              color: Colors.white.withValues(alpha: 0.08),
+            ),
+          ),
+          Positioned(
+            right: 40.w,
+            bottom: 45.h,
+            child: Container(
+              width: 120.w,
+              height: 1.h,
+              color: Colors.white.withValues(alpha: 0.1),
+            ),
+          ),
+          Positioned(
+            left: 20.w,
+            bottom: 95.h,
+            child: Container(
+              width: 100.w,
+              height: 1.5.h,
+              color: Colors.white.withValues(alpha: 0.06),
+            ),
+          ),
+
+          // Header Content
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              20.w,
+              MediaQuery.of(context).padding.top + 8.h,
+              20.w,
+              14.h,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.delivery_dining_rounded,
+                              color: colors.secondary,
+                              size: 16.sp,
+                            ),
+                            4.horizontalSpace,
+                            Text(
+                              AppStrings.controlPanelTitle,
+                              style: TextStyle(
+                                fontSize: 13.sp,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                fontFamily: 'Cairo',
+                              ),
+                            ),
+                          ],
+                        ),
+                        4.verticalSpace,
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 8.w, vertical: 3.h),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(10.r),
+                            border: Border.all(
+                              color: _isOnline ? colors.success : colors.warning,
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 7.w,
+                                height: 7.w,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: _isOnline ? colors.success : colors.warning,
+                                ),
+                              ),
+                              4.horizontalSpace,
+                              Text(
+                                _isOnline
+                                    ? AppStrings.onlineNowStatus
+                                    : AppStrings.breakLabel.split(' ')[0],
+                                style: TextStyle(
+                                  fontSize: 10.sp,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                  fontFamily: 'Cairo',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // Center Logo
+                    Image.asset(
+                      'assets/image/quick_panner.png',
+                      height: 52.h,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) =>
+                          const SizedBox.shrink(),
+                    ),
+
+                    // Right: Notification Bell + Profile Avatar
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const _NotificationBell(),
+                        10.horizontalSpace,
+                        GestureDetector(
+                          onTap: () => Navigator.of(context).pushNamed(AppRoutes.profileScreen),
+                          child: Container(
+                            width: 36.w,
+                            height: 36.w,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white.withValues(alpha: 0.15),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.4),
+                                width: 1.2,
+                              ),
+                            ),
+                            child: ClipOval(
+                              child: (user?.photo != null &&
+                                      user!.photo!.isNotEmpty)
+                                  ? CachedNetworkImage(
+                                      imageUrl: user.photo!.startsWith('http')
+                                          ? user.photo!
+                                          : '${ApiConstants.streamUrl}${user.photo}',
+                                      fit: BoxFit.cover,
+                                      placeholder: (_, __) => Container(
+                                          color: colors.shimmerBase),
+                                      errorWidget: (_, __, ___) => Icon(
+                                        Icons.person,
+                                        color: Colors.white,
+                                        size: 16.sp,
+                                      ),
+                                    )
+                                  : Icon(
+                                      Icons.person,
+                                      color: Colors.white,
+                                      size: 16.sp,
+                                    ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                14.verticalSpace,
+
+                // Status Card nested inside the header
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+                  decoration: BoxDecoration(
+                    color: colors.surface,
+                    borderRadius: BorderRadius.circular(14.r),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(8.r),
+                        decoration: BoxDecoration(
+                          color: (_isOnline ? colors.success : colors.warning).withValues(alpha: 0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          _isOnline ? Icons.check_circle_rounded : Icons.timer_outlined,
+                          color: _isOnline ? colors.success : colors.warning,
+                          size: 22.sp,
+                        ),
+                      ),
+                      12.horizontalSpace,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _isOnline ? AppStrings.onlineReadyToWorkMsg : AppStrings.breakLabel,
+                              style: AppTextStyles.text13w700(
+                                color: _isOnline ? colors.success : colors.warning,
+                              ),
+                            ),
+                            if (!_isOnline) ...[
+                              2.verticalSpace,
+                              Text(
+                                '${AppStrings.timeLeftLabel}: ${_formatTime(_breakSecondsRemaining)}',
+                                style: AppTextStyles.text11w600(color: colors.warning),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      if (!_isOnline)
+                        ElevatedButton(
+                          onPressed: () => _toggleStatus(true),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: colors.primary,
+                            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
+                          ),
+                          child: Text(AppStrings.endBreakBtn, style: AppTextStyles.text11w700(color: Colors.white)),
+                        )
+                      else
+                        Switch(
+                          value: _isOnline,
+                          onChanged: _toggleStatus,
+                          activeThumbColor: colors.success,
+                          inactiveThumbColor: colors.warning,
+                          inactiveTrackColor: colors.warning.withValues(alpha: 0.3),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatsGrid(BuildContext context, CaptainOrdersState state) {
+    final colors = AppColors(context);
+    return Row(
+      children: [
+        Expanded(
+          child: _buildStatCard(
+            context,
+            title: AppStrings.todayOrders,
+            value: '${state.todayOrdersCount}',
+            icon: Icons.shopping_bag_rounded,
+            iconColor: colors.primary,
+            bgColor: colors.primary.withValues(alpha: 0.08),
+          ),
+        ),
+        16.horizontalSpace,
+        Expanded(
+          child: _buildStatCard(
+            context,
+            title: AppStrings.todayEarnings,
+            value: '${state.todayEarnings.toStringAsFixed(0)} ${AppStrings.currency}',
+            icon: Icons.account_balance_wallet_rounded,
+            iconColor: colors.secondary,
+            bgColor: colors.secondary.withValues(alpha: 0.08),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatCard(
+    BuildContext context, {
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color iconColor,
+    required Color bgColor,
+  }) {
+    final colors = AppColors(context);
+    return Container(
+      padding: EdgeInsets.all(16.r),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(18.r),
+        border: Border.all(color: colors.border.withValues(alpha: 0.6)),
+        boxShadow: [
+          BoxShadow(
+            color: colors.shadow.withValues(alpha: 0.5),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: EdgeInsets.all(10.r),
+            decoration: BoxDecoration(
+              color: bgColor,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: iconColor, size: 22.sp),
+          ),
+          12.verticalSpace,
+          Text(
+            title,
+            style: AppTextStyles.text12w600(color: colors.textSecondary),
+          ),
+          4.verticalSpace,
+          Text(
+            value,
+            style: AppTextStyles.text16w700(color: colors.textPrimary),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(BuildContext context, String title, WidgetRef ref) {
+    final colors = AppColors(context);
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(title, style: AppTextStyles.text18w700(color: colors.textPrimary)),
+        TextButton.icon(
+          onPressed: () => ref.read(captainOrdersProvider.notifier).loadAll(),
+          icon: Icon(Icons.refresh_rounded, size: 16.sp, color: colors.primary),
+          label: Text(AppStrings.refresh, style: AppTextStyles.text12w700(color: colors.primary)),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAvailableOrdersList(BuildContext context, List<OrderDto> orders) {
+    if (orders.isEmpty) {
+      final colors = AppColors(context);
+      return Padding(
+        padding: EdgeInsets.symmetric(vertical: 40.h),
+        child: Center(
+          child: Column(
+            children: [
+              Icon(Icons.inbox_rounded, size: 48.sp, color: colors.textHint.withValues(alpha: 0.5)),
+              12.verticalSpace,
+              Text(
+                'لا توجد طلبات متاحة حالياً',
+                style: AppTextStyles.text14w600(color: colors.textHint),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: orders.length,
+      separatorBuilder: (context, index) => 16.verticalSpace,
+      itemBuilder: (context, index) {
+        return _buildOrderCard(context, orders[index]);
+      },
+    );
+  }
+
+  Widget _buildOrderCard(BuildContext context, OrderDto order) {
+    final colors = AppColors(context);
+    final storeName = order.creator?.name ?? 'متجر غير معروف';
+    final storeAddress = order.creator?.address ?? 'عنوان غير متوفر';
+    final earnings = order.deliveryFee;
+
+    return Container(
+      padding: EdgeInsets.all(16.r),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(20.r),
+        border: Border.all(color: colors.border.withValues(alpha: 0.5)),
+        boxShadow: [
+          BoxShadow(
+            color: colors.shadow.withValues(alpha: 0.6),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 48.w,
+                height: 48.w,
+                decoration: BoxDecoration(
+                  color: colors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(14.r),
+                ),
+                child: Icon(
+                  order.type == 0 ? Icons.restaurant_rounded : Icons.shopping_bag_rounded,
+                  color: colors.primary,
+                  size: 24.sp,
+                ),
+              ),
+              14.horizontalSpace,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      storeName,
+                      style: AppTextStyles.text15w700(color: colors.textPrimary),
+                    ),
+                    2.verticalSpace,
+                    Text(
+                      storeAddress,
+                      style: AppTextStyles.text12w500(color: colors.textSecondary),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                decoration: BoxDecoration(
+                  color: colors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+                child: Text(
+                  '${earnings.toStringAsFixed(0)} ${AppStrings.currency}',
+                  style: AppTextStyles.text13w700(color: colors.primary),
+                ),
+              ),
+            ],
+          ),
+          14.verticalSpace,
+          Divider(color: colors.border.withValues(alpha: 0.5), height: 1),
+          14.verticalSpace,
+          Row(
+            children: [
+              Icon(Icons.location_on_rounded, color: colors.secondary, size: 20.sp),
+              8.horizontalSpace,
+              Expanded(
+                child: Text(
+                  '${AppStrings.deliverToLabel}: ${order.address ?? 'عنوان الزبون غير متوفر'}',
+                  style: AppTextStyles.text12w600(color: colors.textPrimary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              12.horizontalSpace,
+              ElevatedButton(
+                onPressed: () => Navigator.pushNamed(
+                  context,
+                  AppRoutes.captainOrderDetails,
+                  arguments: order,
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colors.primary,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                ),
+                child: Text(
+                  AppStrings.viewDetailsBtn,
+                  style: AppTextStyles.text12w700(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBreakMessage(BuildContext context) {
+    final colors = AppColors(context);
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(vertical: 40.h, horizontal: 20.w),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(20.r),
+        border: Border.all(color: colors.warning.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.coffee_rounded, size: 64.sp, color: colors.warning),
+          16.verticalSpace,
+          Text(AppStrings.breakLabel, style: AppTextStyles.text16w700(color: colors.textPrimary)),
+          6.verticalSpace,
+          Text(AppStrings.openOnlineToReceiveOrdersMsg, style: AppTextStyles.text13w600(color: colors.textSecondary), textAlign: TextAlign.center),
+          24.verticalSpace,
+          ElevatedButton(
+            onPressed: () => _toggleStatus(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: colors.primary,
+              padding: EdgeInsets.symmetric(horizontal: 28.w, vertical: 12.h),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+            ),
+            child: Text(AppStrings.endBreakBtn, style: AppTextStyles.text13w700(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildPendingApprovalScreen(AppColors colors) {
     return Scaffold(
@@ -315,15 +844,14 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Animated icon container
                 Container(
                   width: 120.w,
                   height: 120.w,
                   decoration: BoxDecoration(
-                    color: colors.warning.withOpacity(0.1),
+                    color: colors.warning.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: colors.warning.withOpacity(0.3),
+                      color: colors.warning.withValues(alpha: 0.3),
                       width: 2,
                     ),
                   ),
@@ -334,29 +862,25 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
                   ),
                 ),
                 32.verticalSpace,
-
                 Text(
                   'في انتظار الموافقة',
                   style: AppTextStyles.text22w700(color: colors.textPrimary),
                   textAlign: TextAlign.center,
                 ),
                 12.verticalSpace,
-
                 Text(
                   'تم إنشاء حسابك بنجاح!\nحسابك قيد المراجعة حالياً من قبل الإدارة.\nسيتم تفعيل حسابك في أقرب وقت.',
                   style: AppTextStyles.text14w400(color: colors.textSecondary),
                   textAlign: TextAlign.center,
                 ),
                 32.verticalSpace,
-
-                // Status info card
                 Container(
                   padding: EdgeInsets.all(16.r),
                   decoration: BoxDecoration(
-                    color: colors.warning.withOpacity(0.06),
+                    color: colors.warning.withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(14.r),
                     border: Border.all(
-                      color: colors.warning.withOpacity(0.2),
+                      color: colors.warning.withValues(alpha: 0.2),
                     ),
                   ),
                   child: Row(
@@ -364,7 +888,7 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
                       Container(
                         padding: EdgeInsets.all(8.r),
                         decoration: BoxDecoration(
-                          color: colors.warning.withOpacity(0.15),
+                          color: colors.warning.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(10.r),
                         ),
                         child: Icon(
@@ -394,8 +918,6 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
                   ),
                 ),
                 40.verticalSpace,
-
-                // Refresh button
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
@@ -434,7 +956,6 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Error/Blocked icon container
                 Container(
                   width: 120.w,
                   height: 120.w,
@@ -453,22 +974,18 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
                   ),
                 ),
                 32.verticalSpace,
-
                 Text(
                   'تم رفض الحساب',
                   style: AppTextStyles.text22w700(color: colors.textPrimary),
                   textAlign: TextAlign.center,
                 ),
                 12.verticalSpace,
-
                 Text(
                   'لقد تم رفض طلب انضمامك أو حظر حسابك من قبل الإدارة.\nيرجى التواصل مع الدعم الفني لمزيد من التفاصيل.',
                   style: AppTextStyles.text14w400(color: colors.textSecondary),
                   textAlign: TextAlign.center,
                 ),
                 32.verticalSpace,
-
-                // Status info card
                 Container(
                   padding: EdgeInsets.all(16.r),
                   decoration: BoxDecoration(
@@ -513,8 +1030,6 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
                   ),
                 ),
                 40.verticalSpace,
-
-                // Support button
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
@@ -536,14 +1051,12 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
                   ),
                 ),
                 16.verticalSpace,
-
-                // Logout button
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     onPressed: () async {
                       await ref.read(authProvider.notifier).logout();
-                      if (context.mounted) {
+                      if (mounted) {
                         Navigator.of(context).pushNamedAndRemoveUntil(
                           AppRoutes.chooseUserTypeScreen,
                           (route) => false,
@@ -571,219 +1084,6 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
       ),
     );
   }
-
-  // ─── Normal Home Widgets ──────────────────────────────────────────────────
-
-  Widget _buildStatusCard(BuildContext context) {
-    final colors = AppColors(context);
-    return Container(
-      padding: EdgeInsets.all(15.r),
-      decoration: BoxDecoration(
-        color: _isOnline ? colors.success.withOpacity(0.1) : colors.warning.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(15.r),
-        border: Border.all(color: _isOnline ? colors.success : colors.warning, width: 1),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            _isOnline ? Icons.check_circle : Icons.timer_outlined,
-            color: _isOnline ? colors.success : colors.warning,
-          ),
-          15.horizontalSpace,
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _isOnline ? AppStrings.onlineReadyToWorkMsg : AppStrings.breakLabel,
-                  style: AppTextStyles.text14w600(color: _isOnline ? colors.success : colors.warning),
-                ),
-                if (!_isOnline)
-                  Text(
-                    '${AppStrings.timeLeftLabel}: ${_formatTime(_breakSecondsRemaining)}',
-                    style: AppTextStyles.text12w400(color: colors.warning),
-                  ),
-              ],
-            ),
-          ),
-          if (!_isOnline)
-            TextButton(
-              onPressed: () => _toggleStatus(true),
-              child: Text(AppStrings.endBreakBtn, style: TextStyle(color: colors.primary)),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatsGrid(BuildContext context, CaptainOrdersState state) {
-    return Row(
-      children: [
-        _buildStatItem(context, AppStrings.todayOrders, '${state.todayOrdersCount}', Icons.shopping_bag_outlined, Colors.blue),
-        15.horizontalSpace,
-        _buildStatItem(context, AppStrings.todayEarnings, '${state.todayEarnings.toStringAsFixed(0)} ${AppStrings.currency}', Icons.account_balance_wallet_outlined, Colors.orange),
-      ],
-    );
-  }
-
-  Widget _buildStatItem(BuildContext context, String title, String value, IconData icon, Color color) {
-    final colors = AppColors(context);
-    return Expanded(
-      child: Container(
-        padding: EdgeInsets.all(15.r),
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(15.r),
-          boxShadow: [BoxShadow(color: colors.shadow, blurRadius: 10)],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: color, size: 24.sp),
-            10.verticalSpace,
-            Text(title, style: AppTextStyles.text12w400(color: colors.textSecondary)),
-            5.verticalSpace,
-            Text(value, style: AppTextStyles.text16w700(color: colors.textPrimary)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(BuildContext context, String title, WidgetRef ref) {
-    final colors = AppColors(context);
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(title, style: AppTextStyles.text16w700(color: colors.textPrimary)),
-        TextButton(
-          onPressed: () => ref.read(captainOrdersProvider.notifier).loadAll(),
-          child: Text(AppStrings.refresh, style: TextStyle(color: colors.primary)),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAvailableOrdersList(BuildContext context, List<OrderDto> orders) {
-    if (orders.isEmpty) {
-      final colors = AppColors(context);
-      return Padding(
-        padding: EdgeInsets.symmetric(vertical: 40.h),
-        child: Center(
-          child: Text(
-            'لا توجد طلبات متاحة حالياً',
-            style: AppTextStyles.text14w600(color: colors.textHint),
-          ),
-        ),
-      );
-    }
-
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: orders.length,
-      separatorBuilder: (context, index) => 15.verticalSpace,
-      itemBuilder: (context, index) {
-        return _buildOrderCard(context, orders[index]);
-      },
-    );
-  }
-
-  Widget _buildOrderCard(BuildContext context, OrderDto order) {
-    final colors = AppColors(context);
-    final storeName = order.creator?.name ?? 'متجر غير معروف';
-    final storeAddress = order.creator?.address ?? 'عنوان غير متوفر';
-    final earnings = order.deliveryFee;
-
-    return Container(
-      padding: EdgeInsets.all(15.r),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(15.r),
-        boxShadow: [BoxShadow(color: colors.shadow, blurRadius: 10)],
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: colors.primary.withOpacity(0.1),
-                child: Icon(
-                  order.type == 0 ? Icons.restaurant : Icons.shopping_bag,
-                  color: colors.primary,
-                  size: 20.sp,
-                ),
-              ),
-              15.horizontalSpace,
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(storeName, style: AppTextStyles.text14w700(color: colors.textPrimary)),
-                    Text(storeAddress, style: AppTextStyles.text12w400(color: colors.textSecondary)),
-                  ],
-                ),
-              ),
-              Text(
-                '${earnings.toStringAsFixed(0)} ${AppStrings.currency}',
-                style: AppTextStyles.text14w700(color: colors.primary),
-              ),
-            ],
-          ),
-          20.verticalSpace,
-          Row(
-            children: [
-              Icon(Icons.location_on, color: colors.error, size: 18.sp),
-              10.horizontalSpace,
-              Expanded(
-                child: Text(
-                  'العنوان: ${order.address ?? 'عنوان الزبون غير متوفر'}',
-                  style: AppTextStyles.text12w400(color: colors.textSecondary),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              10.horizontalSpace,
-              ElevatedButton(
-                onPressed: () => Navigator.pushNamed(
-                  context,
-                  AppRoutes.captainOrderDetails,
-                  arguments: order,
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: colors.primary,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
-                ),
-                child: Text(AppStrings.viewDetailsBtn, style: AppTextStyles.text12w600(color: Colors.white)),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBreakMessage(BuildContext context) {
-    final colors = AppColors(context);
-    return Column(
-      children: [
-        40.verticalSpace,
-        Icon(Icons.coffee_outlined, size: 80.sp, color: colors.warning),
-        20.verticalSpace,
-        Text(AppStrings.breakLabel, style: AppTextStyles.text14w600(color: colors.textSecondary)),
-        Text(AppStrings.openOnlineToReceiveOrdersMsg, style: AppTextStyles.text12w400(color: colors.textHint)),
-        30.verticalSpace,
-        ElevatedButton(
-          onPressed: () => _toggleStatus(true),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: colors.primary,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
-          ),
-          child: Text(AppStrings.endBreakBtn, style: AppTextStyles.text12w600(color: Colors.white)),
-        ),
-      ],
-    );
-  }
 }
 
 class _NotificationBell extends ConsumerWidget {
@@ -791,7 +1091,6 @@ class _NotificationBell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colors = AppColors(context);
     final unreadCount =
         ref.watch(notificationsProvider.select((s) => s.unreadCount));
 
@@ -805,44 +1104,44 @@ class _NotificationBell extends ConsumerWidget {
           clipBehavior: Clip.none,
           children: [
             Container(
-              width: 38.w,
-              height: 38.w,
+              width: 36.w,
+              height: 36.w,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: colors.surface,
+                color: Colors.white.withValues(alpha: 0.15),
                 border: Border.all(
-                  color: colors.border,
+                  color: Colors.white.withValues(alpha: 0.4),
                   width: 1.2,
                 ),
               ),
               child: Icon(
                 Icons.notifications_rounded,
-                color: colors.textPrimary,
-                size: 20.sp,
+                color: Colors.white,
+                size: 18.sp,
               ),
             ),
             if (unreadCount > 0)
               Positioned(
-                top: -2,
-                right: -2,
+                top: -4,
+                right: -4,
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 300),
                   transitionBuilder: (child, animation) =>
                       ScaleTransition(scale: animation, child: child),
                   child: Container(
                     key: ValueKey(unreadCount),
-                    constraints: BoxConstraints(minWidth: 16.w, minHeight: 16.w),
+                    constraints: BoxConstraints(minWidth: 18.w, minHeight: 18.w),
                     padding: EdgeInsets.symmetric(horizontal: 4.w),
                     decoration: BoxDecoration(
                       color: Colors.redAccent,
-                      borderRadius: BorderRadius.circular(8.r),
-                      border: Border.all(color: colors.surface, width: 1.5),
+                      borderRadius: BorderRadius.circular(9.r),
+                      border: Border.all(color: Colors.white, width: 1.5),
                     ),
                     alignment: Alignment.center,
                     child: Text(
                       unreadCount > 99 ? '99+' : '$unreadCount',
                       style: TextStyle(
-                        fontSize: 8.sp,
+                        fontSize: 9.sp,
                         fontWeight: FontWeight.w800,
                         color: Colors.white,
                         height: 1,
@@ -857,4 +1156,3 @@ class _NotificationBell extends ConsumerWidget {
     );
   }
 }
-

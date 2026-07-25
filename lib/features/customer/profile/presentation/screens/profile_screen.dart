@@ -1,4 +1,5 @@
 import 'package:base_app/core/routes/app_routes.dart';
+import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -34,9 +35,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (user == null && profileState.status != ProfileStatus.error) {
       return Scaffold(
         backgroundColor: AppColors(context).background,
-        body: const Center(
-          child: LoadingButton(),
-        ),
+        body: const Center(child: LoadingButton()),
       );
     }
 
@@ -51,18 +50,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               Text(profileState.errorMessage ?? AppStrings.errorOccurredTitle),
               10.verticalSpace,
               ElevatedButton(
-                onPressed: () => ref.read(profileProvider.notifier).loadProfile(),
-                child: Text(AppStrings.okText), 
-                  ),
-                ],
+                onPressed: () =>
+                    ref.read(profileProvider.notifier).loadProfile(),
+                child: Text(AppStrings.okText),
               ),
-            ),
-          );
-        }
+            ],
+          ),
+        ),
+      );
+    }
 
     final rawPhoto = user?.photo ?? user?.avatar;
     final resolvedPhotoUrl = (rawPhoto != null && rawPhoto.isNotEmpty)
-        ? (rawPhoto.startsWith('http') ? rawPhoto : '${ApiConstants.streamUrl}$rawPhoto')
+        ? (rawPhoto.startsWith('http')
+              ? rawPhoto
+              : '${ApiConstants.streamUrl}$rawPhoto')
         : '';
 
     return Scaffold(
@@ -71,17 +73,30 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         physics: const BouncingScrollPhysics(),
         child: Column(
           children: [
-            _buildProfileHeader(context, user?.name, user?.phone, resolvedPhotoUrl),
+            _buildProfileHeader(
+              context,
+              user?.name,
+              user?.phone,
+              resolvedPhotoUrl,
+            ),
             20.verticalSpace,
-            _buildMenuSection(context, ref),
-            SizedBox(height: 64.h + 16.h + MediaQuery.of(context).padding.bottom + 16.h),
+            _buildMenuSection(context, ref, user),
+            SizedBox(
+              height:
+                  64.h + 16.h + MediaQuery.of(context).padding.bottom + 16.h,
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildProfileHeader(BuildContext context, String? name, String? phone, String? photoUrl) {
+  Widget _buildProfileHeader(
+    BuildContext context,
+    String? name,
+    String? phone,
+    String? photoUrl,
+  ) {
     final colors = AppColors(context);
     return Container(
       width: double.infinity,
@@ -105,13 +120,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             child: ClipOval(
               child: photoUrl != null && photoUrl.isNotEmpty
                   ? Image.network(
-                photoUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Image.asset(
-                  'assets/image/logo.png',
-                  fit: BoxFit.cover,
-                ),
-              )
+                      photoUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Image.asset(
+                        'assets/image/logo.png',
+                        fit: BoxFit.cover,
+                      ),
+                    )
                   : Image.asset('assets/image/logo.png', fit: BoxFit.cover),
             ),
           ),
@@ -130,7 +145,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _buildMenuSection(BuildContext context, WidgetRef ref) {
+  Widget _buildMenuSection(BuildContext context, WidgetRef ref, UserDto? user) {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 20.w),
       padding: EdgeInsets.symmetric(vertical: 10.h),
@@ -140,16 +155,80 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ),
       child: Column(
         children: [
-          _buildMenuItem(context, ref, Icons.person_outline, AppStrings.personalInformation),
-          _buildMenuItem(context, ref, Icons.location_on_outlined, AppStrings.address),
-          _buildMenuItem(context, ref, Icons.account_balance_wallet_outlined, AppStrings.wallet),
-          _buildMenuItem(context, ref, Icons.notifications_none, AppStrings.notifications),
-          _buildMenuItem(context, ref, Icons.chat_bubble_outline_rounded, AppStrings.chats),
-          _buildMenuItem(context, ref, Icons.star_border, AppStrings.favorites),
-          _buildMenuItem(context, ref, Icons.settings_outlined, AppStrings.settings),
-          _buildMenuItem(context, ref, Icons.privacy_tip_outlined, AppStrings.privacyPolicy),
-          _buildMenuItem(context, ref, Icons.help_outline, AppStrings.contactUs),
-          _buildMenuItem(context, ref, Icons.logout, AppStrings.logout, isLogout: true),
+          _buildMenuItem(
+            context,
+            ref,
+            Icons.person_outline,
+            AppStrings.personalInformation,
+          ),
+          _buildMenuItem(
+            context,
+            ref,
+            Icons.location_on_outlined,
+            AppStrings.address,
+          ),
+          _buildMenuItem(
+            context,
+            ref,
+            Icons.account_balance_wallet_outlined,
+            AppStrings.wallet,
+          ),
+          _buildMenuItem(
+            context,
+            ref,
+            Icons.notifications_none,
+            AppStrings.notifications,
+          ),
+          _buildMenuItem(
+            context,
+            ref,
+            Icons.chat_bubble_outline_rounded,
+            AppStrings.chats,
+          ),
+          if (user?.role != 2)
+            _buildMenuItem(
+              context,
+              ref,
+              Icons.star_border,
+              AppStrings.favorites,
+            ),
+          _buildMenuItem(
+            context,
+            ref,
+            Icons.settings_outlined,
+            AppStrings.settings,
+          ),
+          _buildMenuItem(
+            context,
+            ref,
+            Icons.info_outline,
+            AppStrings.aboutUs,
+          ),
+          _buildMenuItem(
+            context,
+            ref,
+            Icons.description_outlined,
+            AppStrings.termsAndConditions,
+          ),
+          _buildMenuItem(
+            context,
+            ref,
+            Icons.privacy_tip_outlined,
+            AppStrings.privacyPolicy,
+          ),
+          _buildMenuItem(
+            context,
+            ref,
+            Icons.help_outline,
+            AppStrings.contactUs,
+          ),
+          _buildMenuItem(
+            context,
+            ref,
+            Icons.logout,
+            AppStrings.logout,
+            isLogout: true,
+          ),
         ],
       ),
     );
@@ -203,6 +282,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           Navigator.of(context).pushNamed(AppRoutes.favorites);
         } else if (title == AppStrings.settings) {
           Navigator.of(context).pushNamed(AppRoutes.settings);
+        } else if (title == AppStrings.aboutUs) {
+          Navigator.of(context).pushNamed(AppRoutes.aboutUs);
+        } else if (title == AppStrings.termsAndConditions) {
+          Navigator.of(context).pushNamed(AppRoutes.termsAndConditions);
         } else if (title == AppStrings.privacyPolicy) {
           Navigator.of(context).pushNamed(AppRoutes.privacyPolicy);
         } else if (title == AppStrings.contactUs) {

@@ -50,6 +50,8 @@ class AppChatGrbcNotifier extends _$AppChatGrbcNotifier {
     _chatSubscription?.cancel();
     _repository?.disconnect();
     _messages.clear();
+    _chatId = null;
+    _targetUserId = null;
     _isGrpcConnected = false;
 
     print('✅ All resources cleaned up!');
@@ -57,13 +59,14 @@ class AppChatGrbcNotifier extends _$AppChatGrbcNotifier {
   }
 
   Future<void> connect({int? chatId, int? targetUserId}) async {
-    if (chatId != null) _chatId = chatId;
-    if (targetUserId != null) _targetUserId = targetUserId;
+    _chatId = chatId;
+    _targetUserId = targetUserId;
+    _messages.clear();
 
     state = const AppChatGrbcState.connecting();
 
     print('\n🔗 ═══════════════════════════════════════════════════════');
-    print('📱 Starting connection...');
+    print('📱 Starting connection for chatId: $_chatId, targetUserId: $_targetUserId...');
 
     try {
       final extractedId = await JwtHelper.getUserId();
@@ -93,12 +96,16 @@ class AppChatGrbcNotifier extends _$AppChatGrbcNotifier {
           print('   • Time: ${message.createdOn}');
           print('   • ChatId: ${message.chatId}');
 
-          if (message.recipientId == _currentUserId ||
-              message.creatorId == _currentUserId) {
-            print('✅ Message is for current user, adding to list');
+          final isForCurrentChat = (_chatId != null && _chatId != 0 && message.chatId == _chatId) ||
+              ((_chatId == null || _chatId == 0) && _targetUserId != null && _targetUserId != 0 &&
+                  (message.creatorId == _targetUserId || message.recipientId == _targetUserId));
+
+          if ((message.recipientId == _currentUserId ||
+                  message.creatorId == _currentUserId) && isForCurrentChat) {
+            print('✅ Message is for current active chat, adding to list');
             addMessage(message);
           } else {
-            print('⚠️ Message is not for current user, skipping');
+            print('⚠️ Message is not for current open chat screen, skipping UI update');
           }
         },
         onError: (error) {
@@ -184,6 +191,7 @@ class AppChatGrbcNotifier extends _$AppChatGrbcNotifier {
     print('📥 Loading all messages for chat: $chatId');
 
     try {
+      _messages.clear();
       state = const AppChatGrbcState.connecting();
 
       await ref
@@ -422,6 +430,8 @@ class AppChatGrbcNotifier extends _$AppChatGrbcNotifier {
     await _chatSubscription?.cancel();
     await _repository?.disconnect();
     _messages.clear();
+    _chatId = null;
+    _targetUserId = null;
     _isGrpcConnected = false;
 
     print('✅ Disconnected successfully');

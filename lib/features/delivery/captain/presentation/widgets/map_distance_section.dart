@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart' as ll;
 import 'package:geolocator/geolocator.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/styles/app_text_style.dart';
 import 'package:base_app/features/customer/checkout/data/models/order_models.dart';
@@ -27,14 +29,12 @@ class MapDistanceSection extends StatefulWidget {
 class _MapDistanceSectionState extends State<MapDistanceSection> {
   double? _distanceBetweenStoreAndCustomer;
   double? _distanceToStore;
-  Set<Marker> _markers = {};
-  GoogleMapController? _mapController;
+  final MapController _mapController = MapController();
   static const _launcherChannel = MethodChannel('com.quick.app/launcher');
 
   @override
   void initState() {
     super.initState();
-    _updateMarkers();
     _calculateDistances();
   }
 
@@ -43,85 +43,7 @@ class _MapDistanceSectionState extends State<MapDistanceSection> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.order != widget.order ||
         oldWidget.vendorLocation != widget.vendorLocation) {
-      _updateMarkers();
       _calculateDistances();
-    }
-  }
-
-  void _updateMarkers() {
-    final storeLat = widget.vendorLocation?.latitude ??
-        widget.order.userLocation?.latitude ??
-        widget.order.creator?.location?.latitude;
-    final storeLng = widget.vendorLocation?.longitude ??
-        widget.order.userLocation?.longitude ??
-        widget.order.creator?.location?.longitude;
-    final destLat = widget.order.latitude;
-    final destLng = widget.order.longitude;
-
-    final Set<Marker> newMarkers = {};
-
-    if (storeLat != null && storeLng != null && storeLat != 0 && storeLng != 0) {
-      newMarkers.add(
-        Marker(
-          markerId: const MarkerId('store'),
-          position: LatLng(storeLat, storeLng),
-          infoWindow: InfoWindow(
-            title: widget.order.creator?.name ?? "المحل",
-            snippet: widget.vendorLocation?.address ??
-                widget.order.userLocation?.address ??
-                widget.order.creator?.address ??
-                "عنوان المحل",
-          ),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-        ),
-      );
-    }
-
-    if (destLat != 0 && destLng != 0) {
-      newMarkers.add(
-        Marker(
-          markerId: const MarkerId('customer'),
-          position: LatLng(destLat, destLng),
-          infoWindow: InfoWindow(
-            title: widget.order.user?.name ?? "العميل",
-            snippet: widget.order.address ?? "عنوان التوصيل",
-          ),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-        ),
-      );
-    }
-
-    setState(() {
-      _markers = newMarkers;
-    });
-
-    _fitMapToMarkers();
-  }
-
-  void _fitMapToMarkers() {
-    if (_mapController == null || _markers.isEmpty) return;
-
-    final storeLat = widget.vendorLocation?.latitude ??
-        widget.order.userLocation?.latitude ??
-        widget.order.creator?.location?.latitude;
-    final storeLng = widget.vendorLocation?.longitude ??
-        widget.order.userLocation?.longitude ??
-        widget.order.creator?.location?.longitude;
-    final destLat = widget.order.latitude;
-    final destLng = widget.order.longitude;
-
-    if (storeLat != null && storeLng != null && storeLat != 0 && storeLng != 0 && destLat != 0 && destLng != 0) {
-      final bounds = LatLngBounds(
-        southwest: LatLng(
-          storeLat < destLat ? storeLat : destLat,
-          storeLng < destLng ? storeLng : destLng,
-        ),
-        northeast: LatLng(
-          storeLat > destLat ? storeLat : destLat,
-          storeLng > destLng ? storeLng : destLng,
-        ),
-      );
-      _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 50.r));
     }
   }
 
@@ -161,6 +83,33 @@ class _MapDistanceSectionState extends State<MapDistanceSection> {
     }
   }
 
+  Future<void> _openExternalMap(double lat, double lng) async {
+    final url = Uri.parse("https://www.google.com/maps/search/?api=1&query=$lat,$lng");
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        await _launcherChannel.invokeMethod('launchMap', {
+          'latitude': lat,
+          'longitude': lng,
+        });
+      }
+    } catch (_) {
+      try {
+        await _launcherChannel.invokeMethod('launchMap', {
+          'latitude': lat,
+          'longitude': lng,
+        });
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("تعذر فتح تطبيق الخرائط الخارجية")),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = AppColors(context);
@@ -178,6 +127,48 @@ class _MapDistanceSectionState extends State<MapDistanceSection> {
 
     if (!hasStoreLoc && !hasDestLoc) {
       return const SizedBox.shrink();
+    }
+
+    final ll.LatLng centerPoint = hasStoreLoc
+        ? ll.LatLng(storeLat, storeLng)
+        : ll.LatLng(destLat, destLng);
+
+    final List<Marker> markers = [];
+
+    if (hasStoreLoc) {
+      markers.add(
+        Marker(
+          point: ll.LatLng(storeLat, storeLng),
+          width: 40.w,
+          height: 40.w,
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Colors.green,
+              shape: BoxShape.circle,
+              boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
+            ),
+            child: const Icon(Icons.storefront_rounded, color: Colors.white, size: 22),
+          ),
+        ),
+      );
+    }
+
+    if (hasDestLoc) {
+      markers.add(
+        Marker(
+          point: ll.LatLng(destLat, destLng),
+          width: 40.w,
+          height: 40.w,
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Colors.red,
+              shape: BoxShape.circle,
+              boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
+            ),
+            child: const Icon(Icons.person_pin_circle_rounded, color: Colors.white, size: 24),
+          ),
+        ),
+      );
     }
 
     return Container(
@@ -235,7 +226,7 @@ class _MapDistanceSectionState extends State<MapDistanceSection> {
             ),
           ),
           
-          // Map View
+          // OpenStreetMap View
           Container(
             height: 200.h,
             margin: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
@@ -245,23 +236,19 @@ class _MapDistanceSectionState extends State<MapDistanceSection> {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12.r),
-              child: GoogleMap(
-                initialCameraPosition: CameraPosition(
-                  target: LatLng(
-                    storeLat ?? destLat,
-                    storeLng ?? destLng,
-                  ),
-                  zoom: 13,
+              child: FlutterMap(
+                mapController: _mapController,
+                options: MapOptions(
+                  initialCenter: centerPoint,
+                  initialZoom: 13.0,
                 ),
-                markers: _markers,
-                myLocationEnabled: true,
-                myLocationButtonEnabled: false,
-                zoomControlsEnabled: false,
-                mapToolbarEnabled: false,
-                onMapCreated: (controller) {
-                  _mapController = controller;
-                  _fitMapToMarkers();
-                },
+                children: [
+                  TileLayer(
+                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.quick.app',
+                  ),
+                  MarkerLayer(markers: markers),
+                ],
               ),
             ),
           ),
@@ -274,10 +261,7 @@ class _MapDistanceSectionState extends State<MapDistanceSection> {
                 final targetLat = (widget.orderState == 0 || widget.orderState == 1) ? storeLat : destLat;
                 final targetLng = (widget.orderState == 0 || widget.orderState == 1) ? storeLng : destLng;
                 if (targetLat != null && targetLng != null && targetLat != 0 && targetLng != 0) {
-                  _launcherChannel.invokeMethod('launchMap', {
-                    'latitude': targetLat,
-                    'longitude': targetLng,
-                  });
+                  _openExternalMap(targetLat, targetLng);
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text("الإحداثيات غير متوفرة لهذا الموقع")),

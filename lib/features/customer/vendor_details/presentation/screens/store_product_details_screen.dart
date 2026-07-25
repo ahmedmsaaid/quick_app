@@ -154,19 +154,6 @@ class _StoreProductDetailsScreenState
               );
             },
           ),
-          12.horizontalSpace,
-          GestureDetector(
-            onTap: () => context.pushNamed(AppRoutes.cartScreen),
-            child: Container(
-              padding: EdgeInsets.all(8.r),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.35),
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
-              ),
-              child: Icon(Icons.shopping_cart_outlined, color: Colors.white, size: 20.sp),
-            ),
-          ),
           20.horizontalSpace,
         ],
       ),
@@ -548,45 +535,110 @@ class _StoreProductDetailsScreenState
                     color: colors.surface.withValues(alpha: 0.88),
                     border: Border(top: BorderSide(color: colors.border.withValues(alpha: 0.6))),
                   ),
-                  child: ScaleTransition(
-                    scale: _scaleAnim,
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(16.r),
-                        onTap: product.isAvailable ? _addToCart : null,
-                        child: Container(
-                          padding: EdgeInsets.symmetric(vertical: 16.h),
-                          decoration: BoxDecoration(
-                            gradient: product.isAvailable ? AppColors.gradient : null,
-                            color: product.isAvailable ? null : colors.border,
-                            borderRadius: BorderRadius.circular(16.r),
-                            boxShadow: product.isAvailable
-                                ? [
-                                    BoxShadow(
-                                      color: colors.primary.withValues(alpha: 0.35),
-                                      blurRadius: 16,
-                                      offset: const Offset(0, 4),
-                                    )
-                                  ]
-                                : [],
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.shopping_bag_outlined, color: Colors.white, size: 20.sp),
-                              10.horizontalSpace,
-                              Text(
-                                product.isAvailable
-                                    ? 'أضف للعربة — ${(effectivePrice * _quantity).toStringAsFixed(0)} ${AppStrings.currency}'
-                                    : 'غير متوفر',
-                                style: AppTextStyles.text15w700(color: Colors.white),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: ScaleTransition(
+                          scale: _scaleAnim,
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(16.r),
+                              onTap: product.isAvailable ? _addToCart : null,
+                              child: Container(
+                                padding: EdgeInsets.symmetric(vertical: 16.h),
+                                decoration: BoxDecoration(
+                                  gradient: product.isAvailable ? AppColors.gradient : null,
+                                  color: product.isAvailable ? null : colors.border,
+                                  borderRadius: BorderRadius.circular(16.r),
+                                  boxShadow: product.isAvailable
+                                      ? [
+                                          BoxShadow(
+                                            color: colors.primary.withValues(alpha: 0.35),
+                                            blurRadius: 16,
+                                            offset: const Offset(0, 4),
+                                          )
+                                        ]
+                                      : [],
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.shopping_bag_outlined, color: Colors.white, size: 20.sp),
+                                    10.horizontalSpace,
+                                    Text(
+                                      product.isAvailable
+                                          ? 'أضف للعربة — ${(effectivePrice * _quantity).toStringAsFixed(0)} ${AppStrings.currency}'
+                                          : 'غير متوفر',
+                                      style: AppTextStyles.text15w700(color: Colors.white),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
+                      12.horizontalSpace,
+                      Consumer(
+                        builder: (context, ref, child) {
+                          final cartState = ref.watch(cartProvider);
+                          final totalQty = cartState.totalQuantity;
+                          return GestureDetector(
+                            onTap: () => context.pushNamed(AppRoutes.cartScreen),
+                            child: Container(
+                              width: 52.h,
+                              height: 52.h,
+                              decoration: BoxDecoration(
+                                color: colors.surface,
+                                borderRadius: BorderRadius.circular(16.r),
+                                border: Border.all(color: colors.primary.withValues(alpha: 0.35), width: 1.2),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: colors.shadow.withValues(alpha: 0.05),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  )
+                                ],
+                              ),
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  Icon(Icons.shopping_cart_outlined, color: colors.primary, size: 22.sp),
+                                  if (totalQty > 0)
+                                    Positioned(
+                                      top: 4.h,
+                                      right: 4.w,
+                                      child: Container(
+                                        padding: EdgeInsets.all(4.r),
+                                        decoration: const BoxDecoration(
+                                          color: Colors.red,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        constraints: BoxConstraints(
+                                          minWidth: 16.r,
+                                          minHeight: 16.r,
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            '$totalQty',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 9.sp,
+                                              fontWeight: FontWeight.bold,
+                                              height: 1,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
                   ),
                 ),
               ),
