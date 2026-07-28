@@ -26,19 +26,28 @@ class HomeApiService {
   Future<ApiResult<ApiResponse<List<OfferDto>>>> getOffers({
     int pageNumber = 1,
     int pageSize = 10,
+    int? creatorId,
   }) async {
     try {
+      final Map<String, dynamic> filters = {};
+      if (creatorId != null) {
+        filters['creatorId'] = creatorId;
+      } else {
+        filters['Creator.Role'] = 1;
+      }
       final response = await _dio.patch(
         ApiConstants.offers,
         data: {
           'pageNumber': pageNumber,
           'pageSize': pageSize,
           'enablePagination': true,
-          'includesPath': ['OfferProducts.Product']
+          'includesPath': ['OfferProducts.Product'],
+          'filters': filters,
         },
       );
-      final apiResponse = ApiResponse<List<OfferDto>>.fromJson(
-          response.data, (json,) {
+      final apiResponse = ApiResponse<List<OfferDto>>.fromJson(response.data, (
+        json,
+      ) {
         if (json is List) {
           return json
               .map((e) => OfferDto.fromJson(e as Map<String, dynamic>))
@@ -63,7 +72,7 @@ class HomeApiService {
       );
       final apiResponse = ApiResponse<OfferDto>.fromJson(
         response.data,
-            (json) => OfferDto.fromJson(json as Map<String, dynamic>),
+        (json) => OfferDto.fromJson(json as Map<String, dynamic>),
       );
       return ApiResult.success(apiResponse);
     } catch (e) {
@@ -103,12 +112,12 @@ class HomeApiService {
       );
       final apiResponse = ApiResponse<List<ProductDetailDto>>.fromJson(
         response.data,
-            (json) {
+        (json) {
           if (json is List) {
             return json
                 .map(
                   (e) => ProductDetailDto.fromJson(e as Map<String, dynamic>),
-            )
+                )
                 .toList();
           }
           return [];
@@ -180,8 +189,9 @@ class HomeApiService {
         ApiConstants.usersPaginate,
         queryParameters: queryParams,
       );
-      final apiResponse = ApiResponse<List<UserDto>>.fromJson(
-          response.data, (json,) {
+      final apiResponse = ApiResponse<List<UserDto>>.fromJson(response.data, (
+        json,
+      ) {
         if (json is List) {
           return json
               .map((e) => UserDto.fromJson(e as Map<String, dynamic>))
@@ -206,17 +216,15 @@ class HomeApiService {
       }
       final response = await _dio.patch(
         ApiConstants.categories,
-        data: {
-          'enablePagination': false,
-          'filters': filters,
-        },
+        data: {'enablePagination': false, 'filters': filters},
       );
       final apiResponse = ApiResponse<List<CategoryDto>>.fromJson(
         response.data,
-            (json) {
+        (json) {
           if (json is List) {
-            return json.map((e) =>
-                CategoryDto.fromJson(e as Map<String, dynamic>)).toList();
+            return json
+                .map((e) => CategoryDto.fromJson(e as Map<String, dynamic>))
+                .toList();
           }
           return [];
         },
@@ -235,7 +243,7 @@ class HomeApiService {
       final Map<String, dynamic> filters = {};
       if (role != null) {
         // filters['type'] = role;
-       }
+      }
       final response = await _dio.patch(
         ApiConstants.mainCategories,
         data: {
@@ -247,8 +255,9 @@ class HomeApiService {
         response.data,
         (json) {
           if (json is List) {
-            return json.map((e) =>
-                MainCategoryDto.fromJson(e as Map<String, dynamic>)).toList();
+            return json
+                .map((e) => MainCategoryDto.fromJson(e as Map<String, dynamic>))
+                .toList();
           }
           return [];
         },
@@ -267,9 +276,7 @@ class HomeApiService {
     int pageSize = 20,
   }) async {
     try {
-      final Map<String, dynamic> filters = {
-        'creatorId': creatorId,
-      };
+      final Map<String, dynamic> filters = {'creatorId': creatorId};
       if (categoryId != null) {
         filters['categoryId'] = categoryId;
       }
@@ -285,10 +292,13 @@ class HomeApiService {
       );
       final apiResponse = ApiResponse<List<ProductDetailDto>>.fromJson(
         response.data,
-            (json) {
+        (json) {
           if (json is List) {
-            return json.map((e) =>
-                ProductDetailDto.fromJson(e as Map<String, dynamic>)).toList();
+            return json
+                .map(
+                  (e) => ProductDetailDto.fromJson(e as Map<String, dynamic>),
+                )
+                .toList();
           }
           return [];
         },
@@ -301,12 +311,13 @@ class HomeApiService {
 
   /// Fetch a single product details by ID.
   Future<ApiResult<ApiResponse<ProductDetailDto>>> getProductById(
-      int id) async {
+    int id,
+  ) async {
     try {
       final response = await _dio.get('products/$id');
       final apiResponse = ApiResponse<ProductDetailDto>.fromJson(
         response.data,
-            (json) => ProductDetailDto.fromJson(json as Map<String, dynamic>),
+        (json) => ProductDetailDto.fromJson(json as Map<String, dynamic>),
       );
       return ApiResult.success(apiResponse);
     } catch (e) {
@@ -327,17 +338,18 @@ class HomeApiService {
           'pageNumber': pageNumber,
           'pageSize': pageSize,
           'enablePagination': true,
-          'filters': {
-            'categoryId': categoryId,
-          },
+          'filters': {'categoryId': categoryId},
         },
       );
       final apiResponse = ApiResponse<List<ProductDetailDto>>.fromJson(
         response.data,
-            (json) {
+        (json) {
           if (json is List) {
-            return json.map((e) =>
-                ProductDetailDto.fromJson(e as Map<String, dynamic>)).toList();
+            return json
+                .map(
+                  (e) => ProductDetailDto.fromJson(e as Map<String, dynamic>),
+                )
+                .toList();
           }
           return [];
         },

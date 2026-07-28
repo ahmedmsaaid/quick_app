@@ -1,4 +1,5 @@
 import 'package:base_app/core/localizations/app_strings.g.dart';
+import 'package:base_app/core/widgets/lading_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -53,7 +54,7 @@ class _TermsAndConditionsScreenState extends ConsumerState<TermsAndConditionsScr
         centerTitle: true,
       ),
       body: _isLoading
-          ? Center(child: CircularProgressIndicator(color: colors.primary))
+          ? Center(child: LoadingButton(color: colors.primary))
           : SingleChildScrollView(
               padding: EdgeInsets.all(20.w),
               child: Column(

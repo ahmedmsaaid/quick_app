@@ -1,3 +1,4 @@
+import 'package:base_app/core/widgets/lading_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -6,8 +7,6 @@ import 'package:base_app/core/localizations/app_strings.g.dart';
 import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/styles/app_text_style.dart';
 import 'package:base_app/core/widgets/custom_arrow_back.dart';
-import 'package:base_app/core/widgets/custom_button.dart';
-import 'package:base_app/core/widgets/custom_text_field.dart';
 import 'package:base_app/core/services/cms_api_service.dart';
 import 'package:base_app/core/models/cms_models.dart';
 
@@ -64,7 +63,7 @@ class _ContactUsScreenState extends ConsumerState<ContactUsScreen> {
         centerTitle: true,
       ),
       body: _isLoading
-          ? Center(child: CircularProgressIndicator(color: colors.primary))
+          ? Center(child: LoadingButton(color: colors.primary))
           : SingleChildScrollView(
               padding: EdgeInsets.all(20.w),
               child: Column(
@@ -90,8 +89,7 @@ class _ContactUsScreenState extends ConsumerState<ContactUsScreen> {
                   ),
                   20.verticalSpace,
 
-                  // Dynamic Contact Fields from Backend API
-                  if (fields != null && fields.isNotEmpty) ...[
+                  if (fields != null && fields.isNotEmpty)
                     Column(
                       children: fields.map((f) {
                         final val = f.url ?? '';
@@ -141,23 +139,6 @@ class _ContactUsScreenState extends ConsumerState<ContactUsScreen> {
                         );
                       }).toList(),
                     ),
-                    20.verticalSpace,
-                  ],
-
-                  // Message Form
-                  CustomTextField(hintText: AppStrings.subjectHint),
-                  16.verticalSpace,
-                  CustomTextField(hintText: AppStrings.messageHint, maxLines: 4),
-                  24.verticalSpace,
-                  CustomAppButton(
-                    text: AppStrings.sendMessageBtn,
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('تم إرسال رسالتك بنجاح!')),
-                      );
-                      Navigator.pop(context);
-                    },
-                  ),
                 ],
               ),
             ),

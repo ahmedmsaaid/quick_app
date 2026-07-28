@@ -399,9 +399,8 @@ class _ReorderButtonState extends ConsumerState<_ReorderButton> {
           ? SizedBox(
               width: 14.w,
               height: 14.w,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Colors.white,
+              child: LoadingButton(
+                 color: Colors.white,
               ),
             )
           : const Icon(Icons.refresh_rounded, color: Colors.white, size: 18),
@@ -446,7 +445,7 @@ class _CancelOrderCardButtonState extends ConsumerState<_CancelOrderCardButton> 
             ? SizedBox(
                 width: 18.w,
                 height: 18.w,
-                child: CircularProgressIndicator(color: colors.error, strokeWidth: 2),
+                child: LoadingButton(color: colors.error, ),
               )
             : Text(
                 'إلغاء الطلب',

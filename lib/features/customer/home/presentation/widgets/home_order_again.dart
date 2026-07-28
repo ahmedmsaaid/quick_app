@@ -1,3 +1,4 @@
+import 'package:base_app/core/widgets/lading_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -109,9 +110,8 @@ class _HomeOrderAgainState extends ConsumerState<HomeOrderAgain> {
             SeeAllWidget(title: 'اطلب مرة أخرى', onTap: () {}),
             Expanded(
               child: Center(
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: colors.primary,
+                child: LoadingButton(
+                   color: colors.primary,
                 ),
               ),
             ),
@@ -129,44 +129,47 @@ class _HomeOrderAgainState extends ConsumerState<HomeOrderAgain> {
           title: 'اطلب مرة أخرى',
           onTap: () {},
         ),
-        SizedBox(
-          height: 155.h,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: EdgeInsets.symmetric(horizontal: 20.w),
-            itemCount: pastOrders.length,
-            itemBuilder: (context, index) {
-              final order = pastOrders[index];
-              final String title = _getOrderTitle(order);
-              final String imageUrl = _getOrderImageUrl(order);
-              final bool isLoading = _loadingOrderIds.contains(order.id);
+        Padding(
+          padding:   EdgeInsets.symmetric(horizontal: 20.w),
+          child: SizedBox(
+            height: 155.h,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: EdgeInsets.symmetric(horizontal: 20.w),
+              itemCount: pastOrders.length,
+              itemBuilder: (context, index) {
+                final order = pastOrders[index];
+                final String title = _getOrderTitle(order);
+                final String imageUrl = _getOrderImageUrl(order);
+                final bool isLoading = _loadingOrderIds.contains(order.id);
 
-              return _buildOrderAgainCard(
-                context: context,
-                colors: colors,
-                title: title,
-                timeAgo: _getTimeAgo(order.createdOn),
-                imageUrl: imageUrl,
-                isLoading: isLoading,
-                onTap: () async {
-                  if (isLoading) return;
-                  setState(() => _loadingOrderIds.add(order.id));
-                  final success =
-                      await ref.read(ordersProvider.notifier).reorder(order);
-                  if (!context.mounted) return;
-                  setState(() => _loadingOrderIds.remove(order.id));
-                  if (success) {
-                    CustomToast.success(
-                        context, 'تم إضافة المنتجات إلى السلة! 🛒');
-                    Navigator.of(context).pushNamed(AppRoutes.cartScreen);
-                  } else {
-                    final err = ref.read(ordersProvider).reorderError;
-                    CustomToast.error(
-                        context, err ?? 'فشل إضافة المنتجات، حاول مرة أخرى');
-                  }
-                },
-              );
-            },
+                return _buildOrderAgainCard(
+                  context: context,
+                  colors: colors,
+                  title: title,
+                  timeAgo: _getTimeAgo(order.createdOn),
+                  imageUrl: imageUrl,
+                  isLoading: isLoading,
+                  onTap: () async {
+                    if (isLoading) return;
+                    setState(() => _loadingOrderIds.add(order.id));
+                    final success =
+                        await ref.read(ordersProvider.notifier).reorder(order);
+                    if (!context.mounted) return;
+                    setState(() => _loadingOrderIds.remove(order.id));
+                    if (success) {
+                      CustomToast.success(
+                          context, 'تم إضافة المنتجات إلى السلة! 🛒');
+                      Navigator.of(context).pushNamed(AppRoutes.cartScreen);
+                    } else {
+                      final err = ref.read(ordersProvider).reorderError;
+                      CustomToast.error(
+                          context, err ?? 'فشل إضافة المنتجات، حاول مرة أخرى');
+                    }
+                  },
+                );
+              },
+            ),
           ),
         ),
       ],
@@ -238,9 +241,8 @@ class _HomeOrderAgainState extends ConsumerState<HomeOrderAgain> {
                         Container(
                           color: Colors.black.withValues(alpha: 0.4),
                           child: Center(
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.5,
-                              color: Colors.white,
+                            child: LoadingButton(
+                               color: Colors.white,
                             ),
                           ),
                         ),

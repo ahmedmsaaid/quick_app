@@ -1,4 +1,5 @@
 import 'package:base_app/core/routes/app_routes.dart';
+import 'package:base_app/core/widgets/lading_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -884,7 +885,7 @@ class _CancelOrderButtonState extends ConsumerState<_CancelOrderButton> {
             ? SizedBox(
                 width: 20.w,
                 height: 20.w,
-                child: CircularProgressIndicator(color: widget.colors.error, strokeWidth: 2),
+                child: LoadingButton(color: widget.colors.error,  ),
               )
             : Text(
                 'إلغاء الطلب',

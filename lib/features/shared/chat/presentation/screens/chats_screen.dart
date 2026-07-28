@@ -4,6 +4,7 @@ import 'package:base_app/core/routes/app_routes.dart';
 import 'package:base_app/core/exports/exports.dart';
 import 'package:base_app/core/utils/jwt_helper.dart';
 import 'package:base_app/core/widgets/custom_app_bar.dart';
+import 'package:base_app/core/widgets/lading_button.dart';
 import '../riverpod/get_all_chats_riverpod/get_all_chats_notifier.dart';
 import '../widgets/chat_item_widget.dart';
 
@@ -48,7 +49,7 @@ class _ChatsScreenState extends ConsumerState<ChatsScreen> {
         showTrailing: false,
       ),
       body: userId == null
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: LoadingButton())
           : Padding(
               padding: EdgeInsets.symmetric(horizontal: 16.w),
               child: Column(

@@ -11,7 +11,7 @@ import 'package:base_app/core/widgets/see_all_widget.dart';
 import 'package:base_app/core/widgets/lading_button.dart';
 import 'package:base_app/features/customer/home/presentation/riverpod/home_provider.dart';
 
-/// العروض العادية (غير القابلة للتعديل - offerType == 0)
+/// العروض القابلة للتعديل (offerType == 1)
 class HomeTodaysOffers extends ConsumerWidget {
   const HomeTodaysOffers({super.key});
 
@@ -28,10 +28,10 @@ class HomeTodaysOffers extends ConsumerWidget {
       );
     }
 
-    final nonEditableOffers = homeState.offers.where((o) => o.offerType == 0).toList();
+    final editableOffers = homeState.offers.where((o) => o.offerType == 1).toList();
 
     // لو مفيش عروض - اخفي السيكشن ده
-    if (nonEditableOffers.isEmpty) return const SizedBox.shrink();
+    if (editableOffers.isEmpty) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -42,34 +42,37 @@ class HomeTodaysOffers extends ConsumerWidget {
             context.pushNamed(AppRoutes.StoreScreen, arguments: 'عروض خاصة');
           },
         ),
-        SizedBox(
-          height: 190.h,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: EdgeInsets.symmetric(horizontal: 20.w),
-            itemCount: nonEditableOffers.length,
-            itemBuilder: (context, index) {
-              final offer = nonEditableOffers[index];
-              final String? featuredPhoto = offer.featuredPhoto;
-              final String imageUrl = (featuredPhoto != null && featuredPhoto.isNotEmpty)
-                  ? (featuredPhoto.startsWith('http')
-                      ? featuredPhoto
-                      : '${ApiConstants.streamUrl}$featuredPhoto')
-                  : '';
+        Padding(
+          padding:   EdgeInsets.symmetric(horizontal: 20.w),
+          child: SizedBox(
+            height: 190.h,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: EdgeInsets.symmetric(horizontal: 20.w),
+              itemCount: editableOffers.length,
+              itemBuilder: (context, index) {
+                final offer = editableOffers[index];
+                final String? featuredPhoto = offer.featuredPhoto;
+                final String imageUrl = (featuredPhoto != null && featuredPhoto.isNotEmpty)
+                    ? (featuredPhoto.startsWith('http')
+                        ? featuredPhoto
+                        : '${ApiConstants.streamUrl}$featuredPhoto')
+                    : '';
 
-              return _buildOfferCard(
-                context: context,
-                colors: colors,
-                title: offer.name ?? '',
-                subtitle: offer.description ?? 'عرض مميز لفترة محدودة',
-                imageUrl: imageUrl,
-                badgeText: 'عرض خاص',
-                badgeColor: colors.primary,
-                onTap: () {
-                  context.pushNamed(AppRoutes.specialOfferDetails, arguments: offer);
-                },
-              );
-            },
+                return _buildOfferCard(
+                  context: context,
+                  colors: colors,
+                  title: offer.name ?? '',
+                  subtitle: offer.description ?? 'صمم عرضك المفضل الآن',
+                  imageUrl: imageUrl,
+                  badgeText: 'قابل للتعديل 🛠️',
+                  badgeColor: colors.secondary,
+                  onTap: () {
+                    context.pushNamed(AppRoutes.specialOfferDetails, arguments: offer);
+                  },
+                );
+              },
+            ),
           ),
         ),
       ],
@@ -77,7 +80,7 @@ class HomeTodaysOffers extends ConsumerWidget {
   }
 }
 
-/// العروض القابلة للتعديل (offerType == 1)
+/// العروض العادية (غير القابلة للتعديل - offerType == 0)
 class HomeEditableOffers extends ConsumerWidget {
   const HomeEditableOffers({super.key});
 
@@ -91,10 +94,10 @@ class HomeEditableOffers extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
-    final editableOffers = homeState.offers.where((o) => o.offerType == 1).toList();
+    final nonEditableOffers = homeState.offers.where((o) => o.offerType == 0).toList();
 
-    // لو مفيش عروض قابلة للتعديل - اخفي السيكشن ده
-    if (editableOffers.isEmpty) return const SizedBox.shrink();
+    // لو مفيش عروض - اخفي السيكشن ده
+    if (nonEditableOffers.isEmpty) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -105,34 +108,37 @@ class HomeEditableOffers extends ConsumerWidget {
             context.pushNamed(AppRoutes.StoreScreen, arguments: 'عروض اليوم');
           },
         ),
-        SizedBox(
-          height: 190.h,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: EdgeInsets.symmetric(horizontal: 20.w),
-            itemCount: editableOffers.length,
-            itemBuilder: (context, index) {
-              final offer = editableOffers[index];
-              final String? featuredPhoto = offer.featuredPhoto;
-              final String imageUrl = (featuredPhoto != null && featuredPhoto.isNotEmpty)
-                  ? (featuredPhoto.startsWith('http')
-                      ? featuredPhoto
-                      : '${ApiConstants.streamUrl}$featuredPhoto')
-                  : '';
+        Padding(
+          padding:   EdgeInsets.symmetric(horizontal: 20.w),
+          child: SizedBox(
+            height: 190.h,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: EdgeInsets.symmetric(horizontal: 20.w),
+              itemCount: nonEditableOffers.length,
+              itemBuilder: (context, index) {
+                final offer = nonEditableOffers[index];
+                final String? featuredPhoto = offer.featuredPhoto;
+                final String imageUrl = (featuredPhoto != null && featuredPhoto.isNotEmpty)
+                    ? (featuredPhoto.startsWith('http')
+                        ? featuredPhoto
+                        : '${ApiConstants.streamUrl}$featuredPhoto')
+                    : '';
 
-              return _buildOfferCard(
-                context: context,
-                colors: colors,
-                title: offer.name ?? '',
-                subtitle: offer.description ?? 'صمم عرضك المفضل الآن',
-                imageUrl: imageUrl,
-                badgeText: 'قابل للتعديل 🛠️',
-                badgeColor: colors.secondary,
-                onTap: () {
-                  context.pushNamed(AppRoutes.specialOfferDetails, arguments: offer);
-                },
-              );
-            },
+                return _buildOfferCard(
+                  context: context,
+                  colors: colors,
+                  title: offer.name ?? '',
+                  subtitle: offer.description ?? 'عرض مميز لفترة محدودة',
+                  imageUrl: imageUrl,
+                  badgeText: 'عرض خاص',
+                  badgeColor: colors.primary,
+                  onTap: () {
+                    context.pushNamed(AppRoutes.specialOfferDetails, arguments: offer);
+                  },
+                );
+              },
+            ),
           ),
         ),
       ],

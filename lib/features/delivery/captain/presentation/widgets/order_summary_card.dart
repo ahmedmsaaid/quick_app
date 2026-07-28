@@ -1,3 +1,4 @@
+import 'package:base_app/core/widgets/lading_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:base_app/core/network/api_constants.dart';
@@ -47,7 +48,8 @@ class OrderSummaryCard extends StatelessWidget {
                 child: SizedBox(
                   width: 24.w,
                   height: 24.w,
-                  child: CircularProgressIndicator(color: colors.primary, strokeWidth: 2),
+                  child: LoadingButton(color: colors.primary,
+                  ),
                 ),
               ),
             )

@@ -207,12 +207,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           _buildMenuItem(
             context,
             ref,
-            Icons.description_outlined,
-            AppStrings.termsAndConditions,
-          ),
-          _buildMenuItem(
-            context,
-            ref,
             Icons.privacy_tip_outlined,
             AppStrings.privacyPolicy,
           ),
@@ -284,8 +278,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           Navigator.of(context).pushNamed(AppRoutes.settings);
         } else if (title == AppStrings.aboutUs) {
           Navigator.of(context).pushNamed(AppRoutes.aboutUs);
-        } else if (title == AppStrings.termsAndConditions) {
-          Navigator.of(context).pushNamed(AppRoutes.termsAndConditions);
         } else if (title == AppStrings.privacyPolicy) {
           Navigator.of(context).pushNamed(AppRoutes.privacyPolicy);
         } else if (title == AppStrings.contactUs) {

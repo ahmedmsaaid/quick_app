@@ -472,7 +472,7 @@ class _SpecialOfferDetailsScreenState extends ConsumerState<SpecialOfferDetailsS
                           child: SizedBox(
                             width: 24.r,
                             height: 24.r,
-                            child: CircularProgressIndicator(strokeWidth: 2.5, color: colors.primary),
+                            child: LoadingButton(  color: colors.primary),
                           ),
                         ),
                       ],
@@ -835,7 +835,7 @@ class _AddProductBottomSheetState extends ConsumerState<_AddProductBottomSheet> 
           // Products List
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(child: LoadingButton())
                 : _filteredProducts.isEmpty
                     ? Center(
                         child: Text(

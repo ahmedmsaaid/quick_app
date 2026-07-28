@@ -1,4 +1,5 @@
 import 'package:base_app/core/network/api_result.dart';
+import 'package:base_app/core/widgets/lading_button.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -14,6 +15,7 @@ import 'package:base_app/core/network/api_constants.dart';
 import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
 import 'package:base_app/features/customer/home/data/models/product_detail_model.dart';
 import 'package:base_app/features/customer/home/data/models/category_model.dart';
+import 'package:base_app/features/customer/home/data/models/offer_model.dart';
 import 'package:base_app/features/customer/vendor_details/presentation/riverpod/vendor_details_provider.dart';
 import 'package:base_app/features/customer/cart/presentation/riverpod/cart_provider.dart';
 import 'package:base_app/features/customer/favorites/presentation/riverpod/favorites_provider.dart';
@@ -34,11 +36,14 @@ class VendorDetailsScreen extends ConsumerStatefulWidget {
 class _VendorDetailsScreenState extends ConsumerState<VendorDetailsScreen> {
   UserDto? _vendor;
   bool _isLoadingVendor = false;
+  List<OfferDto> _vendorOffers = [];
+  bool _isLoadingOffers = false;
 
   @override
   void initState() {
     super.initState();
     _vendor = widget.vendor;
+    _loadVendorOffers();
     
     // If the photo/avatar is missing or empty, load it from backend
     if (_vendor!.photo == null || _vendor!.photo!.isEmpty) {
@@ -51,6 +56,39 @@ class _VendorDetailsScreenState extends ConsumerState<VendorDetailsScreen> {
             .setPreSelectedCategory(widget.initialCategory!);
       });
     }
+  }
+
+  Future<void> _loadVendorOffers() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoadingOffers = true;
+    });
+
+    final result = await ref.read(homeApiServiceProvider).getOffers(
+      creatorId: widget.vendor.id,
+      pageSize: 50,
+    );
+
+    if (!mounted) return;
+    result.when(
+      success: (response) {
+        if (response.success && response.result != null) {
+          setState(() {
+            _vendorOffers = response.result!;
+            _isLoadingOffers = false;
+          });
+        } else {
+          setState(() {
+            _isLoadingOffers = false;
+          });
+        }
+      },
+      failure: (error) {
+        setState(() {
+          _isLoadingOffers = false;
+        });
+      },
+    );
   }
 
   Future<void> _loadVendorDetails() async {
@@ -200,6 +238,8 @@ class _VendorDetailsScreenState extends ConsumerState<VendorDetailsScreen> {
             ),
           ),
 
+          _buildVendorOffersSection(colors),
+
           SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
@@ -329,7 +369,184 @@ class _VendorDetailsScreenState extends ConsumerState<VendorDetailsScreen> {
     );
   }
 
+  Widget _buildVendorOffersSection(AppColors colors) {
+    if (_vendorOffers.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
 
+    final bool isArabic = Localizations.localeOf(context).languageCode == 'ar';
+
+    return SliverToBoxAdapter(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
+            child: Text(
+              isArabic ? 'عروض هذا المتجر 🎁' : 'Shop Offers 🎁',
+              style: AppTextStyles.text13w700(color: colors.textPrimary),
+            ),
+          ),
+          SizedBox(
+            height: 95.h,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              itemCount: _vendorOffers.length,
+              itemBuilder: (context, index) {
+                final offer = _vendorOffers[index];
+                final String? featuredPhoto = offer.featuredPhoto;
+                final String imageUrl = (featuredPhoto != null && featuredPhoto.isNotEmpty)
+                    ? (featuredPhoto.startsWith('http') ? featuredPhoto : '${ApiConstants.streamUrl}$featuredPhoto')
+                    : '';
+                final bool hasProducts = offer.products != null && offer.products!.isNotEmpty;
+
+                return GestureDetector(
+                  onTap: hasProducts ? () {
+                    Navigator.of(context).pushNamed(AppRoutes.specialOfferDetails, arguments: offer);
+                  } : null,
+                  child: Container(
+                    width: 250.w,
+                    margin: EdgeInsets.only(left: 10.w),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(14.r),
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFF0F2027), Color(0xFF203A43)],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.12),
+                          blurRadius: 6,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(14.r),
+                      child: Stack(
+                        children: [
+                          if (imageUrl.isNotEmpty)
+                            Positioned.fill(
+                              child: CachedNetworkImage(
+                                imageUrl: imageUrl,
+                                fit: BoxFit.cover,
+                                placeholder: (_, __) => Container(
+                                  color: colors.border,
+                                  child: const Center(child: LoadingButton(size: 15)),
+                                ),
+                                errorWidget: (_, __, ___) => const SizedBox.shrink(),
+                              ),
+                            ),
+                          // Dark gradient overlay
+                          Positioned.fill(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: isArabic ? Alignment.centerRight : Alignment.centerLeft,
+                                  end: isArabic ? Alignment.centerLeft : Alignment.centerRight,
+                                  colors: [
+                                    Colors.black.withValues(alpha: 0.8),
+                                    Colors.black.withValues(alpha: 0.15),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          // Offer Info Text & Button
+                          Padding(
+                            padding: EdgeInsets.all(10.r),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Container(
+                                        padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.5.h),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withValues(alpha: 0.18),
+                                          borderRadius: BorderRadius.circular(5.r),
+                                        ),
+                                        child: Text(
+                                          offer.offerType == 1
+                                              ? (isArabic ? 'قابل للتعديل 🛠️' : 'Editable 🛠️')
+                                              : (isArabic ? 'عرض خاص' : 'Special Offer'),
+                                          style: TextStyle(
+                                            fontSize: 7.5.sp,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                            fontFamily: 'Cairo',
+                                          ),
+                                        ),
+                                      ),
+                                      3.verticalSpace,
+                                      Text(
+                                        offer.name ?? '',
+                                        style: TextStyle(
+                                          fontSize: 11.5.sp,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                          fontFamily: 'Cairo',
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      1.verticalSpace,
+                                      Text(
+                                        offer.description ?? '',
+                                        style: TextStyle(
+                                          fontSize: 8.sp,
+                                          color: Colors.white.withValues(alpha: 0.8),
+                                          fontFamily: 'Cairo',
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                6.horizontalSpace,
+                                if (hasProducts)
+                                  Container(
+                                    padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                                    decoration: BoxDecoration(
+                                      color: colors.secondary,
+                                      borderRadius: BorderRadius.circular(8.r),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: colors.secondary.withValues(alpha: 0.25),
+                                          blurRadius: 3,
+                                          offset: const Offset(0, 1.5),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Text(
+                                      '${offer.price.toStringAsFixed(0)} ${AppStrings.currency}',
+                                      style: TextStyle(
+                                        fontSize: 9.sp,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                        fontFamily: 'Cairo',
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          6.verticalSpace,
+        ],
+      ),
+    );
+  }
 
   Widget _placeholderBg(AppColors colors, bool isMarket) => Container(
     color: colors.primary,
@@ -1194,10 +1411,8 @@ void _showRatingDialog(BuildContext context, WidgetRef ref, UserDto vendor, AppC
                           ? SizedBox(
                               width: 16.w,
                               height: 16.h,
-                              child: const CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
+                              child: const LoadingButton(
+                               ),
                             )
                           : Text(
                               "تقييم",

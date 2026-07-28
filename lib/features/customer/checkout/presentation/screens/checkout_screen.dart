@@ -424,9 +424,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             SizedBox(
               width: 20.w,
               height: 20.w,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: colors.primary,
+              child: LoadingButton(
+                 color: colors.primary,
               ),
             ),
             15.horizontalSpace,

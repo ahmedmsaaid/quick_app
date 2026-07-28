@@ -79,16 +79,20 @@ class _HomeModernBannerState extends ConsumerState<HomeModernBanner> {
               : '${ApiConstants.streamUrl}$featuredPhoto')
           : '';
 
+      final bool hasProducts = offer.products != null && offer.products!.isNotEmpty;
+
       bannerItems.add(BannerItem(
         title: offer.name ?? '',
         description: offer.description ?? '',
         imageUrl: imageUrl.isNotEmpty ? imageUrl : null,
         isAsset: false,
         badgeText: AppStrings.specialOffer,
-        price: '${offer.price} ${AppStrings.currency}',
-        onTap: () {
-          context.pushNamed(AppRoutes.specialOfferDetails, arguments: offer);
-        },
+        price: hasProducts ? '${offer.price} ${AppStrings.currency}' : null,
+        onTap: hasProducts
+            ? () {
+                context.pushNamed(AppRoutes.specialOfferDetails, arguments: offer);
+              }
+            : null,
         gradientColors: [
           const Color(0xFF004D40), // Premium Dark Teal gradient
           const Color(0xFF00796B),
@@ -220,37 +224,74 @@ class _HomeModernBannerState extends ConsumerState<HomeModernBanner> {
           borderRadius: BorderRadius.circular(20.r),
           child: Stack(
             children: [
-              // Subtle background wave/patterns
-              Positioned(
-                right: -20.w,
-                bottom: -20.h,
-                child: Opacity(
-                  opacity: 0.12,
-                  child: Container(
-                    width: 130.w,
-                    height: 130.w,
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
+              if (item.imageUrl != null && !item.isAsset) ...[
+                // Network Image Background
+                Positioned.fill(
+                  child: CachedNetworkImage(
+                    imageUrl: item.imageUrl!,
+                    fit: BoxFit.cover,
+                    placeholder: (_, __) => Container(
+                      color: colors.border,
+                      child: const LoadingButton(size: 20),
+                    ),
+                    errorWidget: (_, __, ___) => Container(
+                      color: item.gradientColors.first,
+                      child: Icon(
+                        Icons.fastfood_rounded,
+                        color: Colors.white30,
+                        size: 40.sp,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              Positioned(
-                left: -30.w,
-                top: -30.h,
-                child: Opacity(
-                  opacity: 0.08,
+                // Dark gradient overlay to ensure text readability
+                Positioned.fill(
                   child: Container(
-                    width: 90.w,
-                    height: 90.w,
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: isArabic ? Alignment.centerRight : Alignment.centerLeft,
+                        end: isArabic ? Alignment.centerLeft : Alignment.centerRight,
+                        colors: [
+                          Colors.black.withValues(alpha: 0.85),
+                          Colors.black.withValues(alpha: 0.1),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
+              ] else ...[
+                // Subtle background wave/patterns for asset illustrations
+                Positioned(
+                  right: -20.w,
+                  bottom: -20.h,
+                  child: Opacity(
+                    opacity: 0.12,
+                    child: Container(
+                      width: 130.w,
+                      height: 130.w,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: -30.w,
+                  top: -30.h,
+                  child: Opacity(
+                    opacity: 0.08,
+                    child: Container(
+                      width: 90.w,
+                      height: 90.w,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
 
               // Main content layout
               Padding(
@@ -312,30 +353,17 @@ class _HomeModernBannerState extends ConsumerState<HomeModernBanner> {
                             overflow: TextOverflow.ellipsis,
                           ),
                           6.verticalSpace,
-                          if (item.price != null)
-                            Container(
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: 8.w, vertical: 3.h),
-                              decoration: BoxDecoration(
-                                color: colors.secondary,
-                                borderRadius: BorderRadius.circular(8.r),
-                              ),
-                              child: Text(
-                                item.price!,
-                                style: TextStyle(
-                                  fontSize: 9.sp,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                  fontFamily: 'Cairo',
+                          if (item.onTap != null) ...[
+                            if (item.price != null)
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 8.w, vertical: 3.h),
+                                decoration: BoxDecoration(
+                                  color: colors.secondary,
+                                  borderRadius: BorderRadius.circular(8.r),
                                 ),
-                              ),
-                            )
-                          else
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  AppStrings.orderNowText,
+                                child: Text(
+                                  item.price!,
                                   style: TextStyle(
                                     fontSize: 9.sp,
                                     fontWeight: FontWeight.bold,
@@ -343,57 +371,48 @@ class _HomeModernBannerState extends ConsumerState<HomeModernBanner> {
                                     fontFamily: 'Cairo',
                                   ),
                                 ),
-                                3.horizontalSpace,
-                                Icon(
-                                  isArabic
-                                      ? Icons.arrow_back_ios_rounded
-                                      : Icons.arrow_forward_ios_rounded,
-                                  color: Colors.white,
-                                  size: 8.sp,
-                                ),
-                              ],
-                            ),
+                              )
+                            else
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    AppStrings.orderNowText,
+                                    style: TextStyle(
+                                      fontSize: 9.sp,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                      fontFamily: 'Cairo',
+                                    ),
+                                  ),
+                                  3.horizontalSpace,
+                                  Icon(
+                                    isArabic
+                                        ? Icons.arrow_back_ios_rounded
+                                        : Icons.arrow_forward_ios_rounded,
+                                    color: Colors.white,
+                                    size: 8.sp,
+                                  ),
+                                ],
+                              ),
+                          ],
                         ],
                       ),
                     ),
-                    8.horizontalSpace,
-
-                    // Right illustration image
-                    Expanded(
-                      flex: 2,
-                      child: Container(
-                        height: 95.h,
-                        alignment: Alignment.center,
-                        child: item.imageUrl != null
-                            ? (item.isAsset
-                                ? Image.asset(
-                                    item.imageUrl!,
-                                    fit: BoxFit.contain,
-                                  )
-                                : CachedNetworkImage(
-                                    imageUrl: item.imageUrl!,
-                                    fit: BoxFit.cover,
-                                    placeholder: (_, __) => Container(
-                                      decoration: BoxDecoration(
-                                        color:
-                                            Colors.white.withValues(alpha: 0.1),
-                                        borderRadius:
-                                            BorderRadius.circular(10.r),
-                                      ),
-                                    ),
-                                    errorWidget: (_, __, ___) => Icon(
-                                      Icons.fastfood_rounded,
-                                      color: Colors.white30,
-                                      size: 30.sp,
-                                    ),
-                                  ))
-                            : Icon(
-                                Icons.fastfood_rounded,
-                                color: Colors.white30,
-                                size: 36.sp,
-                              ),
+                    if (item.imageUrl != null && item.isAsset) ...[
+                      8.horizontalSpace,
+                      Expanded(
+                        flex: 2,
+                        child: Container(
+                          height: 95.h,
+                          alignment: Alignment.center,
+                          child: Image.asset(
+                            item.imageUrl!,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),

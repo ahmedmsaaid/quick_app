@@ -3,6 +3,7 @@ import 'package:base_app/core/models/creator_response.dart';
 
 import 'package:base_app/core/exports/exports.dart';
 import 'package:base_app/core/widgets/custom_app_bar.dart';
+import 'package:base_app/core/widgets/lading_button.dart';
 import '../riverpod/app_chat_grbc_notifier.dart';
 import '../riverpod/app_chat_grbc_state.dart';
 import '../widgets/chat_details_widgets/chat_bubble.dart';
@@ -120,8 +121,8 @@ class _MessagesList extends StatelessWidget {
           },
         );
       },
-      connecting: () => const Center(child: CircularProgressIndicator()),
-      sendingMessage: () => const Center(child: CircularProgressIndicator()),
+      connecting: () => const Center(child: LoadingButton()),
+      sendingMessage: () => const Center(child: LoadingButton()),
       error: (msg) => Center(child: Text(msg)),
       orElse: () => const SizedBox.shrink(),
     );

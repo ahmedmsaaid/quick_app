@@ -1,3 +1,4 @@
+import 'package:base_app/core/widgets/lading_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:base_app/core/styles/app_colors.dart';
@@ -39,7 +40,7 @@ class OrderActionButton extends StatelessWidget {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15.r)),
         ),
         child: isLoading
-            ? const CircularProgressIndicator(color: Colors.white)
+            ? const LoadingButton(color: Colors.white)
             : Text(
                 _buttonTexts[orderState],
                 style: AppTextStyles.text16w700(color: Colors.white),
