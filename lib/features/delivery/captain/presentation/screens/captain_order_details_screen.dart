@@ -9,6 +9,7 @@ import 'package:base_app/core/widgets/custom_arrow_back.dart';
 import 'package:base_app/features/customer/checkout/data/models/order_models.dart';
 import 'package:base_app/features/customer/orders/data/orders_api_service.dart';
 import 'package:base_app/features/delivery/captain/presentation/riverpod/captain_orders_provider.dart';
+import 'package:base_app/features/delivery/captain/presentation/riverpod/captain_location_stream_provider.dart';
 import 'package:base_app/features/customer/profile/data/profile_api_service.dart';
 import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
 
@@ -146,9 +147,13 @@ class _CaptainOrderDetailsScreenState extends ConsumerState<CaptainOrderDetailsS
       setState(() => _isLoading = false);
 
       if (success) {
+        ref.read(captainLocationStreamNotifierProvider.notifier).startStreaming(
+          orderId: _order.id,
+          deliveryId: _order.deliveryId ?? 0,
+        );
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('تم استلام الطلب وبدء رحلة التوصيل')),
+            const SnackBar(content: Text('تم استلام الطلب وبدء رحلة التوصيل مع التتبع المباشر')),
           );
         }
         _fetchOrderDetails();
@@ -166,6 +171,10 @@ class _CaptainOrderDetailsScreenState extends ConsumerState<CaptainOrderDetailsS
       setState(() => _isLoading = false);
 
       if (success) {
+        await ref.read(captainLocationStreamNotifierProvider.notifier).sendDeliveredSignal(
+          orderId: _order.id,
+          deliveryId: _order.deliveryId ?? 0,
+        );
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('تم توصيل الطلب بنجاح!')),

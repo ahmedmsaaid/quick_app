@@ -150,6 +150,40 @@ class UserDto {
     'createdOn': createdOn,
     'rating': rating,
   };
+
+  UserDto copyWith({
+    int? id,
+    String? phone,
+    String? email,
+    String? photo,
+    String? avatar,
+    String? name,
+    String? address,
+    int? role,
+    int? status,
+    LocationModel? location,
+    String? description,
+    bool? active,
+    String? createdOn,
+    double? rating,
+  }) {
+    return UserDto(
+      id: id ?? this.id,
+      phone: phone ?? this.phone,
+      email: email ?? this.email,
+      photo: photo ?? this.photo,
+      avatar: avatar ?? this.avatar,
+      name: name ?? this.name,
+      address: address ?? this.address,
+      role: role ?? this.role,
+      status: status ?? this.status,
+      location: location ?? this.location,
+      description: description ?? this.description,
+      active: active ?? this.active,
+      createdOn: createdOn ?? this.createdOn,
+      rating: rating ?? this.rating,
+    );
+  }
 }
 
 class ApiResponse<T> {

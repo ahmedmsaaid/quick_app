@@ -44,6 +44,31 @@ class AuthApiService {
     }
   }
 
+  /// Authenticate a user using Google authentication token.
+  Future<ApiResult<ApiResponse<TokenDto>>> googleAuth({
+    required String idToken,
+    required int role,
+  }) async {
+    try {
+      final response = await _dio.post(
+        'users/google-auth',
+        data: {
+          'idToken': idToken,
+          'role': role,
+        },
+      );
+
+      final apiResponse = ApiResponse<TokenDto>.fromJson(
+        response.data,
+        (json) => TokenDto.fromJson(json as Map<String, dynamic>),
+      );
+
+      return ApiResult.success(apiResponse);
+    } catch (e) {
+      return ApiResult.failure(handleError(e));
+    }
+  }
+
   /// Register a new user account (Customer or Driver).
   Future<ApiResult<ApiResponse<TokenDto>>> signup({
     required String phone,

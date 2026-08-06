@@ -1,12 +1,12 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' as ll;
 import 'package:geolocator/geolocator.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/styles/app_text_style.dart';
+import 'package:base_app/core/services/maps_service.dart';
 import 'package:base_app/features/customer/checkout/data/models/order_models.dart';
 import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
 
@@ -29,21 +29,70 @@ class MapDistanceSection extends StatefulWidget {
 class _MapDistanceSectionState extends State<MapDistanceSection> {
   double? _distanceBetweenStoreAndCustomer;
   double? _distanceToStore;
+  Position? _currentCaptainPosition;
+  RouteResult? _roadRouteResult;
+  StreamSubscription<Position>? _positionSubscription;
   final MapController _mapController = MapController();
-  static const _launcherChannel = MethodChannel('com.quick.app/launcher');
+  bool _isAutoCentering = true;
 
   @override
   void initState() {
     super.initState();
     _calculateDistances();
+    _listenToLocationUpdates();
   }
 
   @override
   void didUpdateWidget(covariant MapDistanceSection oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.order != widget.order ||
-        oldWidget.vendorLocation != widget.vendorLocation) {
+        oldWidget.vendorLocation != widget.vendorLocation ||
+        oldWidget.orderState != widget.orderState) {
       _calculateDistances();
+    }
+  }
+
+  @override
+  void dispose() {
+    _positionSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _listenToLocationUpdates() async {
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.always || permission == LocationPermission.whileInUse) {
+        final position = await Geolocator.getCurrentPosition();
+        if (mounted) {
+          setState(() {
+            _currentCaptainPosition = position;
+          });
+        }
+
+        _positionSubscription = Geolocator.getPositionStream(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            distanceFilter: 3,
+          ),
+        ).listen((pos) {
+          if (mounted) {
+            setState(() {
+              _currentCaptainPosition = pos;
+            });
+            _calculateDistances();
+
+            if (_isAutoCentering) {
+              final zoomLevel = _mapController.camera.zoom > 10 ? _mapController.camera.zoom : 15.5;
+              _mapController.move(ll.LatLng(pos.latitude, pos.longitude), zoomLevel);
+            }
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint("Error in location stream: $e");
     }
   }
 
@@ -57,55 +106,64 @@ class _MapDistanceSectionState extends State<MapDistanceSection> {
     final destLat = widget.order.latitude;
     final destLng = widget.order.longitude;
 
-    if (storeLat != null && storeLng != null && storeLat != 0 && storeLng != 0) {
-      if (destLat != 0 && destLng != 0) {
+    final hasStoreLoc = storeLat != null && storeLng != null && storeLat != 0 && storeLng != 0;
+    final hasDestLoc = destLat != 0 && destLng != 0;
+
+    if (hasStoreLoc) {
+      if (hasDestLoc) {
         final meters = Geolocator.distanceBetween(storeLat, storeLng, destLat, destLng);
         setState(() {
           _distanceBetweenStoreAndCustomer = meters / 1000;
         });
       }
 
-      try {
-        LocationPermission permission = await Geolocator.checkPermission();
-        if (permission == LocationPermission.denied) {
-          permission = await Geolocator.requestPermission();
-        }
-        if (permission == LocationPermission.always || permission == LocationPermission.whileInUse) {
-          final position = await Geolocator.getCurrentPosition();
-          final meters = Geolocator.distanceBetween(position.latitude, position.longitude, storeLat, storeLng);
+      final pos = _currentCaptainPosition;
+      if (pos != null) {
+        final meters = Geolocator.distanceBetween(pos.latitude, pos.longitude, storeLat, storeLng);
+        setState(() {
+          _distanceToStore = meters / 1000;
+        });
+      }
+
+      // Fetch OSRM Road Route
+      final bool isPickedUp = widget.orderState >= 3;
+      final ll.LatLng? startPt = pos != null
+          ? ll.LatLng(pos.latitude, pos.longitude)
+          : (hasStoreLoc ? ll.LatLng(storeLat, storeLng) : null);
+
+      final ll.LatLng? endPt = isPickedUp
+          ? (hasDestLoc ? ll.LatLng(destLat, destLng) : null)
+          : (hasStoreLoc ? ll.LatLng(storeLat, storeLng) : null);
+
+      if (startPt != null && endPt != null) {
+        final route = await MapService.getDrivingRoute(startPt, endPt);
+        if (mounted) {
           setState(() {
-            _distanceToStore = meters / 1000;
+            _roadRouteResult = route;
           });
         }
-      } catch (e) {
-        debugPrint("Error getting captain current position: $e");
       }
     }
   }
 
-  Future<void> _openExternalMap(double lat, double lng) async {
-    final url = Uri.parse("https://www.google.com/maps/search/?api=1&query=$lat,$lng");
-    try {
-      if (await canLaunchUrl(url)) {
-        await launchUrl(url, mode: LaunchMode.externalApplication);
-      } else {
-        await _launcherChannel.invokeMethod('launchMap', {
-          'latitude': lat,
-          'longitude': lng,
-        });
-      }
-    } catch (_) {
+  Future<void> _recenterMap() async {
+    setState(() {
+      _isAutoCentering = true;
+    });
+    final pos = _currentCaptainPosition;
+    if (pos != null) {
+      _mapController.move(ll.LatLng(pos.latitude, pos.longitude), 16.0);
+    } else {
       try {
-        await _launcherChannel.invokeMethod('launchMap', {
-          'latitude': lat,
-          'longitude': lng,
-        });
-      } catch (e) {
+        final currentPos = await Geolocator.getCurrentPosition();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("تعذر فتح تطبيق الخرائط الخارجية")),
-          );
+          setState(() {
+            _currentCaptainPosition = currentPos;
+          });
+          _mapController.move(ll.LatLng(currentPos.latitude, currentPos.longitude), 16.0);
         }
+      } catch (e) {
+        debugPrint('Recenter error: $e');
       }
     }
   }
@@ -113,39 +171,69 @@ class _MapDistanceSectionState extends State<MapDistanceSection> {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors(context);
+    final pos = _currentCaptainPosition;
+
     final storeLat = widget.vendorLocation?.latitude ??
         widget.order.userLocation?.latitude ??
         widget.order.creator?.location?.latitude;
     final storeLng = widget.vendorLocation?.longitude ??
         widget.order.userLocation?.longitude ??
         widget.order.creator?.location?.longitude;
+
     final destLat = widget.order.latitude;
     final destLng = widget.order.longitude;
 
-    final hasStoreLoc = storeLat != null && storeLng != null && storeLat != 0 && storeLng != 0;
-    final hasDestLoc = destLat != 0 && destLng != 0;
+    final bool hasStoreLoc = storeLat != null && storeLng != null && storeLat != 0 && storeLng != 0;
+    final bool hasDestLoc = destLat != 0 && destLng != 0;
 
     if (!hasStoreLoc && !hasDestLoc) {
       return const SizedBox.shrink();
     }
 
-    final ll.LatLng centerPoint = hasStoreLoc
-        ? ll.LatLng(storeLat, storeLng)
-        : ll.LatLng(destLat, destLng);
+    final centerPoint = pos != null
+        ? ll.LatLng(pos.latitude, pos.longitude)
+        : (hasStoreLoc
+            ? ll.LatLng(storeLat, storeLng)
+            : (hasDestLoc ? ll.LatLng(destLat, destLng) : const ll.LatLng(30.0444, 31.2357)));
 
     final List<Marker> markers = [];
+    final List<Polyline> polylines = [];
+
+    if (pos != null) {
+      markers.add(
+        Marker(
+          point: ll.LatLng(pos.latitude, pos.longitude),
+          width: 48.w,
+          height: 48.w,
+          child: Container(
+            decoration: BoxDecoration(
+              color: colors.primary,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: colors.primary.withValues(alpha: 0.4),
+                  blurRadius: 10,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: const Icon(Icons.navigation_rounded, color: Colors.white, size: 24),
+          ),
+        ),
+      );
+    }
 
     if (hasStoreLoc) {
       markers.add(
         Marker(
           point: ll.LatLng(storeLat, storeLng),
-          width: 40.w,
-          height: 40.w,
+          width: 44.w,
+          height: 44.w,
           child: Container(
             decoration: const BoxDecoration(
               color: Colors.green,
               shape: BoxShape.circle,
-              boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
+              boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 6)],
             ),
             child: const Icon(Icons.storefront_rounded, color: Colors.white, size: 22),
           ),
@@ -157,13 +245,13 @@ class _MapDistanceSectionState extends State<MapDistanceSection> {
       markers.add(
         Marker(
           point: ll.LatLng(destLat, destLng),
-          width: 40.w,
-          height: 40.w,
+          width: 44.w,
+          height: 44.w,
           child: Container(
             decoration: const BoxDecoration(
               color: Colors.red,
               shape: BoxShape.circle,
-              boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
+              boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 6)],
             ),
             child: const Icon(Icons.person_pin_circle_rounded, color: Colors.white, size: 24),
           ),
@@ -171,23 +259,38 @@ class _MapDistanceSectionState extends State<MapDistanceSection> {
       );
     }
 
+    final bool isPickedUp = widget.orderState >= 3;
+    final routePoints = _roadRouteResult?.points ?? [];
+
+    if (routePoints.isNotEmpty) {
+      polylines.add(
+        Polyline(
+          points: routePoints,
+          strokeWidth: 5.5,
+          color: isPickedUp ? Colors.orange : colors.primary,
+          borderStrokeWidth: 2.0,
+          borderColor: isPickedUp ? const Color(0xFF7C2D12) : const Color(0xFF0F172A),
+          strokeCap: StrokeCap.round,
+          strokeJoin: StrokeJoin.round,
+        ),
+      );
+    }
+
     return Container(
       decoration: BoxDecoration(
         color: colors.surface,
-        borderRadius: BorderRadius.circular(15.r),
-        border: Border.all(color: colors.border),
+        borderRadius: BorderRadius.circular(16.r),
         boxShadow: [
           BoxShadow(
-            color: colors.shadow.withValues(alpha: 0.05),
+            color: colors.shadow,
             blurRadius: 10,
             offset: const Offset(0, 4),
-          )
+          ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Distance Info Rows
           Padding(
             padding: EdgeInsets.all(15.r),
             child: Column(
@@ -196,14 +299,26 @@ class _MapDistanceSectionState extends State<MapDistanceSection> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          Icon(Icons.directions_bike, color: colors.primary, size: 18.sp),
-                          8.horizontalSpace,
-                          Text("المسافة إليك من المحل:", style: AppTextStyles.text13w600(color: colors.textSecondary)),
-                        ],
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Icon(Icons.directions_bike, color: colors.primary, size: 18.sp),
+                            8.horizontalSpace,
+                            Flexible(
+                              child: Text(
+                                "المسافة إليك من المحل:",
+                                style: AppTextStyles.text13w600(color: colors.textSecondary),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      Text("${_distanceToStore!.toStringAsFixed(1)} كم", style: AppTextStyles.text14w700(color: colors.primary)),
+                      4.horizontalSpace,
+                      Text(
+                        "${_distanceToStore!.toStringAsFixed(1)} كم",
+                        style: AppTextStyles.text14w700(color: colors.primary),
+                      ),
                     ],
                   ),
                 if (_distanceToStore != null && _distanceBetweenStoreAndCustomer != null)
@@ -212,73 +327,215 @@ class _MapDistanceSectionState extends State<MapDistanceSection> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          Icon(Icons.map_outlined, color: Colors.orange, size: 18.sp),
-                          8.horizontalSpace,
-                          Text("مسافة التوصيل (من المحل للعميل):", style: AppTextStyles.text13w600(color: colors.textSecondary)),
-                        ],
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Icon(Icons.map_outlined, color: Colors.orange, size: 18.sp),
+                            8.horizontalSpace,
+                            Flexible(
+                              child: Text(
+                                "مسافة التوصيل (من المحل للعميل):",
+                                style: AppTextStyles.text13w600(color: colors.textSecondary),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      Text("${_distanceBetweenStoreAndCustomer!.toStringAsFixed(1)} كم", style: AppTextStyles.text14w700(color: Colors.orange)),
+                      4.horizontalSpace,
+                      Text(
+                        "${_distanceBetweenStoreAndCustomer!.toStringAsFixed(1)} كم",
+                        style: AppTextStyles.text14w700(color: Colors.orange),
+                      ),
                     ],
                   ),
+                if (_roadRouteResult != null && _roadRouteResult!.distanceMeters > 0) ...[
+                  10.verticalSpace,
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                    decoration: BoxDecoration(
+                      color: colors.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(10.r),
+                      border: Border.all(color: colors.primary.withValues(alpha: 0.2)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Icon(Icons.alt_route_rounded, color: colors.primary, size: 18.sp),
+                              8.horizontalSpace,
+                              Flexible(
+                                child: Text(
+                                  "مسار الطريق الفعلي:",
+                                  style: AppTextStyles.text13w600(color: colors.textPrimary),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        4.horizontalSpace,
+                        Flexible(
+                          child: Text(
+                            "${_roadRouteResult!.formattedDistance} • ${_roadRouteResult!.formattedDuration}",
+                            style: AppTextStyles.text13w700(color: colors.primary),
+                            textAlign: TextAlign.end,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
           
-          // OpenStreetMap View
           Container(
-            height: 200.h,
+            height: 260.h,
             margin: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12.r),
+              borderRadius: BorderRadius.circular(14.r),
               border: Border.all(color: colors.border),
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(12.r),
-              child: FlutterMap(
-                mapController: _mapController,
-                options: MapOptions(
-                  initialCenter: centerPoint,
-                  initialZoom: 13.0,
-                ),
+              borderRadius: BorderRadius.circular(14.r),
+              child: Stack(
                 children: [
-                  TileLayer(
-                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'com.quick.app',
+                  FlutterMap(
+                    mapController: _mapController,
+                    options: MapOptions(
+                      initialCenter: centerPoint,
+                      initialZoom: 13.5,
+                      onPositionChanged: (position, hasGesture) {
+                        if (hasGesture && _isAutoCentering) {
+                          setState(() {
+                            _isAutoCentering = false;
+                          });
+                        }
+                      },
+                    ),
+                    children: [
+                      TileLayer(
+                        urlTemplate: 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+                        userAgentPackageName: 'com.quick.app',
+                      ),
+                      if (polylines.isNotEmpty) PolylineLayer(polylines: polylines),
+                      MarkerLayer(markers: markers),
+                    ],
                   ),
-                  MarkerLayer(markers: markers),
-                ],
-              ),
-            ),
-          ),
 
-          // External Map Button
-          Padding(
-            padding: EdgeInsets.all(10.r),
-            child: ElevatedButton.icon(
-              onPressed: () {
-                final targetLat = (widget.orderState == 0 || widget.orderState == 1) ? storeLat : destLat;
-                final targetLng = (widget.orderState == 0 || widget.orderState == 1) ? storeLng : destLng;
-                if (targetLat != null && targetLng != null && targetLat != 0 && targetLng != 0) {
-                  _openExternalMap(targetLat, targetLng);
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("الإحداثيات غير متوفرة لهذا الموقع")),
-                  );
-                }
-              },
-              icon: const Icon(Icons.navigation, color: Colors.white),
-              label: Text(
-                (widget.orderState == 0 || widget.orderState == 1)
-                    ? "الذهاب للمحل في الخرائط الخارجية"
-                    : "الذهاب للعميل في الخرائط الخارجية",
-                style: AppTextStyles.text13w700(color: Colors.white),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: colors.primary,
-                padding: EdgeInsets.symmetric(vertical: 12.h),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+                  // Floating Uber-Style Controls Panel (Zoom In +, Zoom Out -, Recenter 🎯)
+                  Positioned(
+                    bottom: 12.h,
+                    left: 12.w,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Zoom Controls Pill
+                        Container(
+                          decoration: BoxDecoration(
+                            color: colors.surface,
+                            borderRadius: BorderRadius.circular(12.r),
+                            border: Border.all(color: colors.border.withValues(alpha: 0.5)),
+                            boxShadow: [
+                              BoxShadow(
+                                color: colors.shadow.withValues(alpha: 0.15),
+                                blurRadius: 8,
+                                spreadRadius: 1,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Zoom In (+)
+                              InkWell(
+                                onTap: () {
+                                  final newZoom = (_mapController.camera.zoom + 0.8).clamp(1.0, 19.0);
+                                  _mapController.move(_mapController.camera.center, newZoom);
+                                },
+                                borderRadius: BorderRadius.only(
+                                  topLeft: Radius.circular(12.r),
+                                  topRight: Radius.circular(12.r),
+                                ),
+                                child: Padding(
+                                  padding: EdgeInsets.all(9.r),
+                                  child: Icon(
+                                    Icons.add_rounded,
+                                    color: colors.textPrimary,
+                                    size: 20.sp,
+                                  ),
+                                ),
+                              ),
+                              Container(
+                                height: 1,
+                                width: 26.w,
+                                color: colors.border.withValues(alpha: 0.6),
+                              ),
+                              // Zoom Out (-)
+                              InkWell(
+                                onTap: () {
+                                  final newZoom = (_mapController.camera.zoom - 0.8).clamp(1.0, 19.0);
+                                  _mapController.move(_mapController.camera.center, newZoom);
+                                },
+                                borderRadius: BorderRadius.only(
+                                  bottomLeft: Radius.circular(12.r),
+                                  bottomRight: Radius.circular(12.r),
+                                ),
+                                child: Padding(
+                                  padding: EdgeInsets.all(9.r),
+                                  child: Icon(
+                                    Icons.remove_rounded,
+                                    color: colors.textPrimary,
+                                    size: 20.sp,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        8.verticalSpace,
+
+                        // Recenter FAB Button (🎯)
+                        Material(
+                          color: _isAutoCentering ? colors.primary : colors.surface,
+                          elevation: 6,
+                          shape: const CircleBorder(),
+                          child: InkWell(
+                            onTap: _recenterMap,
+                            customBorder: const CircleBorder(),
+                            child: Container(
+                              padding: EdgeInsets.all(11.r),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: _isAutoCentering ? colors.primary : colors.surface,
+                                border: Border.all(
+                                  color: _isAutoCentering ? colors.primary : colors.border.withValues(alpha: 0.5),
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: colors.shadow.withValues(alpha: 0.2),
+                                    blurRadius: 8,
+                                    spreadRadius: 1,
+                                  ),
+                                ],
+                              ),
+                              child: Icon(
+                                Icons.my_location_rounded,
+                                color: _isAutoCentering ? Colors.white : colors.primary,
+                                size: 22.sp,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

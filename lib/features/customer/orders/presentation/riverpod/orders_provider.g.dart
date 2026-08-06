@@ -130,3 +130,74 @@ final class TrackOrderFamily extends $Family
   @override
   String toString() => r'trackOrderProvider';
 }
+
+@ProviderFor(orderTrackingGrpcStream)
+final orderTrackingGrpcStreamProvider = OrderTrackingGrpcStreamFamily._();
+
+final class OrderTrackingGrpcStreamProvider
+    extends
+        $FunctionalProvider<AsyncValue<tracking_pb.GrpcLocationUpdate>, tracking_pb.GrpcLocationUpdate, Stream<tracking_pb.GrpcLocationUpdate>>
+    with $FutureModifier<tracking_pb.GrpcLocationUpdate>, $StreamProvider<tracking_pb.GrpcLocationUpdate> {
+  OrderTrackingGrpcStreamProvider._({
+    required OrderTrackingGrpcStreamFamily super.from,
+    required int super.argument,
+  }) : super(
+         retry: null,
+         name: r'orderTrackingGrpcStreamProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$orderTrackingGrpcStreamHash();
+
+  @override
+  String toString() {
+    return r'orderTrackingGrpcStreamProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $StreamProviderElement<tracking_pb.GrpcLocationUpdate> $createElement($ProviderPointer pointer) =>
+      $StreamProviderElement(pointer);
+
+  @override
+  Stream<tracking_pb.GrpcLocationUpdate> create(Ref ref) {
+    final argument = this.argument as int;
+    return orderTrackingGrpcStream(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is OrderTrackingGrpcStreamProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$orderTrackingGrpcStreamHash() => r'e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0';
+
+final class OrderTrackingGrpcStreamFamily extends $Family
+    with $FunctionalFamilyOverride<Stream<tracking_pb.GrpcLocationUpdate>, int> {
+  OrderTrackingGrpcStreamFamily._()
+    : super(
+        retry: null,
+        name: r'orderTrackingGrpcStreamProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  OrderTrackingGrpcStreamProvider call(int orderId) =>
+      OrderTrackingGrpcStreamProvider._(argument: orderId, from: this);
+
+  @override
+  String toString() => r'orderTrackingGrpcStreamProvider';
+}
+

@@ -202,4 +202,55 @@ class OrderDto {
               : null),
     );
   }
+
+  OrderDto copyWith({
+    int? id,
+    String? address,
+    double? longitude,
+    double? latitude,
+    int? paymentMethod,
+    int? status,
+    double? totalPrice,
+    double? deliveryFee,
+    double? orderFee,
+    int? type,
+    int? offerId,
+    int? userId,
+    int? creatorId,
+    String? createdOn,
+    List<OrderProductDto>? products,
+    UserDto? user,
+    UserDto? creator,
+    UserDto? delivery,
+    int? deliveryId,
+    String? rowVersion,
+    int? userLocationId,
+    LocationDto? userLocation,
+  }) {
+    return OrderDto(
+      id: id ?? this.id,
+      address: address ?? this.address,
+      longitude: longitude ?? this.longitude,
+      latitude: latitude ?? this.latitude,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
+      status: status ?? this.status,
+      totalPrice: totalPrice ?? this.totalPrice,
+      deliveryFee: deliveryFee ?? this.deliveryFee,
+      orderFee: orderFee ?? this.orderFee,
+      type: type ?? this.type,
+      offerId: offerId ?? this.offerId,
+      userId: userId ?? this.userId,
+      creatorId: creatorId ?? this.creatorId,
+      createdOn: createdOn ?? this.createdOn,
+      products: products ?? this.products,
+      user: user ?? this.user,
+      creator: creator ?? this.creator,
+      delivery: delivery ?? this.delivery,
+      deliveryId: deliveryId ?? this.deliveryId,
+      rowVersion: rowVersion ?? this.rowVersion,
+      userLocationId: userLocationId ?? this.userLocationId,
+      userLocation: userLocation ?? this.userLocation,
+    );
+  }
 }
+

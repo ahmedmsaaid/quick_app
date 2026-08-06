@@ -8,6 +8,8 @@ import 'package:base_app/core/network/api_constants.dart';
 import 'package:base_app/core/network/api_result.dart';
 import 'package:base_app/core/error/error_handler.dart';
 import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
+import 'package:geolocator/geolocator.dart';
+import 'dart:math' as math;
 
 part 'profile_api_service.g.dart';
 
@@ -24,6 +26,7 @@ class UserSettingDto {
   final double orderMinFee;
   final double orderMaxFee;
   final double deliveryFee;
+  final double? deliveryMinFee;
 
   const UserSettingDto({
     required this.id,
@@ -31,6 +34,7 @@ class UserSettingDto {
     required this.orderMinFee,
     required this.orderMaxFee,
     required this.deliveryFee,
+    this.deliveryMinFee,
   });
 
   factory UserSettingDto.fromJson(Map<String, dynamic> json) => UserSettingDto(
@@ -39,6 +43,7 @@ class UserSettingDto {
     orderMinFee: (json['orderMinFee'] as num?)?.toDouble() ?? 0.0,
     orderMaxFee: (json['orderMaxFee'] as num?)?.toDouble() ?? 0.0,
     deliveryFee: (json['deliveryFee'] as num?)?.toDouble() ?? 0.0,
+    deliveryMinFee: (json['deliveryMinFee'] as num?)?.toDouble(),
   );
 }
 
@@ -47,17 +52,62 @@ final settingsProvider = FutureProvider<UserSettingDto?>((ref) async {
   final service = ref.read(profileApiServiceProvider);
   final result = await service.getSettings();
   return result.when(
-    success: (response) => response.result,
+    success: (response) => response?.result,
     failure: (_) => null,
   );
 });
+
+/// Provider to fetch locations for a given creatorId (e.g. vendor/restaurant branches)
+final vendorLocationsProvider = FutureProvider.family<List<LocationDto>, int?>((ref, vendorId) async {
+  if (vendorId == null || vendorId <= 0) return [];
+  final service = ref.read(profileApiServiceProvider);
+  final result = await service.getLocations(creatorId: vendorId);
+  return result.when(
+    success: (res) => res?.result ?? [],
+    failure: (_) => [],
+  );
+});
+
+/// Default fallback settings if API response is null or loading
+const defaultAppSettings = UserSettingDto(
+  id: 1,
+  orderFee: 15.0,
+  orderMinFee: 5.0,
+  orderMaxFee: 50.0,
+  deliveryFee: 15.0,
+  deliveryMinFee: 15.0,
+);
 
 /// Calculate the service/order fee based on backend logic:
 ///   raw = subtotal × orderFee% ÷ 100
 ///   final = clamp(raw, orderMinFee, orderMaxFee)
 double calcOrderFee(double subtotal, UserSettingDto settings) {
   final raw = subtotal * settings.orderFee / 100;
-  return raw.clamp(settings.orderMinFee, settings.orderMaxFee);
+  final minFee = settings.orderMinFee;
+  final maxFee = settings.orderMaxFee > 0 ? settings.orderMaxFee : double.infinity;
+  return raw.clamp(minFee, maxFee);
+}
+
+/// Distance formula in Kilometers using Geolocator
+double calculateDistanceKm(double lat1, double lon1, double lat2, double lon2) {
+  if (lat1 == 0.0 || lon1 == 0.0 || lat2 == 0.0 || lon2 == 0.0) return 0.0;
+  final meters = Geolocator.distanceBetween(lat1, lon1, lat2, lon2);
+  return meters / 1000.0;
+}
+
+/// Calculate delivery fee based on distance (km) and backend settings logic:
+/// - If distanceKm <= 0 (unknown/not computed yet): return base deliveryFee or deliveryMinFee
+/// - If distanceKm > 0: calculatedDeliveryFee = distanceKm * setting.deliveryFee
+/// - final deliveryFee = max(calculatedDeliveryFee, setting.deliveryMinFee)
+double calcDeliveryFee(double distanceKm, UserSettingDto settings) {
+  final minDelivery = settings.deliveryMinFee ?? 0.0;
+  if (distanceKm <= 0) {
+    return math.max(settings.deliveryFee > 0 ? settings.deliveryFee : minDelivery, minDelivery);
+  }
+  final calculatedDeliveryFee = settings.deliveryFee > 0
+      ? distanceKm * settings.deliveryFee
+      : settings.deliveryFee;
+  return math.max(calculatedDeliveryFee, minDelivery);
 }
 
 class ProfileApiService {

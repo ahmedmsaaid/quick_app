@@ -1,0 +1,30 @@
+syntax = "proto3";
+import "google/protobuf/timestamp.proto";
+option csharp_namespace = "Quick_Service.Application.Protos";
+package tracking;
+
+service GrpcOrderTrackingService {
+  rpc SendLocation(stream GrpcLocationUpdate) returns (GrpcTrackingAck);
+  rpc SubscribeToOrderTracking(GrpcSubscribeRequest) returns (stream GrpcLocationUpdate);
+}
+
+message GrpcSubscribeRequest {
+  int64 OrderId = 1;
+}
+
+message GrpcLocationUpdate {
+  int64 OrderId = 1;
+  int64 DeliveryId = 2;
+  double Latitude = 3;
+  double Longitude = 4;
+  GrpcOrderStatus Status = 5;
+}
+
+message GrpcTrackingAck {
+  bool Received = 1;
+}
+
+enum GrpcOrderStatus {
+  OutForDelivery = 0;
+  Delivered = 1;
+}

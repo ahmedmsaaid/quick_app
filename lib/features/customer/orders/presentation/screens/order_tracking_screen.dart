@@ -13,7 +13,10 @@ import 'package:base_app/core/network/api_constants.dart';
 import 'package:base_app/features/customer/orders/presentation/riverpod/orders_provider.dart';
 import 'package:base_app/core/constans/role_type_enum.dart';
 import 'package:base_app/core/models/app_chat_argument.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart' as ll;
 import 'package:url_launcher/url_launcher.dart';
+import 'package:base_app/core/services/maps_service.dart';
 
 // ─── Order Status Constants ─────────────────────────────────────────────────
 // 0 = Created
@@ -80,28 +83,9 @@ class OrderTrackingScreen extends ConsumerWidget {
       backgroundColor: colors.background,
       body: Stack(
         children: [
-          // ── Map placeholder bg ────────────────────────────────────────────
-          Container(
-            color: colors.containerBackground,
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.map_outlined,
-                    size: 90.sp,
-                    color: colors.textHint.withValues(alpha: 0.4),
-                  ),
-                  8.verticalSpace,
-                  Text(
-                    AppStrings.orderTrackingMapPlaceholder,
-                    style: AppTextStyles.text12w400(
-                      color: colors.textHint.withValues(alpha: 0.6),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          // ── Live gRPC Order Tracking Map ────────────────────────────────
+          Positioned.fill(
+            child: _LiveOrderTrackingMap(order: o, colors: colors),
           ),
 
           // ── Back button ───────────────────────────────────────────────────
@@ -935,4 +919,404 @@ class _CancelOrderButtonState extends ConsumerState<_CancelOrderButton> {
     }
   }
 }
+
+// ─── Live gRPC Order Tracking Map Widget ──────────────────────────────────────
+class _LiveOrderTrackingMap extends ConsumerStatefulWidget {
+  final OrderDto order;
+  final AppColors colors;
+  const _LiveOrderTrackingMap({required this.order, required this.colors});
+
+  @override
+  ConsumerState<_LiveOrderTrackingMap> createState() => _LiveOrderTrackingMapState();
+}
+
+class _LiveOrderTrackingMapState extends ConsumerState<_LiveOrderTrackingMap> {
+  final MapController _mapController = MapController();
+  RouteResult? _roadRouteResult;
+  bool _isAutoCentering = true;
+
+  // Track previous captain position to detect real movement
+  double? _prevCaptainLat;
+  double? _prevCaptainLng;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchRoadRoute(widget.order);
+  }
+
+  void _onOrderUpdate(OrderDto o) {
+    final capLat = o.delivery?.location?.latitude;
+    final capLng = o.delivery?.location?.longitude;
+
+    // Detect meaningful captain movement (> ~20 meters)
+    final captainMoved = capLat != null &&
+        capLng != null &&
+        capLat != 0 &&
+        capLng != 0 &&
+        (_prevCaptainLat == null ||
+            (capLat - (_prevCaptainLat ?? 0)).abs() > 0.0002 ||
+            (capLng - (_prevCaptainLng ?? 0)).abs() > 0.0002);
+
+    if (captainMoved) {
+      _prevCaptainLat = capLat;
+      _prevCaptainLng = capLng;
+
+      // Auto-follow captain when active
+      if (_isAutoCentering) {
+        _mapController.move(
+          ll.LatLng(capLat!, capLng!),
+          _mapController.camera.zoom > 10 ? _mapController.camera.zoom : 15.5,
+        );
+      }
+
+      // Invalidate route cache and re-fetch
+      MapService.invalidateRouteCache(ll.LatLng(capLat!, capLng!));
+      _fetchRoadRoute(o);
+    }
+  }
+
+  Future<void> _fetchRoadRoute(OrderDto o) async {
+    final destLat = o.latitude;
+    final destLng = o.longitude;
+
+    final storeLat = o.creator?.location?.latitude;
+    final storeLng = o.creator?.location?.longitude;
+
+    final captainLat = o.delivery?.location?.latitude;
+    final captainLng = o.delivery?.location?.longitude;
+
+    final startLat = (o.status == 6 && captainLat != null && captainLat != 0) ? captainLat : storeLat;
+    final startLng = (o.status == 6 && captainLng != null && captainLng != 0) ? captainLng : storeLng;
+
+    if (destLat != 0 && destLng != 0 && startLat != null && startLng != null && startLat != 0 && startLng != 0) {
+      if ((startLat - destLat).abs() < 0.0001 && (startLng - destLng).abs() < 0.0001) {
+        return;
+      }
+      final route = await MapService.getDrivingRoute(
+        ll.LatLng(startLat, startLng),
+        ll.LatLng(destLat, destLng),
+      );
+      if (mounted) {
+        setState(() {
+          _roadRouteResult = route;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Watch live updates directly from gRPC stream
+    final liveOrderAsync = ref.watch(trackOrderProvider(widget.order.id));
+    final o = liveOrderAsync.value ?? widget.order;
+
+    // Trigger captain-movement side effects after build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final liveVal = liveOrderAsync.value;
+      if (liveVal != null) _onOrderUpdate(liveVal);
+    });
+    final destLat = o.latitude;
+    final destLng = o.longitude;
+
+    final storeLat = o.creator?.location?.latitude;
+    final storeLng = o.creator?.location?.longitude;
+
+    final captainLat = o.delivery?.location?.latitude;
+    final captainLng = o.delivery?.location?.longitude;
+
+    final hasDest = destLat != 0 && destLng != 0;
+    final hasStore = storeLat != null && storeLng != null && storeLat != 0 && storeLng != 0;
+    final hasCaptain = captainLat != null && captainLng != null && captainLat != 0 && captainLng != 0;
+
+    final centerLat = hasDest ? destLat : (hasStore ? storeLat : 30.0444);
+    final centerLng = hasDest ? destLng : (hasStore ? storeLng : 31.2357);
+
+    final markers = <Marker>[];
+    final polylines = <Polyline>[];
+
+    // Real OSRM Road Polyline
+    final routePoints = _roadRouteResult?.points ?? [];
+    if (routePoints.isNotEmpty) {
+      polylines.add(
+        Polyline(
+          points: routePoints,
+          strokeWidth: 5.5,
+          color: widget.colors.primary,
+          borderStrokeWidth: 2.0,
+          borderColor: const Color(0xFF0F172A),
+          strokeCap: StrokeCap.round,
+          strokeJoin: StrokeJoin.round,
+        ),
+      );
+    }
+
+    // Store marker
+    if (hasStore) {
+      markers.add(
+        Marker(
+          point: ll.LatLng(storeLat, storeLng),
+          width: 44.w,
+          height: 44.w,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.green,
+              shape: BoxShape.circle,
+              boxShadow: [BoxShadow(color: widget.colors.shadow, blurRadius: 6)],
+            ),
+            child: const Icon(Icons.storefront_rounded, color: Colors.white, size: 22),
+          ),
+        ),
+      );
+    }
+
+    // Customer destination marker
+    if (hasDest) {
+      markers.add(
+        Marker(
+          point: ll.LatLng(destLat, destLng),
+          width: 44.w,
+          height: 44.w,
+          child: Container(
+            decoration: BoxDecoration(
+              color: widget.colors.primary,
+              shape: BoxShape.circle,
+              boxShadow: [BoxShadow(color: widget.colors.shadow, blurRadius: 6)],
+            ),
+            child: const Icon(Icons.person_pin_circle_rounded, color: Colors.white, size: 24),
+          ),
+        ),
+      );
+    }
+
+    // Live Captain / Driver Marker (when out for delivery)
+    if (o.status == 6 && (hasCaptain || hasDest)) {
+      final capPoint = hasCaptain ? ll.LatLng(captainLat, captainLng) : ll.LatLng(destLat, destLng);
+      markers.add(
+        Marker(
+          point: capPoint,
+          width: 48.w,
+          height: 48.w,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.orange,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: widget.colors.primary.withValues(alpha: 0.4),
+                  blurRadius: 10,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: const Icon(Icons.delivery_dining_rounded, color: Colors.white, size: 26),
+          ),
+        ),
+      );
+    }
+
+    return Stack(
+      children: [
+        FlutterMap(
+          mapController: _mapController,
+          options: MapOptions(
+            initialCenter: ll.LatLng(centerLat, centerLng),
+            initialZoom: 14.5,
+            onPositionChanged: (position, hasGesture) {
+              if (hasGesture && _isAutoCentering) {
+                setState(() {
+                  _isAutoCentering = false;
+                });
+              }
+            },
+          ),
+          children: [
+            TileLayer(
+              urlTemplate: 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+              userAgentPackageName: 'com.quick.app',
+            ),
+            if (polylines.isNotEmpty) PolylineLayer(polylines: polylines),
+            MarkerLayer(markers: markers),
+          ],
+        ),
+
+        // Live Route ETA & Distance Banner (أعلى الخريطة)
+        if (_roadRouteResult != null && _roadRouteResult!.distanceMeters > 0)
+          Positioned(
+            top: 105.h,
+            left: 20.w,
+            right: 20.w,
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 11.h),
+              decoration: BoxDecoration(
+                color: widget.colors.surface.withValues(alpha: 0.95),
+                borderRadius: BorderRadius.circular(16.r),
+                border: Border.all(color: widget.colors.primary.withValues(alpha: 0.3)),
+                boxShadow: [
+                  BoxShadow(
+                    color: widget.colors.shadow.withValues(alpha: 0.18),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(9.r),
+                    decoration: BoxDecoration(
+                      color: widget.colors.primary.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.delivery_dining_rounded,
+                      color: widget.colors.primary,
+                      size: 24.sp,
+                    ),
+                  ),
+                  12.horizontalSpace,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          o.status == 6 ? "السائق في الطريق إليك الآن 🚗" : "المسافة والوقت المقدر للوصول 🛣️",
+                          style: AppTextStyles.text12w600(color: widget.colors.textSecondary),
+                        ),
+                        3.verticalSpace,
+                        Text(
+                          "${_roadRouteResult!.formattedDistance} • ${_roadRouteResult!.formattedDuration}",
+                          style: AppTextStyles.text15w700(color: widget.colors.primary),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+        // Floating Uber-Style Controls Panel (Zoom In +, Zoom Out -, Recenter 🎯)
+        Positioned(
+          bottom: 240.h,
+          left: 20.w,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Zoom Controls Pill
+              Container(
+                decoration: BoxDecoration(
+                  color: widget.colors.surface,
+                  borderRadius: BorderRadius.circular(12.r),
+                  border: Border.all(color: widget.colors.border.withValues(alpha: 0.5)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: widget.colors.shadow.withValues(alpha: 0.15),
+                      blurRadius: 8,
+                      spreadRadius: 1,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Zoom In (+)
+                    InkWell(
+                      onTap: () {
+                        final newZoom = (_mapController.camera.zoom + 0.8).clamp(1.0, 19.0);
+                        _mapController.move(_mapController.camera.center, newZoom);
+                      },
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(12.r),
+                        topRight: Radius.circular(12.r),
+                      ),
+                      child: Padding(
+                        padding: EdgeInsets.all(10.r),
+                        child: Icon(
+                          Icons.add_rounded,
+                          color: widget.colors.textPrimary,
+                          size: 22.sp,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      height: 1,
+                      width: 28.w,
+                      color: widget.colors.border.withValues(alpha: 0.6),
+                    ),
+                    // Zoom Out (-)
+                    InkWell(
+                      onTap: () {
+                        final newZoom = (_mapController.camera.zoom - 0.8).clamp(1.0, 19.0);
+                        _mapController.move(_mapController.camera.center, newZoom);
+                      },
+                      borderRadius: BorderRadius.only(
+                        bottomLeft: Radius.circular(12.r),
+                        bottomRight: Radius.circular(12.r),
+                      ),
+                      child: Padding(
+                        padding: EdgeInsets.all(10.r),
+                        child: Icon(
+                          Icons.remove_rounded,
+                          color: widget.colors.textPrimary,
+                          size: 22.sp,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              10.verticalSpace,
+
+              // Recenter FAB Button (🎯)
+              Material(
+                color: _isAutoCentering ? widget.colors.primary : widget.colors.surface,
+                elevation: 6,
+                shape: const CircleBorder(),
+                child: InkWell(
+                  onTap: () {
+                    setState(() => _isAutoCentering = true);
+                    final capLat = o.delivery?.location?.latitude;
+                    final capLng = o.delivery?.location?.longitude;
+                    // Recenter → captain if out for delivery, else customer destination
+                    final hasCap = capLat != null && capLng != null && capLat != 0 && capLng != 0;
+                    final targetLat = (o.status == 6 && hasCap) ? capLat! : centerLat;
+                    final targetLng = (o.status == 6 && hasCap) ? capLng! : centerLng;
+                    _mapController.move(ll.LatLng(targetLat, targetLng), 15.5);
+                  },
+                  customBorder: const CircleBorder(),
+                  child: Container(
+                    padding: EdgeInsets.all(12.r),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _isAutoCentering ? widget.colors.primary : widget.colors.surface,
+                      border: Border.all(
+                        color: _isAutoCentering ? widget.colors.primary : widget.colors.border.withValues(alpha: 0.5),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: widget.colors.shadow.withValues(alpha: 0.2),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      Icons.my_location_rounded,
+                      color: _isAutoCentering ? Colors.white : widget.colors.primary,
+                      size: 24.sp,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 

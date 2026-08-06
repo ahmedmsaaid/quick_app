@@ -12,6 +12,8 @@ import 'package:base_app/core/widgets/custom_button.dart';
 import 'package:base_app/core/network/api_constants.dart';
 import 'package:base_app/features/customer/cart/presentation/riverpod/cart_provider.dart';
 import 'package:base_app/features/customer/profile/data/profile_api_service.dart';
+import 'package:base_app/features/customer/profile/presentation/riverpod/profile_provider.dart';
+import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
 
 class CartScreen extends ConsumerWidget {
   const CartScreen({super.key});
@@ -22,11 +24,40 @@ class CartScreen extends ConsumerWidget {
     final cart = ref.watch(cartProvider);
     final notifier = ref.read(cartProvider.notifier);
     final settingsAsync = ref.watch(settingsProvider);
+    final profileState = ref.watch(profileProvider);
+    final user = profileState.user;
+
+    // Customer Location
+    LocationDto? userLocation;
+    if (profileState.locations.isNotEmpty) {
+      userLocation = profileState.locations.firstWhere(
+        (loc) => loc.base,
+        orElse: () => profileState.locations.first,
+      );
+    }
+    final double userLat = userLocation?.latitude ?? user?.location?.latitude ?? 0.0;
+    final double userLng = userLocation?.longitude ?? user?.location?.longitude ?? 0.0;
+
+    // Vendor Location
+    final vendorLocsAsync = ref.watch(vendorLocationsProvider(cart.vendorId));
+    final vendorLocs = vendorLocsAsync.asData?.value ?? [];
+    LocationDto? vendorLocation;
+    if (vendorLocs.isNotEmpty) {
+      vendorLocation = vendorLocs.firstWhere(
+        (l) => l.base,
+        orElse: () => vendorLocs.first,
+      );
+    }
+    final double storeLat = vendorLocation?.latitude ?? 0.0;
+    final double storeLng = vendorLocation?.longitude ?? 0.0;
+
+    // Calculate exact distance
+    final double distanceKm = calculateDistanceKm(userLat, userLng, storeLat, storeLng);
 
     // Calculate fees dynamically
-    final settings = settingsAsync.asData?.value;
-    final deliveryFee = settings?.deliveryFee ?? 0.0;
-    final serviceFee = settings != null ? calcOrderFee(cart.subtotal, settings) : 0.0;
+    final settings = settingsAsync.asData?.value ?? defaultAppSettings;
+    final deliveryFee = calcDeliveryFee(distanceKm, settings);
+    final serviceFee = calcOrderFee(cart.subtotal, settings);
     final total = cart.subtotal + deliveryFee + serviceFee;
 
     return Scaffold(

@@ -225,7 +225,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                         // Google Login Button
                         OutlinedButton.icon(
-                          onPressed: () {},
+                          onPressed: () async {
+                            final success = await ref.read(authProvider.notifier).loginWithGoogle(
+                              isUser: widget.isUser,
+                            );
+                            if (success) {
+                              if (mounted) {
+                                if (widget.isUser) {
+                                  context.pushNamedAndRemoveUntil(AppRoutes.userNav);
+                                } else {
+                                  context.pushNamedAndRemoveUntil(AppRoutes.captainNav);
+                                }
+                              }
+                            } else {
+                              if (mounted) {
+                                final state = ref.read(authProvider);
+                                CustomToast.error(context, state.errorMessage ?? AppStrings.errorOccurred);
+                              }
+                            }
+                          },
                           icon: Icon(FontAwesomeIcons.google, color: Colors.red, size: 18.sp),
                           label: Text(
                             AppStrings.loginWithGoogle,

@@ -18,6 +18,8 @@ import 'package:base_app/features/customer/checkout/presentation/screens/order_s
 import 'package:base_app/core/widgets/custom_toast.dart';
 import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
 import 'package:base_app/features/customer/profile/data/profile_api_service.dart';
+import 'package:base_app/core/services/maps_service.dart';
+import 'package:latlong2/latlong.dart' as ll;
 
 class CheckoutScreen extends ConsumerStatefulWidget {
   final OfferDto? offer;
@@ -66,7 +68,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     if (!mounted) return;
     result.when(
       success: (response) {
-        final locs = response.result ?? [];
+        final locs = response?.result ?? [];
         setState(() {
           _vendorLocations = locs;
           _isLoadingBranches = false;
@@ -162,9 +164,17 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
     // Get settings from shared provider
     final settingsAsync = ref.watch(settingsProvider);
-    final settings = settingsAsync.asData?.value;
-    final double deliveryFee = settings?.deliveryFee ?? 0.0;
-    final double serviceFee = settings != null ? calcOrderFee(productsPrice, settings) : 0.0;
+    final settings = settingsAsync.asData?.value ?? defaultAppSettings;
+
+    final double userLat = selectedLocation?.latitude ?? user?.location?.latitude ?? 0.0;
+    final double userLng = selectedLocation?.longitude ?? user?.location?.longitude ?? 0.0;
+    final double storeLat = _selectedVendorLocation?.latitude ?? 0.0;
+    final double storeLng = _selectedVendorLocation?.longitude ?? 0.0;
+
+    final double distanceKm = calculateDistanceKm(userLat, userLng, storeLat, storeLng);
+
+    final double deliveryFee = calcDeliveryFee(distanceKm, settings);
+    final double serviceFee = calcOrderFee(productsPrice, settings);
     final double totalRequired = productsPrice + deliveryFee + serviceFee;
 
     final checkoutState = ref.watch(checkoutProvider);

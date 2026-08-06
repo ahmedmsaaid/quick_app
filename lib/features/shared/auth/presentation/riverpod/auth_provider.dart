@@ -7,8 +7,12 @@ import 'package:base_app/core/network/api_result.dart';
 import 'package:base_app/features/shared/auth/data/auth_api_service.dart';
 import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
 import 'package:base_app/core/services/push_notification/push_notification_service.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 part 'auth_provider.g.dart';
+
+/// Flag to ensure GoogleSignIn is initialized only once (required in v7.x)
+bool _googleSignInInitialized = false;
 
 enum AuthStatus { initial, loading, authenticated, unauthenticated, error }
 
@@ -207,5 +211,75 @@ class Auth extends _$Auth {
     await CacheHelper.remove('refreshToken');
     await CacheHelper.remove('userRole');
     state = AuthState.unauthenticated();
+  }
+
+  /// Perform Google authentication login
+  Future<bool> loginWithGoogle({
+    required bool isUser,
+  }) async {
+    state = AuthState.loading();
+    try {
+      final googleSignIn = GoogleSignIn.instance;
+
+      if (!_googleSignInInitialized) {
+        await googleSignIn.initialize();
+        _googleSignInInitialized = true;
+      }
+
+      final GoogleSignInAccount googleUser = await googleSignIn.authenticate(
+        scopeHint: ['email'],
+      );
+
+      final GoogleSignInAuthentication googleAuthDetails = googleUser.authentication;
+      final idToken = googleAuthDetails.idToken;
+
+      if (idToken == null || idToken.isEmpty) {
+        state = AuthState.error("فشل الحصول على رمز تعريف جوجل (idToken)");
+        return false;
+      }
+
+      final role = isUser ? 2 : 3;
+      final result = await ref.read(authApiServiceProvider).googleAuth(
+        idToken: idToken,
+        role: role,
+      );
+
+      return result.when(
+        success: (response) async {
+          if (response.success && response.result != null) {
+            final tokenDto = response.result!;
+            if (tokenDto.accessToken != null) {
+              await CacheHelper.setString(CacheKeys.token, tokenDto.accessToken!);
+            }
+            if (tokenDto.refreshToken != null) {
+              await CacheHelper.setString('refreshToken', tokenDto.refreshToken!);
+            }
+
+            // Cache the user role!
+            await CacheHelper.setInt('userRole', role);
+
+            // Register FCM token with backend immediately upon login!
+            ref.read(pushNotificationServiceProvider).registerDeviceTokenWithBackend();
+
+            state = AuthState.authenticated(UserDto(id: 0, role: role, status: 0));
+            return true;
+          } else {
+            state = AuthState.error(response.message ?? "فشل تسجيل الدخول بـ جوجل", statusCode: response.statusCode);
+            return false;
+          }
+        },
+        failure: (error) async {
+          state = AuthState.error(error.message, statusCode: error.statusCode);
+          return false;
+        },
+      );
+    } catch (e) {
+      if (e is GoogleSignInException && e.code == GoogleSignInExceptionCode.canceled) {
+        state = AuthState.initial();
+        return false;
+      }
+      state = AuthState.error("حدث خطأ أثناء تسجيل الدخول بـ جوجل: $e");
+      return false;
+    }
   }
 }
