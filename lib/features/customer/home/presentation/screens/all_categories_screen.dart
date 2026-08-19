@@ -1,30 +1,23 @@
-import 'package:base_app/core/exports/exports.dart';
-import 'package:base_app/core/extintions/navigation_extension.dart';
-import 'package:base_app/core/localizations/app_strings.g.dart';
-import 'package:base_app/core/network/api_constants.dart';
-import 'package:base_app/core/network/api_result.dart';
-import 'package:base_app/core/routes/app_router.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:base_app/core/routes/app_routes.dart';
+import 'package:base_app/core/routes/app_router.dart';
 import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/styles/app_text_style.dart';
-import 'package:base_app/core/widgets/cached_network_image.dart';
+import 'package:base_app/core/network/api_constants.dart';
 import 'package:base_app/core/widgets/custom_arrow_back.dart';
 import 'package:base_app/core/widgets/lading_button.dart';
 import 'package:base_app/features/customer/home/data/models/category_model.dart';
- import 'package:base_app/features/customer/vendor_list/presentation/screens/vendor_list_screen.dart';
 import 'package:base_app/features/customer/home/data/home_api_service.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:base_app/core/utils/extensions.dart';
 
 final subCategoriesProvider = FutureProvider.autoDispose<List<CategoryDto>>((ref) async {
   final apiService = ref.watch(homeApiServiceProvider);
   final result = await apiService.getCategories();
   return result.when(
-    success: (response) {
-      if (response.success && response.result != null) {
-        return response.result!;
-      }
-      return [];
-    },
+    success: (response) => (response.success && response.result != null) ? response.result! : [],
     failure: (error) => [],
   );
 });
@@ -33,12 +26,7 @@ final mainCategoriesListProvider = FutureProvider.autoDispose<List<MainCategoryD
   final apiService = ref.watch(homeApiServiceProvider);
   final result = await apiService.getMainCategories();
   return result.when(
-    success: (response) {
-      if (response.success && response.result != null) {
-        return response.result!;
-      }
-      return [];
-    },
+    success: (response) => (response.success && response.result != null) ? response.result! : [],
     failure: (error) => [],
   );
 });
@@ -80,13 +68,13 @@ class AllCategoriesScreen extends ConsumerWidget {
                 Icon(Icons.error_outline, size: 48.sp, color: colors.error),
                 16.verticalSpace,
                 Text(
-                  AppStrings.errorOccurred,
+                  isArabic ? 'حدث خطأ ما' : 'An error occurred',
                   style: AppTextStyles.text16w600(color: colors.textSecondary),
                 ),
                 15.verticalSpace,
                 ElevatedButton(
                   onPressed: () => ref.refresh(mainCategoriesListProvider),
-                  child: Text(AppStrings.tryAgain),
+                  child: Text(isArabic ? 'إعادة المحاولة' : 'Try Again'),
                 ),
               ],
             ),
@@ -100,7 +88,7 @@ class AllCategoriesScreen extends ConsumerWidget {
                     Icon(Icons.storefront_outlined, size: 64.sp, color: colors.textHint),
                     16.verticalSpace,
                     Text(
-                      AppStrings.noItemsFound,
+                      isArabic ? 'لا توجد عناصر' : 'No items found',
                       style: AppTextStyles.text16w600(color: colors.textSecondary),
                     ),
                   ],
@@ -137,7 +125,7 @@ class AllCategoriesScreen extends ConsumerWidget {
                         arguments: VendorListArgs(
                           title: cat.name ?? (isArabic ? 'المتاجر' : 'Stores'),
                           categoryId: cat.id,
-                          userRole: cat.userRole ?? 0,
+                          userRole: cat.userRole,
                         ),
                       );
                     },
@@ -173,13 +161,13 @@ class AllCategoriesScreen extends ConsumerWidget {
               Icon(Icons.error_outline, size: 48.sp, color: colors.error),
               16.verticalSpace,
               Text(
-                AppStrings.errorOccurred,
+                isArabic ? 'حدث خطأ ما' : 'An error occurred',
                 style: AppTextStyles.text16w600(color: colors.textSecondary),
               ),
               15.verticalSpace,
               ElevatedButton(
                 onPressed: () => ref.refresh(subCategoriesProvider),
-                child: Text(AppStrings.tryAgain),
+                child: Text(isArabic ? 'إعادة المحاولة' : 'Try Again'),
               ),
             ],
           ),
@@ -193,7 +181,7 @@ class AllCategoriesScreen extends ConsumerWidget {
                   Icon(Icons.category_outlined, size: 64.sp, color: colors.textHint),
                   16.verticalSpace,
                   Text(
-                    AppStrings.noItemsFound,
+                    isArabic ? 'لا توجد عناصر' : 'No items found',
                     style: AppTextStyles.text16w600(color: colors.textSecondary),
                   ),
                 ],
@@ -304,6 +292,7 @@ class _MainCategoryCard extends StatelessWidget {
                       child: Text('🏪', style: TextStyle(fontSize: columnCount == 4 ? 20.sp : 24.sp)),
                     ),
             ),
+            8.verticalSpace,
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 4.w),
               child: Text(
@@ -397,7 +386,6 @@ class _CategoryCard extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Image / Emoji circle
             Container(
               width: circleSize,
               height: circleSize,
