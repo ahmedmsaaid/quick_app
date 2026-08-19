@@ -289,9 +289,21 @@ class _MainCategoryCard extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               clipBehavior: Clip.antiAlias,
-              child:
-                  CustomNetworkImage.circular( imageUrl:category.photo ?? '🏪', radius: 25)
-            ),  8.verticalSpace,
+              child: photoUrl.isNotEmpty
+                  ? CachedNetworkImage(
+                      imageUrl: photoUrl,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Center(
+                        child: Text('🏪', style: TextStyle(fontSize: columnCount == 4 ? 20.sp : 24.sp)),
+                      ),
+                      errorWidget: (context, url, error) => Center(
+                        child: Text('🏪', style: TextStyle(fontSize: columnCount == 4 ? 20.sp : 24.sp)),
+                      ),
+                    )
+                  : Center(
+                      child: Text('🏪', style: TextStyle(fontSize: columnCount == 4 ? 20.sp : 24.sp)),
+                    ),
+            ),
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 4.w),
               child: Text(
