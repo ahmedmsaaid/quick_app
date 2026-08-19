@@ -7,6 +7,8 @@ import 'package:base_app/core/routes/app_router.dart';
 import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/styles/app_text_style.dart';
 import 'package:base_app/core/network/api_constants.dart';
+import 'package:base_app/core/network/api_result.dart';
+import 'package:base_app/core/network/api_response.dart';
 import 'package:base_app/core/widgets/custom_arrow_back.dart';
 import 'package:base_app/core/widgets/lading_button.dart';
 import 'package:base_app/features/customer/home/data/models/category_model.dart';
@@ -16,31 +18,25 @@ import 'package:base_app/core/utils/extensions.dart';
 final subCategoriesProvider = FutureProvider.autoDispose<List<CategoryDto>>((ref) async {
   final apiService = ref.watch(homeApiServiceProvider);
   final result = await apiService.getCategories();
-  List<CategoryDto> list = [];
-  result.when(
-    success: (response) {
-      if (response.success && response.result != null) {
-        list = response.result!;
-      }
-    },
-    failure: (error) {},
-  );
-  return list;
+  if (result is Success<ApiResponse<List<CategoryDto>>>) {
+    final response = result.data;
+    if (response.success && response.result != null) {
+      return response.result!;
+    }
+  }
+  return [];
 });
 
 final mainCategoriesListProvider = FutureProvider.autoDispose<List<MainCategoryDto>>((ref) async {
   final apiService = ref.watch(homeApiServiceProvider);
   final result = await apiService.getMainCategories();
-  List<MainCategoryDto> list = [];
-  result.when(
-    success: (response) {
-      if (response.success && response.result != null) {
-        list = response.result!;
-      }
-    },
-    failure: (error) {},
-  );
-  return list;
+  if (result is Success<ApiResponse<List<MainCategoryDto>>>) {
+    final response = result.data;
+    if (response.success && response.result != null) {
+      return response.result!;
+    }
+  }
+  return [];
 });
 
 class AllCategoriesScreen extends ConsumerWidget {
