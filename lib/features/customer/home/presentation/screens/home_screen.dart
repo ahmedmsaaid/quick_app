@@ -96,7 +96,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   SeeAllWidget(
                     title: isArabic ? 'أقسام المتاجر' : 'Store Categories',
                     onTap: () {
-                      context.pushNamed(AppRoutes.allCategoriesScreen);
+                      final role = selectedCat?.userRole ?? 0;
+                      context.pushNamed(
+                        AppRoutes.StoreScreen,
+                        arguments: VendorListArgs(
+                          title: selectedCat?.name ?? (isArabic ? 'كل المتاجر' : 'All Stores'),
+                          categoryId: selectedCat?.id,
+                          userRole: role,
+                        ),
+                      );
                     },
                   ),
                   Padding(
