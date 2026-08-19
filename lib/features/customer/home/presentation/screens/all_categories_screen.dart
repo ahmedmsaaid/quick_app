@@ -8,7 +8,7 @@ import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/styles/app_text_style.dart';
 import 'package:base_app/core/network/api_constants.dart';
 import 'package:base_app/core/network/api_result.dart';
-import 'package:base_app/core/network/api_response.dart';
+import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
 import 'package:base_app/core/widgets/custom_arrow_back.dart';
 import 'package:base_app/core/widgets/lading_button.dart';
 import 'package:base_app/features/customer/home/data/models/category_model.dart';
