@@ -177,7 +177,8 @@ abstract class AppRouter {
         final OrderDto? trackOrder = settings.arguments is OrderDto ? settings.arguments as OrderDto : null;
         return _buildAnimatedRoute(OrderTrackingScreen(order: trackOrder), settings);
       case AppRoutes.allCategoriesScreen:
-        return _buildAnimatedRoute(const AllCategoriesScreen(), settings);
+        final bool isStoreCategories = settings.arguments is bool ? settings.arguments as bool : false;
+        return _buildAnimatedRoute(AllCategoriesScreen(isStoreCategories: isStoreCategories), settings);
       case AppRoutes.captainRegisterScreen:
         return _buildAnimatedRoute(const CaptainRegisterScreen(), settings);
       case AppRoutes.StoreScreen:
