@@ -22,6 +22,14 @@ class CaptainNavScreen extends ConsumerStatefulWidget {
 class _CaptainNavScreenState extends ConsumerState<CaptainNavScreen> {
   int _selectedIndex = 0;
 
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      ref.read(profileProvider.notifier).loadProfile(clearOld: true);
+    });
+  }
+
   final List<Widget> _pages = [
     const CaptainHomeScreen(),
     const CaptainOrdersScreen(),

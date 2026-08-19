@@ -11,7 +11,9 @@ import 'package:base_app/core/widgets/see_all_widget.dart';
 import 'package:base_app/core/widgets/lading_button.dart';
 import 'package:base_app/features/customer/home/presentation/riverpod/home_provider.dart';
 
-/// العروض القابلة للتعديل (offerType == 1)
+import 'package:base_app/features/customer/profile/data/profile_api_service.dart';
+
+/// سيكشن العروض الموحد (يجمع كل العروض بأسماء الكاتيجوري من إعدادات النظام)
 class HomeTodaysOffers extends ConsumerWidget {
   const HomeTodaysOffers({super.key});
 
@@ -19,6 +21,17 @@ class HomeTodaysOffers extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColors(context);
     final homeState = ref.watch(homeProvider);
+    final settingsAsync = ref.watch(settingsProvider);
+    final settings = settingsAsync.asData?.value;
+
+    final isArabic = Localizations.localeOf(context).languageCode == 'ar';
+    String sectionTitle = isArabic ? 'عروض حصرية' : 'Exclusive Offers';
+    if (settings != null) {
+      final configuredName = isArabic ? settings.categoryNameAr : settings.categoryNameEn;
+      if (configuredName != null && configuredName.trim().isNotEmpty && configuredName.trim() != 'string') {
+        sectionTitle = configuredName.trim();
+      }
+    }
 
     // Loading state
     if (homeState.status == HomeStatus.loading && homeState.offers.isEmpty) {
@@ -28,30 +41,30 @@ class HomeTodaysOffers extends ConsumerWidget {
       );
     }
 
-    final editableOffers = homeState.offers.where((o) => o.offerType == 1).toList();
+    final allOffers = homeState.offers;
 
     // لو مفيش عروض - اخفي السيكشن ده
-    if (editableOffers.isEmpty) return const SizedBox.shrink();
+    if (allOffers.isEmpty) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SeeAllWidget(
-          title: 'عروض خاصة',
+          title: sectionTitle,
           onTap: () {
-            context.pushNamed(AppRoutes.StoreScreen, arguments: 'عروض خاصة');
+            context.pushNamed(AppRoutes.allOffersScreen, arguments: sectionTitle);
           },
         ),
         Padding(
-          padding:   EdgeInsets.symmetric(horizontal: 20.w),
+          padding: EdgeInsets.symmetric(horizontal: 20.w),
           child: SizedBox(
             height: 190.h,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               padding: EdgeInsets.symmetric(horizontal: 20.w),
-              itemCount: editableOffers.length,
+              itemCount: allOffers.length,
               itemBuilder: (context, index) {
-                final offer = editableOffers[index];
+                final offer = allOffers[index];
                 final String? featuredPhoto = offer.featuredPhoto;
                 final String imageUrl = (featuredPhoto != null && featuredPhoto.isNotEmpty)
                     ? (featuredPhoto.startsWith('http')
@@ -59,14 +72,16 @@ class HomeTodaysOffers extends ConsumerWidget {
                         : '${ApiConstants.streamUrl}$featuredPhoto')
                     : '';
 
+                final isEditable = offer.offerType == 1;
+
                 return _buildOfferCard(
                   context: context,
                   colors: colors,
                   title: offer.name ?? '',
-                  subtitle: offer.description ?? 'صمم عرضك المفضل الآن',
+                  subtitle: offer.description ?? (isEditable ? 'صمم عرضك المفضل الآن' : 'عرض مميز لفترة محدودة'),
                   imageUrl: imageUrl,
-                  badgeText: 'قابل للتعديل 🛠️',
-                  badgeColor: colors.secondary,
+                  badgeText: isEditable ? 'قابل للتعديل 🛠️' : 'عرض خاص',
+                  badgeColor: isEditable ? colors.secondary : colors.primary,
                   onTap: () {
                     context.pushNamed(AppRoutes.specialOfferDetails, arguments: offer);
                   },
@@ -80,70 +95,12 @@ class HomeTodaysOffers extends ConsumerWidget {
   }
 }
 
-/// العروض العادية (غير القابلة للتعديل - offerType == 0)
-class HomeEditableOffers extends ConsumerWidget {
+/// HomeEditableOffers (تم دمجها مع HomeTodaysOffers في سيكشن موحد)
+class HomeEditableOffers extends StatelessWidget {
   const HomeEditableOffers({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final colors = AppColors(context);
-    final homeState = ref.watch(homeProvider);
-
-    // Loading state
-    if (homeState.status == HomeStatus.loading && homeState.offers.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    final nonEditableOffers = homeState.offers.where((o) => o.offerType == 0).toList();
-
-    // لو مفيش عروض - اخفي السيكشن ده
-    if (nonEditableOffers.isEmpty) return const SizedBox.shrink();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SeeAllWidget(
-          title: 'عروض اليوم',
-          onTap: () {
-            context.pushNamed(AppRoutes.StoreScreen, arguments: 'عروض اليوم');
-          },
-        ),
-        Padding(
-          padding:   EdgeInsets.symmetric(horizontal: 20.w),
-          child: SizedBox(
-            height: 190.h,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: EdgeInsets.symmetric(horizontal: 20.w),
-              itemCount: nonEditableOffers.length,
-              itemBuilder: (context, index) {
-                final offer = nonEditableOffers[index];
-                final String? featuredPhoto = offer.featuredPhoto;
-                final String imageUrl = (featuredPhoto != null && featuredPhoto.isNotEmpty)
-                    ? (featuredPhoto.startsWith('http')
-                        ? featuredPhoto
-                        : '${ApiConstants.streamUrl}$featuredPhoto')
-                    : '';
-
-                return _buildOfferCard(
-                  context: context,
-                  colors: colors,
-                  title: offer.name ?? '',
-                  subtitle: offer.description ?? 'عرض مميز لفترة محدودة',
-                  imageUrl: imageUrl,
-                  badgeText: 'عرض خاص',
-                  badgeColor: colors.primary,
-                  onTap: () {
-                    context.pushNamed(AppRoutes.specialOfferDetails, arguments: offer);
-                  },
-                );
-              },
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+  Widget build(BuildContext context) => const SizedBox.shrink();
 }
 
 Widget _buildOfferCard({

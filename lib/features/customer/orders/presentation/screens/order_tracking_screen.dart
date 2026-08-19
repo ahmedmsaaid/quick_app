@@ -151,7 +151,7 @@ class OrderTrackingScreen extends ConsumerWidget {
                   // ── Vendor & products info ────────────────────────────────
                   _VendorRow(order: o, colors: colors, context: context),
                   _DriverRow(order: o, colors: colors),
-                  if (o.status < 6) ...[
+                  if (o.status == 0) ...[
                     16.verticalSpace,
                     _CancelOrderButton(order: o, colors: colors),
                   ],
@@ -552,10 +552,8 @@ class _VendorRow extends StatelessWidget {
           .map((p) => '${p.productName ?? ''} ×${p.quantity}')
           .join('  •  ');
     } else if (order.offerId != null) {
-      productSummary = 'عرض خاص #${order.offerId}';
+      productSummary = 'طلب عرض خاص';
     }
-
-    final int targetVendorId = order.userId; // ✅ vendor ID
 
     return Column(
       children: [
@@ -594,53 +592,6 @@ class _VendorRow extends StatelessWidget {
                   ),
                 ],
               ),
-            ),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                GestureDetector(
-                  onTap: () {
-                    Navigator.of(context).pushNamed(
-                      AppRoutes.chatDetailsScreen,
-                      arguments: AppChatArgument(
-                        chatId: null,
-                        recipientId: targetVendorId,
-                        profileId: targetVendorId,
-                        typeEnum: order.type == 0
-                            ? RoleTypeEnum.restaurant
-                            : RoleTypeEnum.market,
-                        recipientName: storeName,
-                        recipientImage: photoUrl,
-                      ),
-                    );
-                  },
-                  child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                    decoration: BoxDecoration(
-                      color: colors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12.r),
-                      border: Border.all(
-                        color: colors.primary.withValues(alpha: 0.2),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.chat_bubble_outline_rounded,
-                          color: colors.primary,
-                          size: 16.sp,
-                        ),
-                        6.horizontalSpace,
-                        Text(
-                          'مراسلة',
-                          style: AppTextStyles.text12w700(color: colors.primary),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
             ),
           ],
         ),
@@ -965,13 +916,13 @@ class _LiveOrderTrackingMapState extends ConsumerState<_LiveOrderTrackingMap> {
       // Auto-follow captain when active
       if (_isAutoCentering) {
         _mapController.move(
-          ll.LatLng(capLat!, capLng!),
+          ll.LatLng(capLat, capLng),
           _mapController.camera.zoom > 10 ? _mapController.camera.zoom : 15.5,
         );
       }
 
       // Invalidate route cache and re-fetch
-      MapService.invalidateRouteCache(ll.LatLng(capLat!, capLng!));
+      MapService.invalidateRouteCache(ll.LatLng(capLat, capLng));
       _fetchRoadRoute(o);
     }
   }

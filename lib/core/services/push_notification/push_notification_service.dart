@@ -13,6 +13,7 @@ import 'package:base_app/core/routes/app_routes.dart';
 import 'package:base_app/core/services/cach_helper/cache_helper.dart';
 import 'package:base_app/core/services/cach_helper/cache_helper_keys.dart';
 import 'package:base_app/core/services/local_notification/local_notification_service.dart';
+import 'package:base_app/core/services/audio/order_sound_service.dart';
 import 'package:base_app/main.dart'; // to get navigatorKey
 import 'package:base_app/features/delivery/captain/presentation/riverpod/captain_orders_provider.dart';
 import 'package:base_app/features/shared/notifications/presentation/riverpod/notifications_provider.dart';
@@ -52,12 +53,25 @@ class PushNotificationService {
     // 5. Foreground messages
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       log("🔔 Foreground notification received: ${message.notification?.title}");
-      LocalNotificationService.showBasicNotification(message);
+
+      final role = CacheHelper.getInt('userRole') ?? 2;
+      final bool isOrderPush = message.data['type'] == 'order' ||
+          message.data['type'] == 'new_order' ||
+          message.data['orderId'] != null ||
+          (message.notification?.title?.contains('طلب') ?? false) ||
+          (message.notification?.title?.contains('اوردر') ?? false) ||
+          (message.notification?.body?.contains('طلب') ?? false) ||
+          (message.notification?.body?.contains('اوردر') ?? false);
+
+      if (role == 3 || isOrderPush) {
+        LocalNotificationService.showDeliveryOrderNotification(message);
+      } else {
+        LocalNotificationService.showBasicNotification(message);
+      }
       
       // Update unread count for notifications badge
       _ref.read(notificationsProvider.notifier).fetchUnreadCount();
       
-      final role = CacheHelper.getInt('userRole') ?? 2;
       if (role == 3) {
         log("🔄 Refreshing captain orders list on foreground notification");
         _ref.read(captainOrdersProvider.notifier).loadAll();
@@ -84,6 +98,7 @@ class PushNotificationService {
     // 6. Background message tap
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       log("🔔 Background notification tapped: ${message.notification?.title}");
+      OrderSoundService.stopRingtone();
       _openNotificationScreen();
       
       // Update unread count for notifications badge
@@ -100,6 +115,7 @@ class PushNotificationService {
     final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
     if (initialMessage != null) {
       log("🔔 Terminated notification launch: ${initialMessage.notification?.title}");
+      OrderSoundService.stopRingtone();
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _openNotificationScreen();
       });
@@ -110,6 +126,7 @@ class PushNotificationService {
   }
 
   void _openNotificationScreen() {
+    OrderSoundService.stopRingtone();
     final navigator = navigatorKey.currentState;
     if (navigator == null) return;
     final currentRoute = ModalRoute.of(navigator.context)?.settings.name;
@@ -121,6 +138,7 @@ class PushNotificationService {
   static Future<void> handleBackgroundMessage(RemoteMessage message) async {
     await Firebase.initializeApp();
     log("🔔 Handle background message: ${message.notification?.title}");
+    await LocalNotificationService.showDeliveryOrderNotification(message);
   }
 
   Future<bool> registerDeviceTokenWithBackend() async {

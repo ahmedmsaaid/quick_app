@@ -27,6 +27,12 @@ class UserSettingDto {
   final double orderMaxFee;
   final double deliveryFee;
   final double? deliveryMinFee;
+  final String? categoryNameEn;
+  final String? categoryNameAr;
+  final int? orderInterval;
+  final double? allowedAreaLatitude;
+  final double? allowedAreaLongitude;
+  final double? allowedAreaRadiusKm;
 
   const UserSettingDto({
     required this.id,
@@ -35,6 +41,12 @@ class UserSettingDto {
     required this.orderMaxFee,
     required this.deliveryFee,
     this.deliveryMinFee,
+    this.categoryNameEn,
+    this.categoryNameAr,
+    this.orderInterval,
+    this.allowedAreaLatitude,
+    this.allowedAreaLongitude,
+    this.allowedAreaRadiusKm,
   });
 
   factory UserSettingDto.fromJson(Map<String, dynamic> json) => UserSettingDto(
@@ -44,7 +56,30 @@ class UserSettingDto {
     orderMaxFee: (json['orderMaxFee'] as num?)?.toDouble() ?? 0.0,
     deliveryFee: (json['deliveryFee'] as num?)?.toDouble() ?? 0.0,
     deliveryMinFee: (json['deliveryMinFee'] as num?)?.toDouble(),
+    categoryNameEn: json['categoryNameEn'] as String?,
+    categoryNameAr: json['categoryNameAr'] as String?,
+    orderInterval: json['orderInterval'] is int
+        ? json['orderInterval'] as int
+        : int.tryParse(json['orderInterval']?.toString() ?? ''),
+    allowedAreaLatitude: (json['allowedAreaLatitude'] as num?)?.toDouble(),
+    allowedAreaLongitude: (json['allowedAreaLongitude'] as num?)?.toDouble(),
+    allowedAreaRadiusKm: (json['allowedAreaRadiusKm'] as num?)?.toDouble(),
   );
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'orderFee': orderFee,
+    'orderMinFee': orderMinFee,
+    'orderMaxFee': orderMaxFee,
+    'deliveryFee': deliveryFee,
+    'deliveryMinFee': deliveryMinFee,
+    'categoryNameEn': categoryNameEn,
+    'categoryNameAr': categoryNameAr,
+    'orderInterval': orderInterval,
+    'allowedAreaLatitude': allowedAreaLatitude,
+    'allowedAreaLongitude': allowedAreaLongitude,
+    'allowedAreaRadiusKm': allowedAreaRadiusKm,
+  };
 }
 
 /// Cached provider — fetched once and shared across screens.
@@ -76,6 +111,12 @@ const defaultAppSettings = UserSettingDto(
   orderMaxFee: 50.0,
   deliveryFee: 15.0,
   deliveryMinFee: 15.0,
+  categoryNameEn: 'Exclusive Offers',
+  categoryNameAr: 'عروض حصرية',
+  orderInterval: 60,
+  allowedAreaLatitude: 30.0444,
+  allowedAreaLongitude: 31.2357,
+  allowedAreaRadiusKm: 10.0,
 );
 
 /// Calculate the service/order fee based on backend logic:
@@ -341,6 +382,24 @@ class ProfileApiService {
   Future<ApiResult<ApiResponse<UserSettingDto>>> getSettings() async {
     try {
       final response = await _dio.get(ApiConstants.settings);
+      final apiResponse = ApiResponse<UserSettingDto>.fromJson(
+        response.data,
+        (json) => UserSettingDto.fromJson(json as Map<String, dynamic>),
+      );
+      return ApiResult.success(apiResponse);
+    } catch (e) {
+      return ApiResult.failure(handleError(e));
+    }
+  }
+
+  /// Update application settings.
+  Future<ApiResult<ApiResponse<UserSettingDto>>> updateSettings(
+      UserSettingDto settings) async {
+    try {
+      final response = await _dio.put(
+        ApiConstants.settings,
+        data: settings.toJson(),
+      );
       final apiResponse = ApiResponse<UserSettingDto>.fromJson(
         response.data,
         (json) => UserSettingDto.fromJson(json as Map<String, dynamic>),

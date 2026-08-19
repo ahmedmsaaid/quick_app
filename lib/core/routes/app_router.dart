@@ -26,6 +26,7 @@ import 'package:base_app/features/customer/orders/presentation/screens/order_tra
 import 'package:base_app/features/customer/orders/presentation/screens/rate_order_screen.dart';
 import 'package:base_app/features/customer/vendor_list/presentation/screens/vendor_list_screen.dart';
 import 'package:base_app/features/customer/home/presentation/screens/search_results_screen.dart';
+import 'package:base_app/features/customer/profile/presentation/screens/profile_screen.dart';
 import 'package:base_app/features/customer/profile/presentation/screens/personal_info_screen.dart';
 import 'package:base_app/features/customer/profile/presentation/screens/address_screen.dart';
 import 'package:base_app/features/customer/profile/presentation/screens/add_address_screen.dart';
@@ -45,6 +46,7 @@ import 'package:base_app/features/delivery/captain/presentation/screens/captain_
 import 'package:base_app/features/delivery/captain/presentation/screens/captain_registration_details_screen.dart';
 
 import 'package:base_app/features/customer/home/presentation/screens/special_offer_details_screen.dart';
+import 'package:base_app/features/customer/home/presentation/screens/all_offers_screen.dart';
 import 'package:base_app/features/customer/favorites/presentation/screens/favorites_screen.dart';
 import 'package:base_app/features/customer/checkout/data/models/order_models.dart';
 import 'package:base_app/features/customer/home/data/models/offer_model.dart';
@@ -191,9 +193,30 @@ abstract class AppRouter {
       case AppRoutes.specialOfferDetails:
         final OfferDto? offer = settings.arguments as OfferDto?;
         return _buildAnimatedRoute(SpecialOfferDetailsScreen(offer: offer), settings);
+      case AppRoutes.allOffersScreen:
+        final String title = (settings.arguments as String?) ?? 'العروض';
+        return _buildAnimatedRoute(AllOffersScreen(title: title), settings);
       case AppRoutes.searchResults:
         final String query = (settings.arguments as String?) ?? '';
         return _buildAnimatedRoute(SearchResultsScreen(query: query), settings);
+      case AppRoutes.categoryProductsScreen:
+        if (settings.arguments is CategoryDto) {
+          final CategoryDto category = settings.arguments as CategoryDto;
+          return _buildAnimatedRoute(CategoryProductsScreen(category: category), settings);
+        } else if (settings.arguments is Map<String, dynamic>) {
+          final Map<String, dynamic> args = settings.arguments as Map<String, dynamic>;
+          final CategoryDto category = CategoryDto(
+            id: args['categoryId'] as int,
+            name: args['categoryTitle'] as String?,
+            type: (args['type'] as int?) ?? 1,
+            creatorId: (args['creatorId'] as int?) ?? 0,
+          );
+          return _buildAnimatedRoute(CategoryProductsScreen(category: category), settings);
+        }
+        return _buildAnimatedRoute(
+          const Scaffold(body: Center(child: Text('Invalid Arguments'))),
+          settings,
+        );
       case AppRoutes.personalInfo:
         return _buildAnimatedRoute(const PersonalInfoScreen(), settings);
       case AppRoutes.address:
@@ -236,6 +259,8 @@ abstract class AppRouter {
           const Scaffold(body: Center(child: Text('Invalid Arguments'))),
           settings,
         );
+      case AppRoutes.profileScreen:
+        return _buildAnimatedRoute(const ProfileScreen(), settings);
       case AppRoutes.products:
         final CategoryDto category = settings.arguments as CategoryDto;
         return _buildAnimatedRoute(CategoryProductsScreen(category: category), settings);

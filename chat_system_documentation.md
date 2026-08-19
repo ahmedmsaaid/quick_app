@@ -232,7 +232,7 @@ class AppChatDefaultDataSourceImpl extends RemoteExecuteImpl {
   Future<ResponseModel> appGetAlChats(...)
 
   // GET /api/v1/chats/message
-  // query params: chatId/userId, pageIndex, pageSize, sortDirection=1, search (optional)
+  // query params: chatId/userId, pageIndex, pageSize, orderDirection=1, search (optional)
   Future<ResponseModel> getChatMessages(...)
 }
 ```
@@ -627,7 +627,7 @@ gRPC (Test): afiti-tech-test.runasp.net:443 (TLS)
 | Method | Endpoint | الوصف | Query Params |
 |--------|----------|-------|--------------|
 | `GET` | `/api/v1/chats` | جلب قائمة الشاتات | `pageIndex`, `pageSize=15`, `closedChatId?` |
-| `GET` | `/api/v1/chats/message` | جلب رسائل شات | `chatId?`, `userId?`, `pageIndex`, `pageSize=20`, `sortDirection=1`, `search?` |
+| `GET` | `/api/v1/chats/message` | جلب رسائل شات | `chatId?`, `userId?`, `pageIndex`, `pageSize=20`, `orderDirection=1`, `search?` |
 
 ### REST Response Structures
 
@@ -908,7 +908,7 @@ Navigator.pushNamed(
 > **تحديد المرسل:** يتم تحديد هل الرسالة "مني" بمقارنة `message.creatorId == currentUserId` (المستخرج من JWT Token).
 
 > [!CAUTION]
-> **sortDirection=1:** عند جلب الرسائل من REST API، يجب إرسال `sortDirection: 1` للحصول على الرسائل مرتبة من الأحدث للأقدم (للـ pagination الصحيح مع `reverse: true`).
+> **orderDirection=1:** عند جلب الرسائل من REST API، يجب إرسال `orderDirection: 1` للحصول على الرسائل مرتبة من الأحدث للأقدم (للـ pagination الصحيح مع `reverse: true`).
 
 ---
 
@@ -920,7 +920,7 @@ Navigator.pushNamed(
 | gRPC Auth Header | `authorization: Bearer <token>` |
 | pageSize للشاتات | `15` |
 | pageSize للرسائل | `20` |
-| sortDirection | `1` (أحدث أولاً) |
+| orderDirection | `1` (أحدث أولاً) |
 | اتجاه ListView | `reverse: true` |
 | الرسائل الجديدة | `all.insert(0, msg)` |
 | الرسائل القديمة | `all.add(msg)` |

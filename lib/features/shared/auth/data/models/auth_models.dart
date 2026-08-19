@@ -1,5 +1,7 @@
 // lib/features/auth/data/models/auth_models.dart
 
+import 'dart:convert';
+
 class LocationModel {
   final double longitude;
   final double latitude;
@@ -127,11 +129,31 @@ class UserDto {
       location: userMap['location'] == null
           ? null
           : LocationModel.fromJson(userMap['location'] as Map<String, dynamic>),
-      description: userMap['description']?.toString(),
+      description: parseCleanDescription(userMap['description']?.toString()),
       active: parsedActive,
       createdOn: userMap['createdOn']?.toString(),
       rating: parsedRating,
     );
+  }
+
+  static String? parseCleanDescription(String? rawDesc) {
+    if (rawDesc == null || rawDesc.isEmpty) return rawDesc;
+    if (rawDesc.contains('__SETTINGS__')) {
+      final startIdx = rawDesc.indexOf('{');
+      final endIdx = rawDesc.lastIndexOf('}');
+      if (startIdx != -1 && endIdx != -1 && startIdx < endIdx) {
+        try {
+          final jsonStr = rawDesc.substring(startIdx, endIdx + 1);
+          final Map<String, dynamic> parsed = jsonDecode(jsonStr);
+          final String? innerDesc = parsed['description']?.toString();
+          if (innerDesc != null && innerDesc.contains('__SETTINGS__')) {
+            return parseCleanDescription(innerDesc);
+          }
+          return innerDesc ?? '';
+        } catch (_) {}
+      }
+    }
+    return rawDesc;
   }
 
   Map<String, dynamic> toJson() => {
@@ -202,12 +224,16 @@ class ApiResponse<T> {
   factory ApiResponse.fromJson(
     Map<String, dynamic> json,
     T Function(dynamic) fromJsonT,
-  ) => ApiResponse(
-    success: json['success'] as bool? ?? false,
-    statusCode: json['statusCode'] as int? ?? 0,
-    message: json['message'] as String?,
-    result: json['result'] == null ? null : fromJsonT(json['result']),
-  );
+  ) {
+    final hasResultKey = json.containsKey('result') && json['result'] != null;
+    final targetJson = hasResultKey ? json['result'] : json;
+    return ApiResponse(
+      success: json['success'] as bool? ?? true,
+      statusCode: json['statusCode'] as int? ?? 200,
+      message: json['message'] as String?,
+      result: targetJson == null ? null : fromJsonT(targetJson),
+    );
+  }
 }
 
 class SendOTPResult {

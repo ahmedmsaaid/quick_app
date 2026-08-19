@@ -4,6 +4,7 @@ class BaseRequestModel {
   final int pageNumber;
   final int pageSize;
   final String? search;
+  final List<String>? searchFilter;
   final bool? orderBeforPagination;
   final int? orderDirection;
   final List<String>? includesPath;
@@ -13,6 +14,7 @@ class BaseRequestModel {
     this.pageNumber = 1,
     this.pageSize = 10,
     this.search,
+    this.searchFilter,
     this.orderBeforPagination,
     this.orderDirection,
     this.includesPath,
@@ -32,6 +34,7 @@ class BaseRequestModel {
       'pageNumber': pageNumber,
       'pageSize': pageSize,
       if (search != null && search!.isNotEmpty) 'search': search,
+      if (searchFilter != null && searchFilter!.isNotEmpty) 'searchFilter': searchFilter,
       if (orderBeforPagination != null) 'orderBeforPagination': orderBeforPagination,
       if (orderDirection != null) 'orderDirection': orderDirection,
       if (includesPath != null && includesPath!.isNotEmpty) 'includesPath': includesPath,

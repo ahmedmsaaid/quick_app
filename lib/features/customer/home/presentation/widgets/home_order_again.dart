@@ -60,13 +60,15 @@ class _HomeOrderAgainState extends ConsumerState<HomeOrderAgain> {
   /// نفس منطق orders_screen — اسم المنتج الأول + صورته
   String _getOrderTitle(OrderDto order) {
     if (order.offerId != null) return 'طلب عرض خاص #${order.offerId}';
-    if (order.products.isEmpty) return 'طلب جديد';
-    final firstProd = order.products.first;
-    String title = firstProd.productName ?? 'طلب جديد';
-    if (order.products.length > 1) {
-      title += ' و ${order.products.length - 1} منتجات أخرى';
+    if (order.products.isNotEmpty) {
+      final firstProd = order.products.first;
+      String title = firstProd.productName ?? 'طلب #${order.id}';
+      if (order.products.length > 1) {
+        title += ' و ${order.products.length - 1} منتجات أخرى';
+      }
+      return title;
     }
-    return title;
+    return 'طلب #${order.id}';
   }
 
   /// نفس منطق orders_screen — صورة المنتج الأول
@@ -75,6 +77,14 @@ class _HomeOrderAgainState extends ConsumerState<HomeOrderAgain> {
     final String? photo = order.products.first.photo;
     if (photo == null || photo.isEmpty) return '';
     return photo.startsWith('http') ? photo : '${ApiConstants.streamUrl}$photo';
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      ref.read(ordersProvider.notifier).loadOrders();
+    });
   }
 
   @override
@@ -94,10 +104,9 @@ class _HomeOrderAgainState extends ConsumerState<HomeOrderAgain> {
       }
     });
 
-    // فقط الطلبات المسلّمة Delivered = 7 اللي تستحق "اطلب مرة أخرى"
-    // Cancelled = 8 و Rejected = 9 لا يظهران هنا
+    // الطلبات السابقة ذات المنتجات التي يمكن إعادة طلبها (باستثناء الملغية أو المرفوضة)
     final pastOrders = ordersState.orders
-        .where((o) => o.status == 7 && o.products.isNotEmpty)
+        .where((o) => o.status != 8 && o.status != 9)
         .toList();
 
     // Loading state

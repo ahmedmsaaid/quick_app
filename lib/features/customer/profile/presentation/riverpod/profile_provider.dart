@@ -42,9 +42,18 @@ class ProfileNotifier extends _$ProfileNotifier {
   @override
   ProfileState build() => const ProfileState();
 
+  /// Clears profile state from memory (used on login, signup, and logout).
+  void clearProfile() {
+    state = const ProfileState();
+  }
+
   /// Loads user profile and user locations from the backend.
-  Future<void> loadProfile() async {
-    state = state.copyWith(status: ProfileStatus.loading);
+  Future<void> loadProfile({bool clearOld = false}) async {
+    if (clearOld || state.user == null) {
+      state = const ProfileState(status: ProfileStatus.loading);
+    } else {
+      state = state.copyWith(status: ProfileStatus.loading);
+    }
     
     final profileResult = await ref.read(profileApiServiceProvider).getProfile();
     

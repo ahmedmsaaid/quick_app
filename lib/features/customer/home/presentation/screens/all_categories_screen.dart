@@ -58,45 +58,64 @@ class AllCategoriesScreen extends ConsumerWidget {
                 AppStrings.errorOccurred,
                 style: AppTextStyles.text16w600(color: colors.textSecondary),
               ),
+              15.verticalSpace,
+              ElevatedButton(
+                onPressed: () => ref.refresh(subCategoriesProvider),
+                child: Text(AppStrings.tryAgain),
+              ),
             ],
           ),
         ),
-        data: (categories) => categories.isEmpty
-            ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.category_outlined, size: 64.sp, color: colors.textHint),
-                    16.verticalSpace,
-                    Text(
-                      AppStrings.noItemsFound,
-                      style: AppTextStyles.text16w600(color: colors.textSecondary),
-                    ),
-                  ],
-                ),
-              )
-            : GridView.builder(
-                padding: EdgeInsets.all(20.w),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 1.05,
-                  crossAxisSpacing: 16.w,
-                  mainAxisSpacing: 16.h,
-                ),
-                itemCount: categories.length,
-                itemBuilder: (context, index) {
-                  final cat = categories[index];
-                  return _CategoryCard(
-                    category: cat,
-                    onTap: () {
-                      context.pushNamed(
-                        AppRoutes.products,
-                        arguments: cat,
-                      );
-                    },
-                  );
-                },
+        data: (categories) {
+          if (categories.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.category_outlined, size: 64.sp, color: colors.textHint),
+                  16.verticalSpace,
+                  Text(
+                    AppStrings.noItemsFound,
+                    style: AppTextStyles.text16w600(color: colors.textSecondary),
+                  ),
+                ],
               ),
+            );
+          }
+
+          final int columnCount = categories.length < 15 ? 3 : 4;
+          final double childAspectRatio = categories.length < 10 ? 0.78 : 0.72;
+          final double crossAxisSpacing = categories.length < 10 ? 12.w : 8.w;
+          final double mainAxisSpacing = categories.length < 10 ? 14.h : 10.h;
+
+          return RefreshIndicator(
+            onRefresh: () async => ref.refresh(subCategoriesProvider),
+            child: GridView.builder(
+              physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+              padding: EdgeInsets.all(16.w),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: columnCount,
+                childAspectRatio: childAspectRatio,
+                crossAxisSpacing: crossAxisSpacing,
+                mainAxisSpacing: mainAxisSpacing,
+              ),
+              itemCount: categories.length,
+              itemBuilder: (context, index) {
+                final cat = categories[index];
+                return _CategoryCard(
+                  category: cat,
+                  columnCount: columnCount,
+                  onTap: () {
+                    context.pushNamed(
+                      AppRoutes.products,
+                      arguments: cat,
+                    );
+                  },
+                );
+              },
+            ),
+          );
+        },
       ),
     );
   }
@@ -104,9 +123,14 @@ class AllCategoriesScreen extends ConsumerWidget {
 
 class _CategoryCard extends StatelessWidget {
   final CategoryDto category;
+  final int columnCount;
   final VoidCallback onTap;
 
-  const _CategoryCard({required this.category, required this.onTap});
+  const _CategoryCard({
+    required this.category,
+    required this.columnCount,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -117,27 +141,30 @@ class _CategoryCard extends StatelessWidget {
             : '${ApiConstants.streamUrl}${category.photo!}')
         : '';
 
+    final double circleSize = columnCount == 4 ? 54.w : 64.w;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
           color: colors.surface,
-          borderRadius: BorderRadius.circular(20.r),
+          borderRadius: BorderRadius.circular(columnCount == 4 ? 14.r : 18.r),
           boxShadow: [
             BoxShadow(
-              color: colors.shadow.withValues(alpha: 0.07),
-              blurRadius: 12,
+              color: colors.shadow.withValues(alpha: 0.06),
+              blurRadius: 10,
               offset: const Offset(0, 4),
             ),
           ],
         ),
+        padding: EdgeInsets.all(columnCount == 4 ? 6.r : 8.r),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             // Image / Emoji circle
             Container(
-              width: 72.w,
-              height: 72.w,
+              width: circleSize,
+              height: circleSize,
               decoration: BoxDecoration(
                 color: colors.primary.withValues(alpha: 0.08),
                 shape: BoxShape.circle,
@@ -148,37 +175,61 @@ class _CategoryCard extends StatelessWidget {
                       imageUrl: photoUrl,
                       fit: BoxFit.cover,
                       placeholder: (context, url) => Center(
-                        child: Text('🍽️', style: TextStyle(fontSize: 28.sp)),
+                        child: Text('📁', style: TextStyle(fontSize: columnCount == 4 ? 20.sp : 24.sp)),
                       ),
                       errorWidget: (context, url, error) => Center(
-                        child: Text('🍽️', style: TextStyle(fontSize: 28.sp)),
+                        child: Text('📁', style: TextStyle(fontSize: columnCount == 4 ? 20.sp : 24.sp)),
                       ),
                     )
                   : Center(
-                      child: Text('📁', style: TextStyle(fontSize: 28.sp)),
+                      child: Text('📁', style: TextStyle(fontSize: columnCount == 4 ? 20.sp : 24.sp)),
                     ),
             ),
-            12.verticalSpace,
+            8.verticalSpace,
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: 8.w),
+              padding: EdgeInsets.symmetric(horizontal: 4.w),
               child: Text(
                 category.name ?? '',
-                style: AppTextStyles.text14w600(color: colors.textPrimary),
+                style: TextStyle(
+                  fontSize: columnCount == 4 ? 10.5.sp : 12.sp,
+                  fontWeight: FontWeight.bold,
+                  color: colors.textPrimary,
+                  fontFamily: 'Cairo',
+                ),
                 textAlign: TextAlign.center,
-                maxLines: 2,
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            6.verticalSpace,
+            4.verticalSpace,
             Container(
-              padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 3.h),
-              decoration: BoxDecoration(
-                color: colors.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(20.r),
+              padding: EdgeInsets.symmetric(
+                horizontal: columnCount == 4 ? 6.w : 8.w,
+                vertical: columnCount == 4 ? 2.h : 3.h,
               ),
-              child: Text(
-                AppStrings.seeAll,
-                style: AppTextStyles.text10w500(color: colors.primary),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEE9C20).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12.r),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    "عرض المنتجات",
+                    style: TextStyle(
+                      fontSize: columnCount == 4 ? 8.sp : 9.5.sp,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFFEE9C20),
+                      fontFamily: 'Cairo',
+                    ),
+                  ),
+                  2.horizontalSpace,
+                  Icon(
+                    Icons.arrow_forward_rounded,
+                    size: columnCount == 4 ? 8.sp : 10.sp,
+                    color: const Color(0xFFEE9C20),
+                  ),
+                ],
               ),
             ),
           ],

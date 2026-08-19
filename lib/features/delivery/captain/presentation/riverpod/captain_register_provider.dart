@@ -5,7 +5,9 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:base_app/core/network/api_constants.dart';
 import 'package:base_app/core/network/api_result.dart';
 import 'package:base_app/core/services/cach_helper/cache_helper.dart';
-import 'package:base_app/features/shared/auth/data/auth_api_service.dart';
+import 'package:base_app/features/customer/profile/presentation/riverpod/profile_provider.dart';
+
+import '../../../../shared/auth/data/auth_api_service.dart' show authApiServiceProvider;
 
 part 'captain_register_provider.g.dart';
 
@@ -209,6 +211,7 @@ class CaptainRegisterNotifier extends _$CaptainRegisterNotifier {
             await CacheHelper.setString('tempToken', tokenDto.accessToken!);
           }
           await CacheHelper.setInt('userRole', 3);
+          ref.invalidate(profileProvider);
           state = state.copyWith(status: CaptainRegisterStatus.success);
           return true;
         } else {

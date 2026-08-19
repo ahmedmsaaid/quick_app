@@ -1,5 +1,4 @@
 import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:base_app/core/exports/exports.dart';
 import 'cache_helper_keys.dart';
 
@@ -9,7 +8,8 @@ class CacheHelper {
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
   }
- Future<void> clear() async {
+
+  Future<void> clear() async {
     _prefs.clear();
   }
 
@@ -33,6 +33,10 @@ class CacheHelper {
     return await _prefs.setDouble(key, value);
   }
 
+  static Future<bool> setStringList(String key, List<String> value) async {
+    return await _prefs.setStringList(key, value);
+  }
+
   static String? getString(String key) {
     return _prefs.getString(key);
   }
@@ -47,6 +51,10 @@ class CacheHelper {
 
   static double? getDouble(String key) {
     return _prefs.getDouble(key);
+  }
+
+  static List<String>? getStringList(String key) {
+    return _prefs.getStringList(key);
   }
 
   static Future<bool> remove(String key) async {

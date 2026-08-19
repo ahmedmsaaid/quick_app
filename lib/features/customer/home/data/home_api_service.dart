@@ -94,9 +94,10 @@ class HomeApiService {
     }
   }
 
-  /// Search/paginate products from backend.
+  /// Search/paginate products from backend with searchFilter strings.
   Future<ApiResult<ApiResponse<List<ProductDetailDto>>>> searchProducts({
     required String query,
+    List<String>? searchFilter,
     int pageNumber = 1,
     int pageSize = 20,
   }) async {
@@ -107,7 +108,14 @@ class HomeApiService {
           'pageNumber': pageNumber,
           'pageSize': pageSize,
           'enablePagination': true,
+          'sortDirection': 1,
           'search': query,
+          'searchFilter': searchFilter ?? const [
+            "name",
+            "description",
+            "Name",
+            "Description"
+          ],
         },
       );
       final apiResponse = ApiResponse<List<ProductDetailDto>>.fromJson(
@@ -141,6 +149,7 @@ class HomeApiService {
           'pageNumber': pageNumber,
           'pageSize': pageSize,
           'enablePagination': true,
+          'sortDirection': 1,
         },
       );
       final apiResponse = ApiResponse<List<ProductDetailDto>>.fromJson(
@@ -162,27 +171,43 @@ class HomeApiService {
     }
   }
 
-  /// Fetch users (vendors) list by role and filters.
+  /// Fetch users (vendors) list by role, search query, and searchFilter.
   Future<ApiResult<ApiResponse<List<UserDto>>>> getUsersPaginate({
     required int role,
+    String? search,
+    List<String>? searchFilter,
     bool? orderByRate,
     int? categoryId,
     int pageNumber = 1,
     int pageSize = 10,
   }) async {
     try {
-      final queryParams = {
+      final Map<String, dynamic> queryParams = {
         'role': role,
         'userStatus': 1,
         'pageNumber': pageNumber,
         'pageSize': pageSize,
         'enablePagination': true,
+        'sortDirection': 1,
       };
+
+      if (categoryId != null && categoryId > 0) {
+        queryParams['categoryId'] = categoryId;
+      }
+
       if (orderByRate != null) {
         queryParams['orderByRate'] = orderByRate;
       }
-      if (categoryId != null) {
-        queryParams['categoryId'] = categoryId;
+
+      // Only attach search & searchFilter parameters when text search is actually performed
+      if (search != null && search.trim().isNotEmpty) {
+        queryParams['search'] = search.trim();
+        queryParams['searchFilter'] = searchFilter ?? const [
+          "name",
+          "phone",
+          "email",
+          "description"
+        ];
       }
 
       final response = await _dio.get(
@@ -268,15 +293,18 @@ class HomeApiService {
     }
   }
 
-  /// Fetch products by vendor (creatorId) and optional categoryId.
+  /// Fetch products by optional vendor (creatorId) and optional categoryId.
   Future<ApiResult<ApiResponse<List<ProductDetailDto>>>> getVendorProducts({
-    required int creatorId,
+    int? creatorId,
     int? categoryId,
     int pageNumber = 1,
-    int pageSize = 20,
+    int pageSize = 50,
   }) async {
     try {
-      final Map<String, dynamic> filters = {'creatorId': creatorId};
+      final Map<String, dynamic> filters = {};
+      if (creatorId != null) {
+        filters['creatorId'] = creatorId;
+      }
       if (categoryId != null) {
         filters['categoryId'] = categoryId;
       }
@@ -287,7 +315,9 @@ class HomeApiService {
           'pageNumber': pageNumber,
           'pageSize': pageSize,
           'enablePagination': true,
-          'filters': filters,
+          'sortDirection': 1,
+          if (categoryId != null) 'categoryId': categoryId,
+          if (filters.isNotEmpty) 'filters': filters,
         },
       );
       final apiResponse = ApiResponse<List<ProductDetailDto>>.fromJson(

@@ -36,6 +36,7 @@ class AppRoutes {
   static const String addAndUpdateProductScreen = '/addAndUpdateProductScreen';
   static const String profileScreen = '/profileScreen';
   static const String specialOfferDetails = '/specialOfferDetails';
+  static const String allOffersScreen = '/allOffersScreen';
   static const String personalInfo = '/personalInfo';
   static const String wallet = '/wallet';
   static const String address = '/address';
@@ -52,4 +53,5 @@ class AppRoutes {
   static const String captainRegisterScreen = '/captainRegisterScreen';
   static const String termsAndConditions = '/termsAndConditions';
   static const String aboutUs = '/aboutUs';
+  static const String categoryProductsScreen = '/categoryProductsScreen';
 }

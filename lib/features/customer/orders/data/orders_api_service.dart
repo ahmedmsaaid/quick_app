@@ -19,7 +19,7 @@ class OrdersApiService {
 
   OrdersApiService(this._dio);
 
-  /// Fetch orders list with creatorId filter.
+  /// Fetch orders list with creatorId filter (Lightweight list without User, Creator, OrderProducts.Product).
   Future<ApiResult<ApiResponse<List<OrderDto>>>> getOrders({
     required int userId,
     int pageNumber = 1,
@@ -32,7 +32,8 @@ class OrdersApiService {
           'pageNumber': pageNumber,
           'pageSize': pageSize,
           'enablePagination': true,
-          "includesPath": ["User", "Creator", "OrderProducts.Product"],
+          'orderDirection': 1,
+          "includesPath": ["OrderProducts.Product"],
           "filters": {"CreatorId": userId},
         },
       );
@@ -68,6 +69,7 @@ class OrdersApiService {
           'pageNumber': pageNumber,
           'pageSize': pageSize,
           'enablePagination': true,
+          'orderDirection': 1,
           if (includesPath != null && includesPath.isNotEmpty) "includesPath": includesPath,
           if (filters != null && filters.isNotEmpty) "filters": filters,
         },
@@ -114,16 +116,17 @@ class OrdersApiService {
     }
   }
 
-  /// Retrieve a single order by ID with specific include paths.
+  /// Retrieve a single order by ID with specific include paths (User, Creator, OrderProducts.Product).
   Future<ApiResult<ApiResponse<OrderDto>>> getOrderById({
     required int orderId,
-    required List<String> includesPath,
+    List<String>? includesPath,
   }) async {
     try {
       final response = await _dio.patch(
         'orders/$orderId',
         data: {
-          "includesPath": includesPath,
+          'orderDirection': 1,
+          "includesPath": includesPath ?? const ["User", "Creator", "OrderProducts.Product", "Delivery", "UserLocation"],
         },
       );
       final apiResponse = ApiResponse<OrderDto>.fromJson(response.data, (json) {

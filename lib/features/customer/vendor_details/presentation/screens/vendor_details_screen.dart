@@ -238,7 +238,7 @@ class _VendorDetailsScreenState extends ConsumerState<VendorDetailsScreen> {
             ),
           ),
 
-          _buildVendorOffersSection(colors),
+
 
           SliverToBoxAdapter(
             child: Padding(
@@ -281,23 +281,117 @@ class _VendorDetailsScreenState extends ConsumerState<VendorDetailsScreen> {
 
           // ─── Categories filter ───
           if (state.categories.isNotEmpty || state.categoriesStatus == VendorDetailsStatus.loading)
-            if (isMarket)
-              SliverPersistentHeader(
-                pinned: true,
-                delegate: _QuickMarketCategoriesHeaderDelegate(
-                  child: _QuickMarketCategoriesFilter(state: state, notifier: notifier, colors: colors),
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _CategoriesHeaderDelegate(
+                child: _CategoriesFilter(
+                  state: state,
+                  notifier: notifier,
+                  colors: colors,
+                  onTapOffers: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ExclusiveOffersScreen(
+                        offers: _vendorOffers,
+                        vendorName: vendor.name ?? '',
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+          if (state.selectedCategory != null)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                child: Row(
+                  children: [
+                    InkWell(
+                      onTap: () => notifier.selectCategory(null),
+                      borderRadius: BorderRadius.circular(20.r),
+                      child: Container(
+                        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                        decoration: BoxDecoration(
+                          color: colors.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20.r),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.grid_view_rounded, size: 15.sp, color: colors.primary),
+                            5.horizontalSpace,
+                            Text(
+                              'جميع الفئات',
+                              style: AppTextStyles.text12w700(color: colors.primary),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    10.horizontalSpace,
+                    Expanded(
+                      child: Text(
+                        'فئة: ${state.selectedCategory!.name ?? ""}',
+                        style: AppTextStyles.text14w700(color: colors.textPrimary),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+          // ─── Content body (Categories or Products or Offers) ───
+          if (state.selectedCategory == null) ...[
+            _MarketCategoriesGridBody(
+              state: state,
+              notifier: notifier,
+              colors: colors,
+              onTapOffers: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => ExclusiveOffersScreen(
+                    offers: _vendorOffers,
+                    vendorName: vendor.name ?? '',
+                  ),
+                ),
+              ),
+            ),
+          ] else if (state.selectedCategory?.id == -999) ...[
+            if (_isLoadingOffers)
+              SliverPadding(
+                padding: EdgeInsets.symmetric(horizontal: 16.w),
+                sliver: isMarket ? _marketShimmerGrid() : _restaurantShimmerList(colors),
+              )
+            else if (_vendorOffers.isEmpty)
+              SliverFillRemaining(
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.local_offer_outlined, size: 56.sp, color: colors.textHint),
+                      12.verticalSpace,
+                      Text(
+                        Localizations.localeOf(context).languageCode == 'ar'
+                            ? 'لا توجد عروض حصرية حالياً'
+                            : 'No exclusive offers currently',
+                        style: AppTextStyles.text14w600(color: colors.textSecondary),
+                      ),
+                    ],
+                  ),
                 ),
               )
             else
-              SliverPersistentHeader(
-                pinned: true,
-                delegate: _CategoriesHeaderDelegate(
-                  child: _CategoriesFilter(state: state, notifier: notifier, colors: colors),
+              SliverPadding(
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (ctx, i) => _OfferCard(offer: _vendorOffers[i], colors: colors),
+                    childCount: _vendorOffers.length,
+                  ),
                 ),
               ),
-
-          // ─── Content body (Categories or Products) ───
-          if (isMarket) ...[
+          ] else if (isMarket) ...[
             if (state.productsStatus == VendorDetailsStatus.loading)
               SliverPadding(
                 padding: EdgeInsets.symmetric(horizontal: 16.w),
@@ -350,13 +444,16 @@ class _VendorDetailsScreenState extends ConsumerState<VendorDetailsScreen> {
             else
               SliverPadding(
                 padding: EdgeInsets.symmetric(horizontal: 16.w),
-                sliver: SliverList(
+                sliver: SliverGrid(
                   delegate: SliverChildBuilderDelegate(
-                    (ctx, i) => Padding(
-                      padding: EdgeInsets.only(bottom: 12.h),
-                      child: _RestaurantProductCard(product: state.products[i], colors: colors, ref: ref, vendorId: vendor.id),
-                    ),
+                    (ctx, i) => _RestaurantProductCard(product: state.products[i], colors: colors, ref: ref, vendorId: vendor.id),
                     childCount: state.products.length,
+                  ),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.9,
+                    crossAxisSpacing: 12.w,
+                    mainAxisSpacing: 12.h,
                   ),
                 ),
               )
@@ -617,11 +714,17 @@ class _CategoriesHeaderDelegate extends SliverPersistentHeaderDelegate {
 
 // ── Categories filter ─────────────────────────────────────────
 class _CategoriesFilter extends StatelessWidget {
-  const _CategoriesFilter({required this.state, required this.notifier, required this.colors});
+  const _CategoriesFilter({
+    required this.state,
+    required this.notifier,
+    required this.colors,
+    required this.onTapOffers,
+  });
 
   final VendorDetailsState state;
   final VendorDetailsNotifier notifier;
   final AppColors colors;
+  final VoidCallback onTapOffers;
 
   String _imageUrl(String? path) {
     if (path == null || path.isEmpty) return '';
@@ -666,10 +769,20 @@ class _CategoriesFilter extends StatelessWidget {
         itemBuilder: (_, i) {
           final CategoryDto cat = state.categories[i];
           final bool selected = state.selectedCategory?.id == cat.id;
+          final bool isOffersCategory = cat.id == -999;
           final String imageUrl = _imageUrl(cat.photo);
 
           return GestureDetector(
-            onTap: () => notifier.selectCategory(cat),
+            onTap: () {
+              if (isOffersCategory) {
+                onTapOffers();
+              } else {
+                context.pushNamed(
+                  AppRoutes.products,
+                  arguments: cat,
+                );
+              }
+            },
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 220),
               padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
@@ -692,26 +805,32 @@ class _CategoriesFilter extends StatelessWidget {
                     height: 22.r,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: selected ? Colors.white24 : colors.containerBackground,
+                      color: selected ? Colors.white24 : (isOffersCategory ? Colors.orange.withValues(alpha: 0.15) : colors.containerBackground),
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(11.r),
-                      child: imageUrl.isNotEmpty
-                          ? CachedNetworkImage(
-                              imageUrl: imageUrl,
-                              fit: BoxFit.cover,
-                              placeholder: (_, __) => Container(color: colors.shimmerBase),
-                              errorWidget: (_, __, ___) => Icon(
-                                Icons.fastfood_rounded,
-                                size: 12.sp,
-                                color: selected ? Colors.white : colors.textSecondary,
-                              ),
+                      child: isOffersCategory
+                          ? Icon(
+                              Icons.local_fire_department_rounded,
+                              size: 13.sp,
+                              color: selected ? Colors.white : Colors.deepOrange,
                             )
-                          : Icon(
-                              Icons.fastfood_rounded,
-                              size: 12.sp,
-                              color: selected ? Colors.white : colors.textSecondary,
-                            ),
+                          : imageUrl.isNotEmpty
+                              ? CachedNetworkImage(
+                                  imageUrl: imageUrl,
+                                  fit: BoxFit.cover,
+                                  placeholder: (_, __) => Container(color: colors.shimmerBase),
+                                  errorWidget: (_, __, ___) => Icon(
+                                    Icons.fastfood_rounded,
+                                    size: 12.sp,
+                                    color: selected ? Colors.white : colors.textSecondary,
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.fastfood_rounded,
+                                  size: 12.sp,
+                                  color: selected ? Colors.white : colors.textSecondary,
+                                ),
                     ),
                   ),
                   8.horizontalSpace,
@@ -1881,6 +2000,7 @@ class _QuickMarketCategoriesFilter extends StatelessWidget {
         itemBuilder: (_, i) {
           final CategoryDto cat = state.categories[i];
           final bool selected = state.selectedCategory?.id == cat.id;
+          final bool isOffersCategory = cat.id == -999;
           final String imageUrl = _imageUrl(cat.photo);
 
           return GestureDetector(
@@ -1907,26 +2027,32 @@ class _QuickMarketCategoriesFilter extends StatelessWidget {
                     height: 22.r,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: selected ? Colors.white24 : colors.containerBackground,
+                      color: selected ? Colors.white24 : (isOffersCategory ? Colors.orange.withValues(alpha: 0.15) : colors.containerBackground),
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(11.r),
-                      child: imageUrl.isNotEmpty
-                          ? CachedNetworkImage(
-                              imageUrl: imageUrl,
-                              fit: BoxFit.cover,
-                              placeholder: (_, __) => Container(color: colors.shimmerBase),
-                              errorWidget: (_, __, ___) => Icon(
-                                Icons.category_rounded,
-                                size: 12.sp,
-                                color: selected ? Colors.white : colors.textSecondary,
-                              ),
+                      child: isOffersCategory
+                          ? Icon(
+                              Icons.local_fire_department_rounded,
+                              size: 13.sp,
+                              color: selected ? Colors.white : Colors.deepOrange,
                             )
-                          : Icon(
-                              Icons.category_rounded,
-                              size: 12.sp,
-                              color: selected ? Colors.white : colors.textSecondary,
-                            ),
+                          : imageUrl.isNotEmpty
+                              ? CachedNetworkImage(
+                                  imageUrl: imageUrl,
+                                  fit: BoxFit.cover,
+                                  placeholder: (_, __) => Container(color: colors.shimmerBase),
+                                  errorWidget: (_, __, ___) => Icon(
+                                    Icons.category_rounded,
+                                    size: 12.sp,
+                                    color: selected ? Colors.white : colors.textSecondary,
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.category_rounded,
+                                  size: 12.sp,
+                                  color: selected ? Colors.white : colors.textSecondary,
+                                ),
                     ),
                   ),
                   8.horizontalSpace,
@@ -1944,6 +2070,584 @@ class _QuickMarketCategoriesFilter extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+// ── Exclusive Offer card widget (Product Card design) ───────────
+class _OfferCard extends StatelessWidget {
+  const _OfferCard({required this.offer, required this.colors});
+
+  final OfferDto offer;
+  final AppColors colors;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isArabic = Localizations.localeOf(context).languageCode == 'ar';
+    final String? featuredPhoto = offer.featuredPhoto;
+    final String imageUrl = (featuredPhoto != null && featuredPhoto.isNotEmpty)
+        ? (featuredPhoto.startsWith('http') ? featuredPhoto : '${ApiConstants.streamUrl}$featuredPhoto')
+        : '';
+    final bool hasProducts = offer.products != null && offer.products!.isNotEmpty;
+
+    return Material(
+      color: colors.surface,
+      borderRadius: BorderRadius.circular(16.r),
+      elevation: 0,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16.r),
+        onTap: hasProducts
+            ? () => Navigator.of(context).pushNamed(AppRoutes.specialOfferDetails, arguments: offer)
+            : null,
+        child: Container(
+          margin: EdgeInsets.only(bottom: 12.h),
+          height: 125.h,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16.r),
+            border: Border.all(color: colors.border),
+          ),
+          child: Row(
+            children: [
+              // Image with Offer Badge Tag
+              ClipRRect(
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(16.r),
+                  bottomLeft: Radius.circular(16.r),
+                ),
+                child: Stack(
+                  children: [
+                    imageUrl.isNotEmpty
+                        ? CachedNetworkImage(
+                            imageUrl: imageUrl,
+                            width: 115.w,
+                            height: double.infinity,
+                            fit: BoxFit.cover,
+                            placeholder: (_, __) => Container(color: colors.shimmerBase),
+                            errorWidget: (_, __, ___) => Image.asset(
+                              'assets/image/logo.png',
+                              width: 115.w,
+                              height: double.infinity,
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                        : Image.asset(
+                            'assets/image/logo.png',
+                            width: 115.w,
+                            height: double.infinity,
+                            fit: BoxFit.cover,
+                          ),
+                    // Offer Badge Tag
+                    Positioned(
+                      top: 8.h,
+                      right: 8.w,
+                      child: Container(
+                        padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 3.h),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEE9C20),
+                          borderRadius: BorderRadius.circular(8.r),
+                        ),
+                        child: Text(
+                          offer.offerType == 1
+                              ? (isArabic ? 'عرض حصري 🔥' : 'Exclusive 🔥')
+                              : (isArabic ? 'عرض خاص 🎁' : 'Special 🎁'),
+                          style: TextStyle(
+                            fontSize: 9.sp,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            fontFamily: 'Cairo',
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Info & Action (Product style)
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.all(12.r),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            offer.name ?? '',
+                            style: TextStyle(
+                              fontSize: 13.sp,
+                              fontWeight: FontWeight.bold,
+                              color: colors.textPrimary,
+                              fontFamily: 'Cairo',
+                              height: 1.2,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          4.verticalSpace,
+                          Text(
+                            offer.description ?? '',
+                            style: TextStyle(
+                              fontSize: 11.sp,
+                              fontWeight: FontWeight.w400,
+                              color: colors.textSecondary,
+                              fontFamily: 'Cairo',
+                              height: 1.2,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '${offer.price.toStringAsFixed(0)} ${AppStrings.currency}',
+                            style: TextStyle(
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.w900,
+                              color: colors.primary,
+                              fontFamily: 'Cairo',
+                            ),
+                          ),
+                          // View Details / Shop Offer Pill Button
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+                            decoration: BoxDecoration(
+                              gradient: AppColors.gradient,
+                              borderRadius: BorderRadius.circular(12.r),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: colors.primary.withValues(alpha: 0.25),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  isArabic ? 'التفاصيل' : 'Details',
+                                  style: TextStyle(
+                                    fontSize: 10.sp,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    fontFamily: 'Cairo',
+                                  ),
+                                ),
+                                3.horizontalSpace,
+                                Icon(
+                                  isArabic ? Icons.arrow_back_ios_new_rounded : Icons.arrow_forward_ios_rounded,
+                                  color: Colors.white,
+                                  size: 10.sp,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Market Categories Grid Body (الكاتيجوريز بس) ──────────────────
+class _MarketCategoriesGridBody extends StatelessWidget {
+  const _MarketCategoriesGridBody({
+    required this.state,
+    required this.notifier,
+    required this.colors,
+    required this.onTapOffers,
+  });
+
+  final VendorDetailsState state;
+  final VendorDetailsNotifier notifier;
+  final AppColors colors;
+  final VoidCallback onTapOffers;
+
+  String _imageUrl(String? path) {
+    if (path == null || path.isEmpty) return '';
+    if (path.startsWith('http')) return path;
+    return '${ApiConstants.streamUrl}$path';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (state.categoriesStatus == VendorDetailsStatus.loading) {
+      return SliverPadding(
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+        sliver: SliverGrid(
+          delegate: SliverChildBuilderDelegate(
+            (context, _) => Shimmer.fromColors(
+              baseColor: colors.shimmerBase,
+              highlightColor: colors.shimmerHighlight,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20.r),
+                ),
+              ),
+            ),
+            childCount: 6,
+          ),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            childAspectRatio: 1.05,
+            crossAxisSpacing: 14.w,
+            mainAxisSpacing: 14.h,
+          ),
+        ),
+      );
+    }
+
+    if (state.categories.isEmpty) {
+      return SliverFillRemaining(
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.category_outlined, size: 56.sp, color: colors.textHint),
+              12.verticalSpace,
+              Text(
+                'لا توجد فئات متاحة حالياً',
+                style: AppTextStyles.text14w600(color: colors.textSecondary),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return SliverPadding(
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+      sliver: SliverGrid(
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            final cat = state.categories[index];
+            final bool isOffers = cat.id == -999;
+            final String imageUrl = _imageUrl(cat.photo);
+
+            return Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  if (isOffers) {
+                    onTapOffers();
+                  } else {
+                    context.pushNamed(
+                      AppRoutes.products,
+                      arguments: cat,
+                    );
+                  }
+                },
+                borderRadius: BorderRadius.circular(20.r),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: colors.surface,
+                    borderRadius: BorderRadius.circular(20.r),
+                    border: Border.all(
+                      color: isOffers ? colors.secondary.withValues(alpha: 0.5) : colors.border.withValues(alpha: 0.6),
+                      width: isOffers ? 1.5 : 1.0,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: isOffers ? colors.secondary.withValues(alpha: 0.15) : colors.shadow.withValues(alpha: 0.04),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 58.r,
+                        height: 58.r,
+                        padding: EdgeInsets.all(8.r),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: isOffers ? Colors.orange.withValues(alpha: 0.12) : colors.containerBackground,
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(29.r),
+                          child: isOffers
+                              ? Icon(Icons.local_fire_department_rounded, size: 32.sp, color: Colors.deepOrange)
+                              : imageUrl.isNotEmpty
+                                  ? CachedNetworkImage(
+                                      imageUrl: imageUrl,
+                                      fit: BoxFit.cover,
+                                      placeholder: (_, __) => Container(color: colors.shimmerBase),
+                                      errorWidget: (_, __, ___) => Icon(Icons.shopping_bag_outlined, size: 28.sp, color: colors.primary),
+                                    )
+                                  : Icon(Icons.shopping_bag_outlined, size: 28.sp, color: colors.primary),
+                        ),
+                      ),
+                      10.verticalSpace,
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8.w),
+                        child: Text(
+                          cat.name ?? '',
+                          style: TextStyle(
+                            fontSize: 13.5.sp,
+                            fontWeight: FontWeight.bold,
+                            color: isOffers ? Colors.deepOrange : colors.textPrimary,
+                            fontFamily: 'Cairo',
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+          childCount: state.categories.length,
+        ),
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          childAspectRatio: 1.05,
+          crossAxisSpacing: 14.w,
+          mainAxisSpacing: 14.h,
+        ),
+      ),
+    );
+  }
+}
+
+// ── Exclusive Offers Screen ──────────────────────────────────
+class ExclusiveOffersScreen extends StatelessWidget {
+  const ExclusiveOffersScreen({
+    super.key,
+    required this.offers,
+    required this.vendorName,
+  });
+
+  final List<OfferDto> offers;
+  final String vendorName;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors(context);
+
+    return Scaffold(
+      backgroundColor: colors.background,
+      appBar: AppBar(
+        backgroundColor: colors.surface,
+        elevation: 0,
+        leading: const CustomArrowBack(),
+        title: Text(
+          'عروض $vendorName',
+          style: AppTextStyles.text18w700(color: colors.textPrimary),
+        ),
+        centerTitle: true,
+      ),
+      body: offers.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.local_offer_outlined, size: 64.sp, color: colors.textHint),
+                  12.verticalSpace,
+                  Text(
+                    'لا توجد عروض حصرية حالياً',
+                    style: AppTextStyles.text16w600(color: colors.textSecondary),
+                  ),
+                ],
+              ),
+            )
+          : GridView.builder(
+              physics: const BouncingScrollPhysics(),
+              padding: EdgeInsets.all(16.w),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 0.68,
+                crossAxisSpacing: 12.w,
+                mainAxisSpacing: 12.h,
+              ),
+              itemCount: offers.length,
+              itemBuilder: (context, index) {
+                final offer = offers[index];
+                return _SquareOfferCard(offer: offer, colors: colors);
+              },
+            ),
+    );
+  }
+}
+
+// ── Square Offer Card (Product Style - مربع) ─────────────────
+class _SquareOfferCard extends StatelessWidget {
+  const _SquareOfferCard({required this.offer, required this.colors});
+
+  final OfferDto offer;
+  final AppColors colors;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isArabic = Localizations.localeOf(context).languageCode == 'ar';
+    final String? featuredPhoto = offer.featuredPhoto;
+    final String imageUrl = (featuredPhoto != null && featuredPhoto.isNotEmpty)
+        ? (featuredPhoto.startsWith('http') ? featuredPhoto : '${ApiConstants.streamUrl}$featuredPhoto')
+        : '';
+    final bool hasProducts = offer.products != null && offer.products!.isNotEmpty;
+
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(20.r),
+          border: Border.all(color: colors.border.withValues(alpha: 0.6)),
+          boxShadow: [
+            BoxShadow(
+              color: colors.shadow.withValues(alpha: 0.03),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20.r),
+          onTap: hasProducts
+              ? () => Navigator.of(context).pushNamed(AppRoutes.specialOfferDetails, arguments: offer)
+              : null,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Square Image Top
+              Expanded(
+                flex: 6,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      imageUrl.isNotEmpty
+                          ? CachedNetworkImage(
+                              imageUrl: imageUrl,
+                              fit: BoxFit.cover,
+                              placeholder: (_, __) => Container(color: colors.shimmerBase),
+                              errorWidget: (_, __, ___) => Image.asset('assets/image/logo.png', fit: BoxFit.cover),
+                            )
+                          : Image.asset('assets/image/logo.png', fit: BoxFit.cover),
+                      // Offer Tag
+                      Positioned(
+                        top: 8.r,
+                        right: 8.r,
+                        child: Container(
+                          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEE9C20),
+                            borderRadius: BorderRadius.circular(10.r),
+                          ),
+                          child: Text(
+                            offer.offerType == 1
+                                ? (isArabic ? 'عرض حصري 🔥' : 'Exclusive 🔥')
+                                : (isArabic ? 'عرض خاص 🎁' : 'Special 🎁'),
+                            style: TextStyle(
+                              fontSize: 9.5.sp,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              fontFamily: 'Cairo',
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Details Bottom
+              Expanded(
+                flex: 5,
+                child: Padding(
+                  padding: EdgeInsets.all(12.r),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            offer.name ?? '',
+                            style: TextStyle(
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.bold,
+                              color: colors.textPrimary,
+                              fontFamily: 'Cairo',
+                              height: 1.2,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          3.verticalSpace,
+                          Text(
+                            offer.description ?? '',
+                            style: TextStyle(
+                              fontSize: 10.sp,
+                              fontWeight: FontWeight.w400,
+                              color: colors.textSecondary,
+                              fontFamily: 'Cairo',
+                              height: 1.2,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '${offer.price.toStringAsFixed(0)} ${AppStrings.currency}',
+                            style: TextStyle(
+                              fontSize: 13.sp,
+                              fontWeight: FontWeight.w900,
+                              color: colors.primary,
+                              fontFamily: 'Cairo',
+                            ),
+                          ),
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                            decoration: BoxDecoration(
+                              gradient: AppColors.gradient,
+                              borderRadius: BorderRadius.circular(10.r),
+                            ),
+                            child: Text(
+                              isArabic ? 'التفاصيل' : 'Details',
+                              style: TextStyle(
+                                fontSize: 9.5.sp,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                fontFamily: 'Cairo',
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -33,7 +33,7 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
     WidgetsBinding.instance.addObserver(this);
     // Load the user profile to check activation status
     Future.microtask(() {
-      ref.read(profileProvider.notifier).loadProfile();
+      ref.read(profileProvider.notifier).loadProfile(clearOld: true);
     });
   }
 

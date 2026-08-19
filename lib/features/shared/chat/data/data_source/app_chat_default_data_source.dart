@@ -83,7 +83,7 @@ abstract class AppChatDefaultDataSource {
 //         if (chatId != null) 'chatId': chatId,
 //         'pageIndex': pageIndex,
 //         'pageSize': 20,
-//         'sortDirection': 1,
+//         'orderDirection': 1,
 //         if (search != null && search.isNotEmpty) 'search': search,
 //       },
 //       getFromJsonFunction: AppChatMessagesResponseModel.fromJson,

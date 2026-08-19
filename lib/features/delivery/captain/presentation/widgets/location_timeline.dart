@@ -76,7 +76,7 @@ class LocationTimeline extends StatelessWidget {
             phone: order.user?.phone,
             recipientId: order.userLocation?.creatorId ?? order.userId,
             roleType: order.type == 0 ? RoleTypeEnum.restaurant : RoleTypeEnum.market,
-            showChat: true,
+            showChat: false,
           ),
           25.verticalSpace,
           _buildTimelineItem(

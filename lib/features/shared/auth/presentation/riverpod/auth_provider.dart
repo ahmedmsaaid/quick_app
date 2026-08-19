@@ -9,6 +9,8 @@ import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
 import 'package:base_app/core/services/push_notification/push_notification_service.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+import 'package:base_app/features/customer/profile/presentation/riverpod/profile_provider.dart';
+
 part 'auth_provider.g.dart';
 
 /// Flag to ensure GoogleSignIn is initialized only once (required in v7.x)
@@ -64,6 +66,7 @@ class Auth extends _$Auth {
 
   /// Sets the authentication state to authenticated directly (e.g. after OTP)
   void setAuthenticated() {
+    ref.invalidate(profileProvider);
     final role = CacheHelper.getInt('userRole') ?? 2;
     ref.read(pushNotificationServiceProvider).registerDeviceTokenWithBackend();
     state = AuthState.authenticated(UserDto(id: 0, role: role, status: 0));
@@ -210,6 +213,7 @@ class Auth extends _$Auth {
     await CacheHelper.remove(CacheKeys.token);
     await CacheHelper.remove('refreshToken');
     await CacheHelper.remove('userRole');
+    ref.invalidate(profileProvider);
     state = AuthState.unauthenticated();
   }
 

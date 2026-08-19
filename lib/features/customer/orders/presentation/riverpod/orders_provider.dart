@@ -5,6 +5,7 @@ import 'package:base_app/features/customer/orders/data/orders_api_service.dart';
 import 'package:base_app/features/customer/checkout/data/models/order_models.dart';
 import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
 import 'package:base_app/features/customer/profile/presentation/riverpod/profile_provider.dart';
+import 'package:base_app/features/customer/profile/data/profile_api_service.dart';
 import 'package:base_app/features/customer/cart/presentation/riverpod/cart_provider.dart';
 import 'package:base_app/features/customer/home/data/models/product_detail_model.dart';
 import 'package:base_app/features/shared/tracking/data/data_source/app_order_tracking_grpc_data_source.dart';
@@ -59,8 +60,23 @@ class OrdersNotifier extends _$OrdersNotifier {
   Future<void> loadOrders() async {
     state = state.copyWith(status: OrdersStatus.loading);
 
-    final profileState = ref.read(profileProvider);
-    final user = profileState.user;
+    var profileState = ref.read(profileProvider);
+    var user = profileState.user;
+
+    // If profile user is null, try fetching the profile dynamically
+    if (user == null) {
+      final profileResult = await ref.read(profileApiServiceProvider).getProfile();
+      profileResult.when(
+        success: (response) {
+          if (response.success && response.result != null) {
+            user = response.result;
+            ref.read(profileProvider.notifier).loadProfile();
+          }
+        },
+        failure: (_) {},
+      );
+    }
+
     if (user == null) {
       state = state.copyWith(
         status: OrdersStatus.error,
@@ -70,7 +86,7 @@ class OrdersNotifier extends _$OrdersNotifier {
     }
 
     final apiService = ref.read(ordersApiServiceProvider);
-    final result = await apiService.getOrders(userId: user.id);
+    final result = await apiService.getOrders(userId: user!.id);
 
     result.when(
       success: (response) {

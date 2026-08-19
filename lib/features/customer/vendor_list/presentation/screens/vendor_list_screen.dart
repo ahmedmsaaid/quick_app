@@ -214,109 +214,44 @@ class _VendorListScreenState extends ConsumerState<VendorListScreen> {
       return const _EmptyState();
     }
 
+    final int columnCount = categories.length < 10 ? 3 : 4;
+    final double childAspectRatio = categories.length < 10 ? 0.78 : 0.70;
+    final double crossAxisSpacing = categories.length < 10 ? 12.w : 8.w;
+    final double mainAxisSpacing = categories.length < 10 ? 14.h : 10.h;
+
     return GridView.builder(
       physics: const BouncingScrollPhysics(),
-      padding: EdgeInsets.all(20.w),
+      padding: EdgeInsets.all(16.w),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.85,
-        crossAxisSpacing: 16.w,
-        mainAxisSpacing: 16.h,
+        crossAxisCount: columnCount,
+        childAspectRatio: childAspectRatio,
+        crossAxisSpacing: crossAxisSpacing,
+        mainAxisSpacing: mainAxisSpacing,
       ),
       itemCount: categories.length,
       itemBuilder: (context, index) {
         final category = categories[index];
         return _CategoryGridItem(
           category: category,
-          isLoading: _isLoading,
+          columnCount: columnCount,
           onTap: () => _handleCategoryTap(category),
         );
       },
     );
   }
 
-  Future<void> _handleCategoryTap(MainCategoryDto category) async {
-    if (_isLoading) return;
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final result = await ref.read(homeApiServiceProvider).getUsersPaginate(
-        role: 1,
-        categoryId: category.id,
-        pageSize: 2,
-      );
-
-      if (!mounted) return;
-
-      result.when(
-        success: (response) {
-          if (response.success && response.result != null && response.result!.isNotEmpty) {
-            final shops = response.result!;
-            if (shops.length == 1) {
-              context.pushNamed(
-                AppRoutes.providerStoreScreen,
-                arguments: {
-                  'vendor': shops.first,
-                  'initialCategory': CategoryDto(
-                    id: category.id,
-                    name: category.name,
-                    description: category.description,
-                    photo: category.photo,
-                    type: 1,
-                    creatorId: shops.first.id,
-                  ),
-                },
-              );
-            } else {
-              context.pushNamed(
-                AppRoutes.StoreScreen,
-                arguments: VendorListArgs(
-                  title: category.name ?? '',
-                  categoryId: category.id,
-                  userRole: 1,
-                ),
-              );
-            }
-          } else {
-            context.pushNamed(
-              AppRoutes.StoreScreen,
-              arguments: VendorListArgs(
-                title: category.name ?? '',
-                categoryId: category.id,
-                userRole: 1,
-              ),
-            );
-          }
-        },
-        failure: (error) {
-          context.pushNamed(
-            AppRoutes.StoreScreen,
-            arguments: VendorListArgs(
-              title: category.name ?? '',
-              categoryId: category.id,
-              userRole: 1,
-            ),
-          );
-        },
-      );
-    } catch (e) {
-      context.pushNamed(
-        AppRoutes.StoreScreen,
-        arguments: VendorListArgs(
-          title: category.name ?? '',
-          categoryId: category.id,
-          userRole: 1,
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
+  void _handleCategoryTap(MainCategoryDto category) {
+    context.pushNamed(
+      AppRoutes.categoryProductsScreen,
+      arguments: CategoryDto(
+        id: category.id,
+        name: category.name,
+        description: category.description,
+        photo: category.photo,
+        type: category.userRole,
+        creatorId: 0,
+      ),
+    );
   }
 }
 
@@ -491,16 +426,16 @@ class _VendorCard extends StatelessWidget {
   }
 }
 
-/// Category Grid item widget with new PREMIUM "تسوّق الآن" (Shop Now) Call-to-Action design.
+/// Category Grid item widget with dynamic sizing based on columnCount.
 class _CategoryGridItem extends StatelessWidget {
   const _CategoryGridItem({
     required this.category,
-    required this.isLoading,
+    required this.columnCount,
     required this.onTap,
   });
 
   final MainCategoryDto category;
-  final bool isLoading;
+  final int columnCount;
   final VoidCallback onTap;
 
   @override
@@ -516,12 +451,12 @@ class _CategoryGridItem extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: colors.surface,
-          borderRadius: BorderRadius.circular(20.r),
+          borderRadius: BorderRadius.circular(columnCount == 4 ? 14.r : 18.r),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 5),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -531,7 +466,7 @@ class _CategoryGridItem extends StatelessWidget {
             // Image on top
             Expanded(
               child: ClipRRect(
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(columnCount == 4 ? 14.r : 18.r)),
                 child: imageUrl.isNotEmpty
                     ? CachedNetworkImage(
                         imageUrl: imageUrl,
@@ -556,14 +491,17 @@ class _CategoryGridItem extends StatelessWidget {
             ),
             // Content on bottom (Name & Shop Now action)
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+              padding: EdgeInsets.symmetric(
+                horizontal: columnCount == 4 ? 6.w : 10.w,
+                vertical: columnCount == 4 ? 6.h : 8.h,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     category.name ?? '',
                     style: TextStyle(
-                      fontSize: 13.sp,
+                      fontSize: columnCount == 4 ? 10.5.sp : 12.sp,
                       fontWeight: FontWeight.bold,
                       color: colors.textPrimary,
                       fontFamily: 'Cairo',
@@ -572,24 +510,23 @@ class _CategoryGridItem extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  4.verticalSpace,
-                  // Minimalist Premium Shop Now text button
+                  3.verticalSpace,
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        "تسوق الآن",
+                        "عرض المنتجات",
                         style: TextStyle(
-                          fontSize: 9.sp,
+                          fontSize: columnCount == 4 ? 8.sp : 9.5.sp,
                           fontWeight: FontWeight.w700,
                           color: const Color(0xFFEE9C20),
                           fontFamily: 'Cairo',
                         ),
                       ),
-                      4.horizontalSpace,
+                      2.horizontalSpace,
                       Icon(
                         Icons.arrow_forward_rounded,
-                        size: 10.sp,
+                        size: columnCount == 4 ? 8.sp : 10.sp,
                         color: const Color(0xFFEE9C20),
                       ),
                     ],
@@ -641,7 +578,7 @@ class _MarketBanner extends StatelessWidget {
         child: Container(
           margin: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
           width: double.infinity,
-          height: 185.h,
+          height: 200.h,
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               colors: [
@@ -694,7 +631,7 @@ class _MarketBanner extends StatelessWidget {
                   padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
                   child: Column(
                     children: [
-                      // Top Row (Logo + Title & Subtitle)
+                      // Top Row (Logo + Title & Subtitle + Action Badge)
                       Expanded(
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
@@ -743,6 +680,42 @@ class _MarketBanner extends StatelessWidget {
                                     fontWeight: FontWeight.w500,
                                     color: Colors.white.withValues(alpha: 0.85),
                                     fontFamily: 'Cairo',
+                                  ),
+                                ),
+                                8.verticalSpace,
+                                // Crisp, clear action button
+                                Container(
+                                  padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 6.h),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(20.r),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.15),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 3),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        isArabic ? 'تصفح المنتجات 🛒' : 'Browse Products 🛒',
+                                        style: TextStyle(
+                                          fontSize: 12.sp,
+                                          fontWeight: FontWeight.w900,
+                                          color: const Color(0xFF033E3B),
+                                          fontFamily: 'Cairo',
+                                        ),
+                                      ),
+                                      6.horizontalSpace,
+                                      Icon(
+                                        isArabic ? Icons.arrow_back_rounded : Icons.arrow_forward_rounded,
+                                        color: const Color(0xFFEE9C20),
+                                        size: 14.sp,
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],

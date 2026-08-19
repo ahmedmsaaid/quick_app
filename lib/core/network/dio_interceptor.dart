@@ -23,6 +23,21 @@ class DioInterceptor extends Interceptor {
       log("TOKEN: $token");
     }
 
+    // Automatically set orderDirection=1 for all GET and PATCH requests
+    if (options.method.toUpperCase() == 'GET' || options.method.toUpperCase() == 'PATCH') {
+      if (!options.queryParameters.containsKey('orderDirection') &&
+          !options.queryParameters.containsKey('orderDirection')) {
+        options.queryParameters['orderDirection'] = 1;
+      }
+      if (options.data is Map<String, dynamic>) {
+        final dataMap = options.data as Map<String, dynamic>;
+        if (!dataMap.containsKey('orderDirection') &&
+            !dataMap.containsKey('orderDirection')) {
+          dataMap['orderDirection'] = 1;
+        }
+      }
+    }
+
     log('REQUEST[${options.method}] => PATH: ${options.path}');
     super.onRequest(options, handler);
   }

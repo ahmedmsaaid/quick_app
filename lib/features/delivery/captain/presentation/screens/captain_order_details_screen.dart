@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:base_app/core/network/api_result.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:base_app/core/localizations/app_strings.g.dart';
 import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/styles/app_text_style.dart';
@@ -29,31 +31,77 @@ class CaptainOrderDetailsScreen extends ConsumerStatefulWidget {
 }
 
 class _CaptainOrderDetailsScreenState extends ConsumerState<CaptainOrderDetailsScreen> {
-  late int _orderState; // 0: Available, 1: Accepted/Going to store, 2: At Store/Picked up, 3: Delivered
+  late int _orderState; // 0: قبول الطلب, 1: استلام الطلب, 2: تم التوصيل, 3: Completed
   bool _isLoading = false;
   bool _isFetchingDetails = false;
   late OrderDto _order;
   LocationDto? _vendorLocation;
+  Position? _currentCaptainPosition;
+  StreamSubscription<Position>? _positionSubscription;
 
   @override
   void initState() {
     super.initState();
     _order = widget.order;
     _initializeOrderState();
+    _startCaptainLocationListener();
     Future.microtask(() => _fetchOrderDetails());
+  }
+
+  @override
+  void dispose() {
+    _positionSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _startCaptainLocationListener() async {
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.always || permission == LocationPermission.whileInUse) {
+        final initialPos = await Geolocator.getCurrentPosition();
+        if (mounted) {
+          setState(() {
+            _currentCaptainPosition = initialPos;
+          });
+        }
+        _positionSubscription = Geolocator.getPositionStream(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            distanceFilter: 3,
+          ),
+        ).listen((pos) {
+          if (mounted) {
+            setState(() {
+              _currentCaptainPosition = pos;
+            });
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint("Error listening to captain location: $e");
+    }
+  }
+
+  double? get _distanceToCustomerMeters {
+    final pos = _currentCaptainPosition;
+    final destLat = _order.latitude;
+    final destLng = _order.longitude;
+    if (pos == null || destLat == 0 || destLng == 0) return null;
+    return Geolocator.distanceBetween(pos.latitude, pos.longitude, destLat, destLng);
   }
 
   void _initializeOrderState() {
     if (_order.deliveryId == null || _order.status == 2) {
-      _orderState = 0; // Available to accept
-    } else if (_order.status == 3) {
-      _orderState = 1; // Accepted / Going to store
-    } else if (_order.status == 4 || _order.status == 5) {
-      _orderState = 2; // Arrived Store / Preparing / Ready for pickup
+      _orderState = 0; // Available to accept (قبول الطلب)
+    } else if (_order.status == 3 || _order.status == 4 || _order.status == 5) {
+      _orderState = 1; // Accepted / Assigned / Preparing -> (استلام الطلب)
     } else if (_order.status == 6) {
-      _orderState = 3; // Out for delivery
+      _orderState = 2; // Out for delivery -> (تم التوصيل)
     } else {
-      _orderState = 4; // Delivered / Cancelled / Rejected (completed states)
+      _orderState = 3; // Delivered / Cancelled / Completed
     }
   }
 
@@ -101,7 +149,7 @@ class _CaptainOrderDetailsScreenState extends ConsumerState<CaptainOrderDetailsS
     if (_isLoading) return;
 
     if (_orderState == 0) {
-      // Accept order -> Update status to 3
+      // Step 1: Accept Order -> Status 3
       setState(() => _isLoading = true);
       final success = await ref.read(captainOrdersProvider.notifier).acceptOrder(_order);
       setState(() => _isLoading = false);
@@ -121,27 +169,7 @@ class _CaptainOrderDetailsScreenState extends ConsumerState<CaptainOrderDetailsS
         }
       }
     } else if (_orderState == 1) {
-      // Arrived store -> Update status to 4 (Preparing)
-      setState(() => _isLoading = true);
-      final success = await ref.read(captainOrdersProvider.notifier).updateStatus(_order, 4);
-      setState(() => _isLoading = false);
-
-      if (success) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('تم تسجيل الوصول للمحل بنجاح')),
-          );
-        }
-        _fetchOrderDetails();
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('فشل تحديث الوصول، يرجى المحاولة لاحقاً')),
-          );
-        }
-      }
-    } else if (_orderState == 2) {
-      // Picked up -> Update status to 6 (OutForDelivery)
+      // Step 2: Pickup Order -> Directly transition to OutForDelivery (Status 6), bypassing "وصلت للمتجر"
       setState(() => _isLoading = true);
       final success = await ref.read(captainOrdersProvider.notifier).updateStatus(_order, 6);
       setState(() => _isLoading = false);
@@ -164,8 +192,26 @@ class _CaptainOrderDetailsScreenState extends ConsumerState<CaptainOrderDetailsS
           );
         }
       }
-    } else if (_orderState == 3) {
-      // Delivered -> Update status to 7 (Delivered)
+    } else if (_orderState == 2) {
+      // Step 3: Delivered (Status 7) -> Enforce 100-meter proximity to Customer Location
+      final distMeters = _distanceToCustomerMeters;
+      if (distMeters != null && distMeters > 100) {
+        final formattedDist = distMeters >= 1000
+            ? '${(distMeters / 1000).toStringAsFixed(1)} كم'
+            : '${distMeters.toStringAsFixed(0)} متر';
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: Colors.red.shade700,
+              content: Text(
+                'لا يمكنك تأكيد التوصيل! يجب التواجد على بعد 100 متر أو أقل من موقع العميل (أنت حالياً على بعد $formattedDist)',
+              ),
+            ),
+          );
+        }
+        return;
+      }
+
       setState(() => _isLoading = true);
       final success = await ref.read(captainOrdersProvider.notifier).updateStatus(_order, 7);
       setState(() => _isLoading = false);
@@ -232,12 +278,13 @@ class _CaptainOrderDetailsScreenState extends ConsumerState<CaptainOrderDetailsS
           ],
         ),
       ),
-      bottomNavigationBar: _orderState >= 4
+      bottomNavigationBar: _orderState >= 3
           ? null
           : OrderActionButton(
               orderState: _orderState,
               isLoading: _isLoading,
               onPressed: _handleActionButton,
+              distanceToCustomerMeters: _distanceToCustomerMeters,
             ),
     );
   }

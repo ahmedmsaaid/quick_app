@@ -11,9 +11,30 @@ import 'package:base_app/core/network/api_constants.dart';
 import 'package:base_app/features/customer/profile/presentation/riverpod/profile_provider.dart';
 import 'package:base_app/features/customer/home/presentation/widgets/location_bottom_sheet.dart';
 import 'package:base_app/features/shared/notifications/presentation/riverpod/notifications_provider.dart';
+import 'package:base_app/features/customer/home/presentation/riverpod/search_history_provider.dart';
 
-class HomeSpeedHeader extends ConsumerWidget {
+class HomeSpeedHeader extends ConsumerStatefulWidget {
   const HomeSpeedHeader({super.key});
+
+  @override
+  ConsumerState<HomeSpeedHeader> createState() => _HomeSpeedHeaderState();
+}
+
+class _HomeSpeedHeaderState extends ConsumerState<HomeSpeedHeader> {
+  late final TextEditingController _searchController;
+  bool _isNavigatingToSearch = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   void _showLocationSheet(BuildContext context) {
     showModalBottomSheet(
@@ -24,8 +45,30 @@ class HomeSpeedHeader extends ConsumerWidget {
     );
   }
 
+  Future<void> _onPerformSearch(String rawQuery) async {
+    final query = rawQuery.trim();
+    if (query.isEmpty || _isNavigatingToSearch) return;
+
+    _isNavigatingToSearch = true;
+    FocusScope.of(context).unfocus();
+
+    // Save to persistent search history
+    ref.read(searchHistoryProvider.notifier).addQuery(query);
+
+    // Clear search controller so returning to Home leaves the search bar empty
+    _searchController.clear();
+
+    await Navigator.of(context).pushNamed(AppRoutes.searchResults, arguments: query);
+
+    if (mounted) {
+      setState(() {
+        _isNavigatingToSearch = false;
+      });
+    }
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final colors = AppColors(context);
     final profileState = ref.watch(profileProvider);
     final user = profileState.user;
@@ -59,198 +102,107 @@ class HomeSpeedHeader extends ConsumerWidget {
             width: 2.5.h,
           ),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: colors.primary.withValues(alpha: 0.15),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: Stack(
         children: [
-          // Visual Speed Lines in the background
+          // Background subtle speed trail curve
           Positioned(
             right: -30.w,
-            top: 25.h,
+            top: -20.h,
             child: Container(
-              width: 160.w,
-              height: 1.5.h,
-              color: Colors.white.withValues(alpha: 0.12),
-            ),
-          ),
-          Positioned(
-            left: -40.w,
-            top: 65.h,
-            child: Container(
-              width: 220.w,
-              height: 2.h,
-              color: Colors.white.withValues(alpha: 0.08),
-            ),
-          ),
-          Positioned(
-            right: 40.w,
-            bottom: 45.h,
-            child: Container(
-              width: 120.w,
-              height: 1.h,
-              color: Colors.white.withValues(alpha: 0.1),
-            ),
-          ),
-          Positioned(
-            left: 20.w,
-            bottom: 95.h,
-            child: Container(
-              width: 100.w,
-              height: 1.5.h,
-              color: Colors.white.withValues(alpha: 0.06),
+              width: 140.w,
+              height: 140.h,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.05),
+              ),
             ),
           ),
 
-          // Header Content
-          // Header Content
           Padding(
-            padding: EdgeInsets.fromLTRB(
-              20.w,
-              MediaQuery.of(context).padding.top + 8.h,
-              20.w,
-              14.h,
-            ),
+            padding: EdgeInsets.fromLTRB(16.w, MediaQuery.of(context).padding.top + 8.h, 16.w, 18.h),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                // Top Row: Location (left), Logo (center), Profile (right)
+                // Top Bar: Location + App Badge + Notification & Cart
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // Left Location Details
-                    GestureDetector(
-                      onTap: () => _showLocationSheet(context),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Row(
+                    // Location Pill
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => _showLocationSheet(context),
+                        behavior: HitTestBehavior.opaque,
+                        child: Container(
+                          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(20.r),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.25),
+                              width: 0.8,
+                            ),
+                          ),
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
                                 Icons.location_on_rounded,
                                 color: colors.secondary,
-                                size: 12.sp,
+                                size: 16.sp,
                               ),
-                              3.horizontalSpace,
-                              Container(
-                                constraints: BoxConstraints(maxWidth: 100.w),
+                              5.horizontalSpace,
+                              Flexible(
                                 child: Text(
                                   addressName,
-                                  style: TextStyle(
-                                    fontSize: 12.sp,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                    fontFamily: 'Cairo',
-                                  ),
+                                  style: AppTextStyles.text12w600(color: Colors.white),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
+                              4.horizontalSpace,
+                              Icon(
+                                Icons.keyboard_arrow_down_rounded,
+                                color: Colors.white70,
+                                size: 16.sp,
+                              ),
                             ],
                           ),
-                          3.verticalSpace,
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                                horizontal: 8.w, vertical: 3.h),
+                        ),
+                      ),
+                    ),
+
+                    10.horizontalSpace,
+
+                    // Action Icons: Cart & Notification
+                    Row(
+                      children: [
+                        // Cart Button
+                        GestureDetector(
+                          onTap: () => context.pushNamed(AppRoutes.cartScreen),
+                          child: Container(
+                            width: 36.w,
+                            height: 36.h,
                             decoration: BoxDecoration(
                               color: Colors.white.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(10.r),
+                              shape: BoxShape.circle,
                               border: Border.all(
                                 color: Colors.white.withValues(alpha: 0.25),
                                 width: 0.8,
                               ),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  'تغيير العنوان',
-                                  style: TextStyle(
-                                    fontSize: 9.sp,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white,
-                                    fontFamily: 'Cairo',
-                                  ),
-                                ),
-                                2.horizontalSpace,
-                                Icon(
-                                  Icons.keyboard_arrow_down_rounded,
-                                  color: Colors.white,
-                                  size: 10.sp,
-                                ),
-                              ],
+                            child: Icon(
+                              Icons.shopping_cart_outlined,
+                              color: Colors.white,
+                              size: 18.sp,
                             ),
                           ),
-                        ],
-                      ),
-                    ),
+                        ),
 
-                    // Center Logo
-                    Image.asset(
-                      'assets/image/quick_panner.png',
-                      height: 60.h,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) => Image.asset(
-                        'assets/image/quick_panner.png',
-                        height: 60.h,
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const SizedBox.shrink(),
-                      ),
-                    ),
+                        8.horizontalSpace,
 
-                    // Right Section: Notification Bell + Profile Avatar
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Notification Bell with Badge
-                        _NotificationBell(),
-                        10.horizontalSpace,
-                        // GestureDetector(
-                        //   onTap: () => context.pushNamed(AppRoutes.personalInfo),
-                        //   child: Container(
-                        //     width: 36.w,
-                        //     height: 36.w,
-                        //     decoration: BoxDecoration(
-                        //       shape: BoxShape.circle,
-                        //       color: Colors.white.withValues(alpha: 0.15),
-                        //       border: Border.all(
-                        //         color: Colors.white.withValues(alpha: 0.4),
-                        //         width: 1.2,
-                        //       ),
-                        //     ),
-                        //     child: ClipOval(
-                        //       child: (user?.photo != null &&
-                        //           user!.photo!.isNotEmpty)
-                        //           ? CachedNetworkImage(
-                        //         imageUrl: user.photo!.startsWith('http')
-                        //             ? user.photo!
-                        //             : '${ApiConstants.streamUrl}${user.photo}',
-                        //         fit: BoxFit.cover,
-                        //         placeholder: (_, __) => Container(
-                        //             color: colors.shimmerBase),
-                        //         errorWidget: (_, __, ___) => Icon(
-                        //           Icons.person,
-                        //           color: Colors.white,
-                        //           size: 16.sp,
-                        //         ),
-                        //       )
-                        //           : Icon(
-                        //         Icons.person,
-                        //         color: Colors.white,
-                        //         size: 16.sp,
-                        //       ),
-                        //     ),
-                        //   ),
-                        // ),
+                        // Notification Bell Widget
+                        const _NotificationBell(),
                       ],
                     ),
                   ],
@@ -276,12 +228,9 @@ class HomeSpeedHeader extends ConsumerWidget {
                     children: [
                       Expanded(
                         child: TextField(
-                          onSubmitted: (value) {
-                            if (value.isNotEmpty) {
-                              context.pushNamed(AppRoutes.searchResults,
-                                  arguments: value);
-                            }
-                          },
+                          controller: _searchController,
+                          textInputAction: TextInputAction.search,
+                          onSubmitted: (value) => _onPerformSearch(value),
                           style: AppTextStyles.text13w600(
                               color: colors.textPrimary),
                           decoration: InputDecoration(
@@ -294,10 +243,13 @@ class HomeSpeedHeader extends ConsumerWidget {
                         ),
                       ),
                       8.horizontalSpace,
-                      Icon(
-                        Icons.search_rounded,
-                        color: colors.textHint,
-                        size: 20.sp,
+                      GestureDetector(
+                        onTap: () => _onPerformSearch(_searchController.text),
+                        child: Icon(
+                          Icons.search_rounded,
+                          color: colors.textHint,
+                          size: 20.sp,
+                        ),
                       ),
                     ],
                   ),

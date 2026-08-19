@@ -156,21 +156,28 @@ class OrdersScreen extends ConsumerWidget {
 
     final isCurrent = order.status < 7;
 
-    return Container(
-      padding: EdgeInsets.all(15.r),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(15.r),
-        boxShadow: [
-          BoxShadow(
-            color: colors.shadow.withValues(alpha: 0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).pushNamed(
+          AppRoutes.orderDetailsScreen,
+          arguments: order,
+        );
+      },
+      child: Container(
+        padding: EdgeInsets.all(15.r),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(15.r),
+          boxShadow: [
+            BoxShadow(
+              color: colors.shadow.withValues(alpha: 0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
           Row(
             children: [
               ClipRRect(
@@ -276,7 +283,7 @@ class OrdersScreen extends ConsumerWidget {
                 ),
               ],
             ),
-            if (order.status < 6) ...[
+            if (order.status == 0) ...[
               10.verticalSpace,
               _CancelOrderCardButton(order: order),
             ],
@@ -316,7 +323,7 @@ class OrdersScreen extends ConsumerWidget {
           ],
         ],
       ),
-    );
+    ));
   }
 
   String _getStatusText(int status) {

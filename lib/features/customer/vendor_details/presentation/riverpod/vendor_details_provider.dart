@@ -71,12 +71,19 @@ class VendorDetailsNotifier extends _$VendorDetailsNotifier {
 
     categoriesResult.when(
       success: (response) async {
-        final List<CategoryDto> categories = response.result ?? [];
+        final CategoryDto offersCategory = CategoryDto(
+          id: -999,
+          name: 'عروض حصريه',
+          description: 'عروض حصريه والإعلانات',
+          type: 1,
+          creatorId: vendorId,
+        );
+
+        final List<CategoryDto> rawCategories = response.result ?? [];
+        final List<CategoryDto> categories = [offersCategory, ...rawCategories];
         CategoryDto? initialCategory = _preSelectedCategory;
 
-        if (initialCategory == null && categories.isNotEmpty) {
-          initialCategory = categories.first;
-        } else if (initialCategory != null) {
+        if (initialCategory != null) {
           initialCategory = categories.firstWhere(
             (c) => c.id == initialCategory!.id,
             orElse: () => initialCategory!,
@@ -87,9 +94,17 @@ class VendorDetailsNotifier extends _$VendorDetailsNotifier {
           categoriesStatus: VendorDetailsStatus.loaded,
           categories: categories,
           selectedCategory: initialCategory,
+          clearSelectedCategory: initialCategory == null,
         );
 
-        await loadProducts(categoryId: initialCategory?.id);
+        if (initialCategory == null || initialCategory.id == -999) {
+          state = state.copyWith(
+            productsStatus: VendorDetailsStatus.loaded,
+            products: [],
+          );
+        } else {
+          await loadProducts(categoryId: initialCategory.id);
+        }
       },
       failure: (error) {
         state = state.copyWith(
@@ -102,6 +117,14 @@ class VendorDetailsNotifier extends _$VendorDetailsNotifier {
   }
 
   Future<void> loadProducts({int? categoryId}) async {
+    if (categoryId == -999) {
+      state = state.copyWith(
+        productsStatus: VendorDetailsStatus.loaded,
+        products: [],
+      );
+      return;
+    }
+
     state = state.copyWith(productsStatus: VendorDetailsStatus.loading);
 
     final result = await ref.read(homeApiServiceProvider).getVendorProducts(
