@@ -16,19 +16,31 @@ import 'package:base_app/core/utils/extensions.dart';
 final subCategoriesProvider = FutureProvider.autoDispose<List<CategoryDto>>((ref) async {
   final apiService = ref.watch(homeApiServiceProvider);
   final result = await apiService.getCategories();
-  return result.when(
-    success: (response) => (response.success && response.result != null) ? response.result! : [],
-    failure: (error) => [],
+  List<CategoryDto> list = [];
+  result.when(
+    success: (response) {
+      if (response.success && response.result != null) {
+        list = response.result!;
+      }
+    },
+    failure: (error) {},
   );
+  return list;
 });
 
 final mainCategoriesListProvider = FutureProvider.autoDispose<List<MainCategoryDto>>((ref) async {
   final apiService = ref.watch(homeApiServiceProvider);
   final result = await apiService.getMainCategories();
-  return result.when(
-    success: (response) => (response.success && response.result != null) ? response.result! : [],
-    failure: (error) => [],
+  List<MainCategoryDto> list = [];
+  result.when(
+    success: (response) {
+      if (response.success && response.result != null) {
+        list = response.result!;
+      }
+    },
+    failure: (error) {},
   );
+  return list;
 });
 
 class AllCategoriesScreen extends ConsumerWidget {
