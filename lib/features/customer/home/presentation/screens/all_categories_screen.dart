@@ -1,14 +1,17 @@
 import 'package:base_app/core/exports/exports.dart';
+import 'package:base_app/core/extintions/navigation_extension.dart';
 import 'package:base_app/core/localizations/app_strings.g.dart';
 import 'package:base_app/core/network/api_constants.dart';
+import 'package:base_app/core/network/api_result.dart';
+import 'package:base_app/core/routes/app_router.dart';
 import 'package:base_app/core/routes/app_routes.dart';
 import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/styles/app_text_style.dart';
+import 'package:base_app/core/widgets/cached_network_image.dart';
 import 'package:base_app/core/widgets/custom_arrow_back.dart';
 import 'package:base_app/core/widgets/lading_button.dart';
 import 'package:base_app/features/customer/home/data/models/category_model.dart';
-import 'package:base_app/features/customer/home/data/models/main_category_model.dart';
-import 'package:base_app/features/customer/vendor_list/presentation/screens/vendor_list_screen.dart';
+ import 'package:base_app/features/customer/vendor_list/presentation/screens/vendor_list_screen.dart';
 import 'package:base_app/features/customer/home/data/home_api_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
@@ -287,20 +290,7 @@ class _MainCategoryCard extends StatelessWidget {
               ),
               clipBehavior: Clip.antiAlias,
               child: photoUrl.isNotEmpty
-                  ? CachedNetworkImage(
-                      imageUrl: photoUrl,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => Center(
-                        child: Text(category.emoji ?? '🏪', style: TextStyle(fontSize: columnCount == 4 ? 20.sp : 24.sp)),
-                      ),
-                      errorWidget: (context, url, error) => Center(
-                        child: Text(category.emoji ?? '🏪', style: TextStyle(fontSize: columnCount == 4 ? 20.sp : 24.sp)),
-                      ),
-                    )
-                  : Center(
-                      child: Text(category.emoji ?? '🏪', style: TextStyle(fontSize: columnCount == 4 ? 20.sp : 24.sp)),
-                    ),
-            ),
+                  ?CustomNetworkImage.circular(imageUrl:category.photo ?? '🏪', radius: 25)
             8.verticalSpace,
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 4.w),
