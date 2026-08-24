@@ -18,8 +18,8 @@ import 'package:base_app/features/customer/checkout/presentation/screens/order_s
 import 'package:base_app/core/widgets/custom_toast.dart';
 import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
 import 'package:base_app/features/customer/profile/data/profile_api_service.dart';
-import 'package:base_app/core/services/maps_service.dart';
-import 'package:latlong2/latlong.dart' as ll;
+
+import 'package:base_app/core/utils/format_price.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
   final OfferDto? offer;
@@ -68,7 +68,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     if (!mounted) return;
     result.when(
       success: (response) {
-        final locs = response?.result ?? [];
+        final locs = response.result ?? [];
         setState(() {
           _vendorLocations = locs;
           _isLoadingBranches = false;
@@ -364,19 +364,19 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           _buildSummaryRow(
             context,
             AppStrings.productsPriceLabel,
-            '${productsPrice.toStringAsFixed(0)} جنيه مصري',
+            '${formatPrice(productsPrice)} جنيه مصري',
           ),
           10.verticalSpace,
           _buildSummaryRow(
             context,
             AppStrings.deliveryFeesLabelMsg,
-            '${deliveryFee.toStringAsFixed(0)} جنيه مصري',
+            '${formatPrice(deliveryFee)} جنيه مصري',
           ),
           10.verticalSpace,
           _buildSummaryRow(
             context,
             AppStrings.serviceFeesLabel,
-            '${serviceFee.toStringAsFixed(0)} جنيه مصري',
+            '${formatPrice(serviceFee)} جنيه مصري',
           ),
           10.verticalSpace,
           const Divider(),
@@ -384,7 +384,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           _buildSummaryRow(
             context,
             AppStrings.totalRequiredLabel,
-            '${totalRequired.toStringAsFixed(0)} جنيه مصري',
+            '${formatPrice(totalRequired)} جنيه مصري',
             isTotal: true,
           ),
         ],

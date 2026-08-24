@@ -1,5 +1,6 @@
 import 'dart:ui';
- import 'package:base_app/core/routes/app_router.dart';
+import 'package:flutter/material.dart';
+import 'package:base_app/core/routes/app_router.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -149,63 +150,63 @@ class HomeFeaturedRestaurants extends ConsumerWidget {
                                     ),
                                   ),
                                 ),
-                                Positioned(
-                                  top: 12.r,
-                                  right: 12.r,
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(20.r),
-                                    child: BackdropFilter(
-                                      filter:
-                                          ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                                      child: Container(
-                                        padding: EdgeInsets.symmetric(
-                                            horizontal: 10.w, vertical: 4.h),
-                                        decoration: BoxDecoration(
-                                          color: Colors.black.withValues(alpha: 0.5),
-                                          borderRadius: BorderRadius.circular(20.r),
-                                          border: Border.all(
-                                            color: Colors.white
-                                                .withValues(alpha: 0.15),
-                                            width: 0.8,
+                                if (restaurant.busy == true || !(restaurant.active ?? true))
+                                  Positioned(
+                                    top: 12.r,
+                                    right: 12.r,
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(20.r),
+                                      child: BackdropFilter(
+                                        filter:
+                                            ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                                        child: Container(
+                                          padding: EdgeInsets.symmetric(
+                                              horizontal: 10.w, vertical: 4.h),
+                                          decoration: BoxDecoration(
+                                            color: Colors.black.withValues(alpha: 0.5),
+                                            borderRadius: BorderRadius.circular(20.r),
+                                            border: Border.all(
+                                              color: Colors.white
+                                                  .withValues(alpha: 0.15),
+                                              width: 0.8,
+                                            ),
                                           ),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Container(
-                                              width: 6.w,
-                                              height: 6.w,
-                                              decoration: BoxDecoration(
-                                                color: (restaurant.active ?? false)
-                                                    ? colors.success
-                                                    : colors.error,
-                                                shape: BoxShape.circle,
-                                                boxShadow: [
-                                                  BoxShadow(
-                                                    color: (restaurant.active ??
-                                                            false)
-                                                        ? colors.success
-                                                        : colors.error,
-                                                    blurRadius: 6,
-                                                    spreadRadius: 2,
-                                                  )
-                                                ],
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Container(
+                                                width: 6.w,
+                                                height: 6.w,
+                                                decoration: BoxDecoration(
+                                                  color: (restaurant.busy == true)
+                                                      ? Colors.amber
+                                                      : colors.error,
+                                                  shape: BoxShape.circle,
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: (restaurant.busy == true)
+                                                          ? Colors.amber
+                                                          : colors.error,
+                                                      blurRadius: 6,
+                                                      spreadRadius: 2,
+                                                    )
+                                                  ],
+                                                ),
                                               ),
-                                            ),
-                                            6.horizontalSpace,
-                                            Text(
-                                              (restaurant.active ?? false)
-                                                  ? AppStrings.openStatus
-                                                  : AppStrings.closedStatus,
-                                              style: AppTextStyles.text10w700(
-                                                  color: Colors.white),
-                                            ),
-                                          ],
+                                              6.horizontalSpace,
+                                              Text(
+                                                (restaurant.busy == true)
+                                                    ? 'مشغول'
+                                                    : AppStrings.closedStatus,
+                                                style: AppTextStyles.text10w700(
+                                                    color: Colors.white),
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                       ),
                                     ),
                                   ),
-                                ),
                                 Positioned(
                                   bottom: 10.r,
                                   left: 12.r,

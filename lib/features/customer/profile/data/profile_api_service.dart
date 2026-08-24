@@ -423,4 +423,18 @@ class ProfileApiService {
       return ApiResult.failure(handleError(e));
     }
   }
+
+  /// Toggle the user's busy status.
+  Future<ApiResult<ApiResponse<bool>>> toggleBusyStatus(int userId) async {
+    try {
+      final response = await _dio.patch('${ApiConstants.toggleBusy}/$userId');
+      final apiResponse = ApiResponse<bool>.fromJson(
+        response.data,
+        (json) => json is bool ? json : (json == true),
+      );
+      return ApiResult.success(apiResponse);
+    } catch (e) {
+      return ApiResult.failure(handleError(e));
+    }
+  }
 }

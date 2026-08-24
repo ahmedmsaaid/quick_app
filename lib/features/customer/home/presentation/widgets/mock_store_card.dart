@@ -1,7 +1,5 @@
 import 'package:base_app/core/exports/exports.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:base_app/core/styles/app_colors.dart';
-import 'package:base_app/core/localizations/app_strings.g.dart';
 import 'package:base_app/core/network/api_constants.dart';
 import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
 
@@ -72,7 +70,7 @@ class MockStoreCard extends StatelessWidget {
                               size: 30.sp,
                               color: colors.textHint,
                             ),
-                      // Open/Closed Tag
+                      if (store.busy == true || !(store.active ?? true))
                       Positioned(
                         top: 8.r,
                         right: 8.r,
@@ -80,12 +78,14 @@ class MockStoreCard extends StatelessWidget {
                           padding: EdgeInsets.symmetric(
                               horizontal: 6.w, vertical: 2.h),
                           decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.6),
+                            color: (store.busy == true)
+                                ? Colors.orange.withValues(alpha: 0.9)
+                                : Colors.black.withValues(alpha: 0.6),
                             borderRadius: BorderRadius.circular(8.r),
                           ),
                           child: Text(
-                            (store.active ?? false)
-                                ? AppStrings.openStatus
+                            (store.busy == true)
+                                ? 'مشغول'
                                 : AppStrings.closedStatus,
                             style: TextStyle(
                               color: Colors.white,

@@ -428,4 +428,35 @@ class ProfileNotifier extends _$ProfileNotifier {
       },
     );
   }
+
+  /// Toggle vendor busy status.
+  Future<bool> toggleBusy() async {
+    final user = state.user;
+    if (user == null) return false;
+
+    state = state.copyWith(status: ProfileStatus.updating);
+    final result = await ref.read(profileApiServiceProvider).toggleBusyStatus(user.id);
+    
+    return result.when(
+      success: (response) async {
+        if (response?.success == true) {
+          await loadProfile(); // Reload to refresh user busy status
+          return true;
+        } else {
+          state = state.copyWith(
+            status: ProfileStatus.error,
+            errorMessage: response?.message,
+          );
+          return false;
+        }
+      },
+      failure: (error) {
+        state = state.copyWith(
+          status: ProfileStatus.error,
+          errorMessage: error.message,
+        );
+        return false;
+      },
+    );
+  }
 }

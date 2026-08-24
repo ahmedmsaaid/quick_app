@@ -1,4 +1,5 @@
 import 'package:base_app/core/routes/app_routes.dart';
+import 'package:base_app/core/utils/format_price.dart';
 import 'package:base_app/core/widgets/lading_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -587,7 +588,7 @@ class _VendorRow extends StatelessWidget {
                   ),
                   4.verticalSpace,
                   Text(
-                    '${order.totalPrice.toStringAsFixed(0)} ${AppStrings.currency}',
+                    '${formatPrice(order.totalPrice)} ${AppStrings.currency}',
                     style: AppTextStyles.text13w600(color: colors.primary),
                   ),
                 ],

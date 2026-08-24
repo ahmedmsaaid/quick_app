@@ -29,11 +29,13 @@ class HomeApiService {
     int? creatorId,
   }) async {
     try {
-      final Map<String, dynamic> filters = {};
+      final Map<String, dynamic> filters = {
+        'Active': true,
+      };
       if (creatorId != null) {
         filters['creatorId'] = creatorId;
       } else {
-        filters['Creator.Role'] = 1;
+        filters['Creator.Role'] = 4;
       }
       final response = await _dio.patch(
         ApiConstants.offers,

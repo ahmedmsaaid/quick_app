@@ -14,6 +14,7 @@ import 'package:base_app/features/customer/cart/presentation/riverpod/cart_provi
 import 'package:base_app/features/customer/profile/data/profile_api_service.dart';
 import 'package:base_app/features/customer/profile/presentation/riverpod/profile_provider.dart';
 import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
+import 'package:base_app/core/utils/format_price.dart';
 
 class CartScreen extends ConsumerWidget {
   const CartScreen({super.key});
@@ -379,21 +380,21 @@ class _SummaryCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _row(AppStrings.subtotalLabel, '${subtotal.toStringAsFixed(0)} ${AppStrings.currency}'),
+          _row(AppStrings.subtotalLabel, '${formatPrice(subtotal)} ${AppStrings.currency}'),
           10.verticalSpace,
           isLoadingFees
               ? _loadingRow(AppStrings.deliveryFeesLabel)
-              : _row(AppStrings.deliveryFeesLabel, '${deliveryFee.toStringAsFixed(0)} ${AppStrings.currency}'),
+              : _row(AppStrings.deliveryFeesLabel, '${formatPrice(deliveryFee)} ${AppStrings.currency}'),
           10.verticalSpace,
           isLoadingFees
               ? _loadingRow(AppStrings.serviceFeesLabel)
-              : _row(AppStrings.serviceFeesLabel, '${serviceFee.toStringAsFixed(0)} ${AppStrings.currency}'),
+              : _row(AppStrings.serviceFeesLabel, '${formatPrice(serviceFee)} ${AppStrings.currency}'),
           12.verticalSpace,
           Divider(color: colors.divider, height: 1),
           12.verticalSpace,
           _row(
             AppStrings.finalTotalLabel,
-            '${total.toStringAsFixed(0)} ${AppStrings.currency}',
+            '${formatPrice(total)} ${AppStrings.currency}',
             isTotal: true,
           ),
         ],
@@ -449,7 +450,7 @@ class _CheckoutBar extends StatelessWidget {
       padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 28.h),
       color: colors.surface,
       child: CustomAppButton(
-        text: '${AppStrings.confirmOrder} — ${total.toStringAsFixed(0)} ${AppStrings.currency}',
+        text: '${AppStrings.confirmOrder} — ${formatPrice(total)} ${AppStrings.currency}',
         onPressed: () => context.pushNamed(AppRoutes.cart),
       ),
     );

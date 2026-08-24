@@ -52,6 +52,7 @@ class UserDto {
   final LocationModel? location;
   final String? description;
   final bool? active;
+  final bool? busy;
   final String? createdOn;
   final double rating;
 
@@ -68,6 +69,7 @@ class UserDto {
     this.location,
     this.description,
     this.active,
+    this.busy,
     this.createdOn,
     this.rating = 0.0,
   });
@@ -116,6 +118,17 @@ class UserDto {
       parsedActive = activeStr == 'true' || activeStr == '1';
     }
 
+    bool? parsedBusy;
+    final dynamic rawBusy = userMap['busy'] ?? userMap['Busy'] ?? userMap['isBusy'] ?? userMap['IsBusy'];
+    if (rawBusy is bool) {
+      parsedBusy = rawBusy;
+    } else if (rawBusy is int) {
+      parsedBusy = rawBusy == 1;
+    } else if (rawBusy != null) {
+      final busyStr = rawBusy.toString().toLowerCase();
+      parsedBusy = busyStr == 'true' || busyStr == '1';
+    }
+
     return UserDto(
       id: userMap['id'] is int ? userMap['id'] as int : int.tryParse(userMap['id']?.toString() ?? '0') ?? 0,
       phone: (userMap['phone'] ?? userMap['phoneNumber'] ?? userMap['identifier'])?.toString(),
@@ -131,6 +144,7 @@ class UserDto {
           : LocationModel.fromJson(userMap['location'] as Map<String, dynamic>),
       description: parseCleanDescription(userMap['description']?.toString()),
       active: parsedActive,
+      busy: parsedBusy,
       createdOn: userMap['createdOn']?.toString(),
       rating: parsedRating,
     );
@@ -169,6 +183,7 @@ class UserDto {
     'location': location?.toJson(),
     'description': description,
     'active': active,
+    'busy': busy,
     'createdOn': createdOn,
     'rating': rating,
   };

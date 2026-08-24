@@ -155,6 +155,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ),
       child: Column(
         children: [
+          if (user != null && (user.role == 0 || user.role == 1))
+            _buildBusyToggleTile(context, ref, user),
           _buildMenuItem(
             context,
             ref,
@@ -224,6 +226,60 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             isLogout: true,
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildBusyToggleTile(BuildContext context, WidgetRef ref, UserDto user) {
+    final colors = AppColors(context);
+    final isBusy = user.busy == true;
+
+    return Container(
+      margin: EdgeInsets.only(bottom: 8.h),
+      decoration: BoxDecoration(
+        color: isBusy
+            ? Colors.orange.withValues(alpha: 0.1)
+            : colors.surface,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(
+          color: isBusy
+              ? Colors.orange.withValues(alpha: 0.4)
+              : Colors.transparent,
+          width: 1,
+        ),
+      ),
+      child: ListTile(
+        leading: Container(
+          padding: EdgeInsets.all(8.r),
+          decoration: BoxDecoration(
+            color: isBusy
+                ? Colors.orange.withValues(alpha: 0.2)
+                : colors.primary.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(10.r),
+          ),
+          child: Icon(
+            Icons.local_fire_department_rounded,
+            color: isBusy ? Colors.orange : colors.primary,
+            size: 20.sp,
+          ),
+        ),
+        title: Text(
+          'حالة الانشغال (مشغول)',
+          style: AppTextStyles.text14w600(color: colors.textPrimary),
+        ),
+        subtitle: Text(
+          isBusy ? 'المتجر ظاهر للعملاء كـ "مشغول"' : 'المتجر يعمل بشكل طبيعي',
+          style: AppTextStyles.text12w400(
+            color: isBusy ? Colors.orange : colors.textSecondary,
+          ),
+        ),
+        trailing: Switch(
+          value: isBusy,
+          activeThumbColor: Colors.orange,
+          onChanged: (val) async {
+            await ref.read(profileProvider.notifier).toggleBusy();
+          },
+        ),
       ),
     );
   }

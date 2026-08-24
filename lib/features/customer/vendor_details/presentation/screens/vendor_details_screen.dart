@@ -74,7 +74,7 @@ class _VendorDetailsScreenState extends ConsumerState<VendorDetailsScreen> {
       success: (response) {
         if (response.success && response.result != null) {
           setState(() {
-            _vendorOffers = response.result!;
+            _vendorOffers = response.result!.where((o) => o.active == true).toList();
             _isLoadingOffers = false;
           });
         } else {
@@ -189,18 +189,20 @@ class _VendorDetailsScreenState extends ConsumerState<VendorDetailsScreen> {
                     right: 16.w,
                     child: Row(
                       children: [
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
-                          decoration: BoxDecoration(
-                            color: (vendor.active ?? false) ? Colors.green : Colors.red,
-                            borderRadius: BorderRadius.circular(20.r),
+                        if (vendor.busy == true || !(vendor.active ?? true)) ...[
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                            decoration: BoxDecoration(
+                              color: (vendor.busy == true) ? Colors.orange : Colors.red,
+                              borderRadius: BorderRadius.circular(20.r),
+                            ),
+                            child: Text(
+                              (vendor.busy == true) ? 'مشغول' : 'مغلق',
+                              style: AppTextStyles.text10w500(color: Colors.white),
+                            ),
                           ),
-                          child: Text(
-                            (vendor.active ?? false) ? 'مفتوح' : 'مغلق',
-                            style: AppTextStyles.text10w500(color: Colors.white),
-                          ),
-                        ),
-                        8.horizontalSpace,
+                          8.horizontalSpace,
+                        ],
                         GestureDetector(
                           onTap: () => _showRatingDialog(context, ref, vendor, colors),
                           child: Container(

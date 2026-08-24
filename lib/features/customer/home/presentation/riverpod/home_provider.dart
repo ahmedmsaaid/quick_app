@@ -126,9 +126,10 @@ class HomeNotifier extends _$HomeNotifier {
     result.when(
       success: (response) {
         if (response.success && response.result != null) {
+          final activeOffers = response.result!.where((o) => o.active == true).toList();
           state = state.copyWith(
             status: HomeStatus.loaded,
-            offers: response.result!,
+            offers: activeOffers,
           );
         } else {
           state = state.copyWith(

@@ -71,7 +71,7 @@ class _HomeModernBannerState extends ConsumerState<HomeModernBanner> {
     final List<BannerItem> bannerItems = [];
 
     // 1. Convert real offers from backend to BannerItems
-    for (final offer in homeState.offers) {
+    for (final offer in homeState.offers.where((o) => o.active == true)) {
       final String? featuredPhoto = offer.featuredPhoto;
       final String imageUrl = (featuredPhoto != null && featuredPhoto.isNotEmpty)
           ? (featuredPhoto.startsWith('http')

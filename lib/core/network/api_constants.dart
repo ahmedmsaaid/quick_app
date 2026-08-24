@@ -13,6 +13,7 @@ abstract class ApiConstants {
   static const String resetPassword = 'users/reset-password';
   static const String locations = 'locations';
   static const String toggleActivity = 'users/toggle-activity';
+  static const String toggleBusy = 'users/toggle-busy';
   static const String profile = 'users';
   static const String getById = 'users/get-by-id';
   static const String updateProfile = 'users/update-profile';

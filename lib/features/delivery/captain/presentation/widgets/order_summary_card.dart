@@ -6,6 +6,7 @@ import 'package:base_app/core/localizations/app_strings.g.dart';
 import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/styles/app_text_style.dart';
 import 'package:base_app/features/customer/checkout/data/models/order_models.dart';
+import 'package:base_app/core/utils/format_price.dart';
 
 class OrderSummaryCard extends StatelessWidget {
   final OrderDto order;
@@ -133,19 +134,19 @@ class OrderSummaryCard extends StatelessWidget {
           _buildSummaryRow(
             context,
             "إجمالي المنتجات",
-            "${subtotal.toStringAsFixed(0)} ${AppStrings.currency}",
+            "${formatPrice(subtotal)} ${AppStrings.currency}",
           ),
           8.verticalSpace,
           _buildSummaryRow(
             context,
             "رسوم التوصيل",
-            "${order.deliveryFee.toStringAsFixed(0)} ${AppStrings.currency}",
+            "${formatPrice(order.deliveryFee)} ${AppStrings.currency}",
           ),
           8.verticalSpace,
           _buildSummaryRow(
             context,
             "رسوم الخدمة",
-            "${order.orderFee.toStringAsFixed(0)} ${AppStrings.currency}",
+            "${formatPrice(order.orderFee)} ${AppStrings.currency}",
           ),
           10.verticalSpace,
           Divider(color: colors.divider),
@@ -153,7 +154,7 @@ class OrderSummaryCard extends StatelessWidget {
           _buildSummaryRow(
             context,
             AppStrings.requiredFromCustomerLabel,
-            "${order.totalPrice.toStringAsFixed(0)} ${AppStrings.currency}",
+            "${formatPrice(order.totalPrice)} ${AppStrings.currency}",
             isTotal: true,
           ),
         ],

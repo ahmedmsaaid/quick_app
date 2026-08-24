@@ -1,4 +1,5 @@
 import 'package:base_app/core/routes/app_routes.dart';
+import 'package:base_app/core/utils/format_price.dart';
 import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -238,7 +239,7 @@ class OrdersScreen extends ConsumerWidget {
                 style: AppTextStyles.text12w400(color: colors.textSecondary),
               ),
               Text(
-                '${order.totalPrice.toStringAsFixed(0)} جنيه مصري',
+                '${formatPrice(order.totalPrice)} جنيه مصري',
                 style: AppTextStyles.text14w700(color: colors.primary),
               ),
             ],

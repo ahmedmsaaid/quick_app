@@ -41,7 +41,9 @@ class HomeTodaysOffers extends ConsumerWidget {
       );
     }
 
-    final allOffers = homeState.offers;
+    final allOffers = homeState.offers
+        .where((o) => o.active == true && o.products != null && o.products!.isNotEmpty)
+        .toList();
 
     // لو مفيش عروض - اخفي السيكشن ده
     if (allOffers.isEmpty) return const SizedBox.shrink();

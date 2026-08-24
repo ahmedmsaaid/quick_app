@@ -46,7 +46,9 @@ class AllOffersScreen extends ConsumerWidget {
       return const Center(child: LoadingButton());
     }
 
-    final offers = homeState.offers;
+    final offers = homeState.offers
+        .where((o) => o.active == true && o.products != null && o.products!.isNotEmpty)
+        .toList();
 
     if (offers.isEmpty) {
       return Center(
