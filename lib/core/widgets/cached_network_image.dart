@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:base_app/core/network/api_constants.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cached_network_svg_image/cached_network_svg_image.dart';
 import 'package:flutter/material.dart';
@@ -93,31 +94,33 @@ class CustomNetworkImage extends StatelessWidget {
   );
 
   String _getFullImageUrl(String url) {
-    if (url.contains('flagcdn') || url.contains('supabase')) {
+    if (url.isEmpty || url.trim().isEmpty) return " ";
+    if (url.startsWith('http://') || url.startsWith('https://') || url.contains('flagcdn') || url.contains('supabase')) {
       return url;
-    } else {
-      return " ";
     }
+    return '${ApiConstants.streamUrl}$url';
   }
 
   Widget _buildImage(double? w, double? h, BuildContext context) {
-    if (imageUrl != null && imageUrl!.isNotEmpty) {
-      if (imageUrl!.startsWith("http")) {
-        final fullUrl = _getFullImageUrl(imageUrl!);
+    final double? validWidth = (w != null && w.isFinite) ? w : null;
+    final double? validHeight = (h != null && h.isFinite) ? h : null;
 
+    if (imageUrl != null && imageUrl!.isNotEmpty) {
+      final fullUrl = _getFullImageUrl(imageUrl!);
+      if (imageUrl!.startsWith("http") || fullUrl.startsWith("http")) {
         if (imageUrl!.endsWith(".svg")) {
           return CachedNetworkSVGImage(
             fullUrl,
             fit: fit,
-            height: h,
-            width: w,
+            height: validHeight,
+            width: validWidth,
             placeholder: _placeHolder(context),
           );
         } else {
           return CachedNetworkImage(
             imageUrl: fullUrl,
-            width: w,
-            height: h,
+            width: validWidth,
+            height: validHeight,
             fit: fit,
             placeholder: (context, url) => _placeHolder(context),
             errorWidget: (context, url, error) => _errorWidget(context),
@@ -126,11 +129,10 @@ class CustomNetworkImage extends StatelessWidget {
       } else if (imageUrl!.contains('assets')) {
         return _buildAsset(imageUrl, context);
       } else {
-        final fullUrl = _getFullImageUrl(imageUrl!);
         return CachedNetworkImage(
           imageUrl: fullUrl,
-          width: w,
-          height: h,
+          width: validWidth,
+          height: validHeight,
           fit: fit,
           placeholder: (context, url) => _placeHolder(context),
           errorWidget: (context, url, error) => _errorWidget(context),

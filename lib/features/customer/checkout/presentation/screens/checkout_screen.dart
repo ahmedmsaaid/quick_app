@@ -18,6 +18,7 @@ import 'package:base_app/features/customer/checkout/presentation/screens/order_s
 import 'package:base_app/core/widgets/custom_toast.dart';
 import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
 import 'package:base_app/features/customer/profile/data/profile_api_service.dart';
+import 'package:base_app/features/customer/home/data/home_api_service.dart';
 
 import 'package:base_app/core/utils/format_price.dart';
 
@@ -31,11 +32,20 @@ class CheckoutScreen extends ConsumerStatefulWidget {
 
 class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   int _selectedPayment = 0; // 0 for Cash, 1 for Online
+  final TextEditingController _notesController = TextEditingController();
 
   List<LocationDto> _vendorLocations = [];
   LocationDto? _selectedVendorLocation;
   bool _isLoadingBranches = false;
   String? _branchesError;
+  bool _isVendorClosed = false;
+  bool _isVendorBusy = false;
+
+  @override
+  void dispose() {
+    _notesController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -62,6 +72,29 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       _isLoadingBranches = true;
       _branchesError = null;
     });
+
+    final vendorResult = await ref.read(homeApiServiceProvider).getUserById(vendorId);
+    if (mounted) {
+      vendorResult.when(
+        success: (res) {
+          if (res.success && res.result != null) {
+            final v = res.result!;
+            if (v.busy == true) {
+              setState(() {
+                _isVendorBusy = true;
+              });
+            }
+            if (!(v.active ?? true) || v.status == 0) {
+              setState(() {
+                _isVendorClosed = true;
+              });
+            }
+          }
+        },
+        failure: (_) {},
+      );
+    }
+
     final result = await ref
         .read(profileApiServiceProvider)
         .getLocations(creatorId: vendorId);
@@ -205,6 +238,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             10.verticalSpace,
             _buildBranchSelectionCard(context),
             25.verticalSpace,
+            _buildSectionTitle(context, "ملاحظات العميل"),
+            10.verticalSpace,
+            _buildCustomerNotesCard(context),
+            25.verticalSpace,
             _buildSectionTitle(context, AppStrings.howToPayLabel),
             10.verticalSpace,
             _buildPaymentMethods(context),
@@ -283,6 +320,29 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCustomerNotesCard(BuildContext context) {
+    final colors = AppColors(context);
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 6.h),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(15.r),
+        border: Border.all(color: colors.border),
+      ),
+      child: TextField(
+        controller: _notesController,
+        maxLines: 3,
+        style: AppTextStyles.text14w500(color: colors.textPrimary),
+        decoration: InputDecoration(
+          hintText: 'اكتب أي ملاحظات أو تعليمات خاصة بالطلب هنا...',
+          hintStyle: AppTextStyles.text12w400(color: colors.textHint),
+          icon: Icon(Icons.edit_note_rounded, color: colors.primary, size: 24.sp),
+          border: InputBorder.none,
+        ),
       ),
     );
   }
@@ -599,6 +659,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   return;
                 }
 
+                if (_isVendorBusy) {
+                  CustomToast.error(context, "المتجر مشغول حالياً، لا يمكن قبول الطلبات الآن");
+                  return;
+                }
+
+                if (_isVendorClosed) {
+                  CustomToast.error(context, "المتجر مغلق مؤقتاً، لا يمكن قبول الطلبات حالياً");
+                  return;
+                }
+
                 if (_selectedVendorLocation == null) {
                   CustomToast.error(
                     context,
@@ -613,8 +683,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   return;
                 }
 
+                final String notesText = _notesController.text.trim();
                 final request = CreateOrderRequest(
-                  address: addressName,
+                  address: notesText.isNotEmpty ? notesText : addressName,
                   longitude:
                       selectedLocation?.longitude ??
                       user.location?.longitude ??

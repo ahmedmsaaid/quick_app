@@ -288,8 +288,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final name = _nameController.text.trim();
-    final password = _passwordController.text;
-    final confirmedPassword = _confirmPasswordController.text;
+    final password = _passwordController.text.trim();
+    final confirmedPassword = _confirmPasswordController.text.trim();
     final email = _emailController.text.trim();
     final address = _addressController.text.trim();
 

@@ -104,10 +104,10 @@ class AllCategoriesScreen extends ConsumerWidget {
               );
             }
 
-            final int columnCount = categories.length < 15 ? 3 : 4;
-            final double childAspectRatio = categories.length < 10 ? 0.78 : 0.72;
-            final double crossAxisSpacing = categories.length < 10 ? 12.w : 8.w;
-            final double mainAxisSpacing = categories.length < 10 ? 14.h : 10.h;
+            final int columnCount = 4;
+            final double childAspectRatio = 0.72;
+            final double crossAxisSpacing = 8.w;
+            final double mainAxisSpacing = 10.h;
 
             return RefreshIndicator(
               onRefresh: () async => ref.refresh(mainCategoriesListProvider),

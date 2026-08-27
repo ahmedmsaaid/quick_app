@@ -110,54 +110,76 @@ class OrderTrackingScreen extends ConsumerWidget {
             ),
           ),
 
-          // ── Bottom sheet ──────────────────────────────────────────────────
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Container(
-              padding: EdgeInsets.fromLTRB(25.w, 20.h, 25.w, 30.h),
-              decoration: BoxDecoration(
-                color: colors.surface,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(30.r)),
-                boxShadow: [BoxShadow(color: colors.shadow, blurRadius: 20)],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // drag handle
-                  Container(
-                    width: 40.w,
-                    height: 4.h,
-                    decoration: BoxDecoration(
-                      color: colors.border,
-                      borderRadius: BorderRadius.circular(2.r),
-                    ),
+          // ── Draggable Bottom Sheet (ينزل ويطلع لسحب الخريطة أو التعرّف على تفاصيل الطلب) ──
+          NotificationListener<DraggableScrollableNotification>(
+            onNotification: (notification) => true,
+            child: DraggableScrollableSheet(
+              initialChildSize: 0.48,
+              minChildSize: 0.16,
+              maxChildSize: 0.88,
+              snap: true,
+              snapSizes: const [0.16, 0.48, 0.88],
+              builder: (context, scrollController) {
+                return Container(
+                  decoration: BoxDecoration(
+                    color: colors.surface,
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(30.r)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: colors.shadow.withValues(alpha: 0.2),
+                        blurRadius: 20,
+                        offset: const Offset(0, -4),
+                      ),
+                    ],
                   ),
-                  16.verticalSpace,
+                  child: ListView(
+                    controller: scrollController,
+                    padding: EdgeInsets.fromLTRB(25.w, 14.h, 25.w, 30.h),
+                    children: [
+                      // Drag handle bar
+                      Center(
+                        child: Container(
+                          width: 40.w,
+                          height: 4.h,
+                          decoration: BoxDecoration(
+                            color: colors.border,
+                            borderRadius: BorderRadius.circular(2.r),
+                          ),
+                        ),
+                      ),
+                      16.verticalSpace,
 
-                  // ── Header: ETA or cancelled/rejected ─────────────────────
-                  if (isCancelled)
-                    _CancelledBanner(status: o.status, colors: colors)
-                  else
-                    _EtaHeader(order: o, colors: colors),
+                      // ── Header: ETA or cancelled/rejected ─────────────────
+                      if (isCancelled)
+                        _CancelledBanner(status: o.status, colors: colors)
+                      else
+                        _EtaHeader(order: o, colors: colors),
 
-                  20.verticalSpace,
+                      16.verticalSpace,
 
-                  // ── Tracking Steps ────────────────────────────────────────
-                  _TrackingSteps(status: o.status, colors: colors),
+                      // ── Order Details & Items Card (في الأعلى) ─────────────
+                      _OrderDetailsCard(order: o, colors: colors),
 
-                  20.verticalSpace,
-                  Divider(color: colors.divider),
-                  16.verticalSpace,
+                      20.verticalSpace,
 
-                  // ── Vendor & products info ────────────────────────────────
-                  _VendorRow(order: o, colors: colors, context: context),
-                  _DriverRow(order: o, colors: colors),
-                  if (o.status == 0) ...[
-                    16.verticalSpace,
-                    _CancelOrderButton(order: o, colors: colors),
-                  ],
-                ],
-              ),
+                      // ── Tracking Steps ────────────────────────────────────
+                      _TrackingSteps(status: o.status, colors: colors),
+
+                      20.verticalSpace,
+                      Divider(color: colors.divider),
+                      16.verticalSpace,
+
+                      // ── Vendor & Driver info ──────────────────────────────
+                      _VendorRow(order: o, colors: colors, context: context),
+                      _DriverRow(order: o, colors: colors),
+                      if (o.status == 0) ...[
+                        16.verticalSpace,
+                        _CancelOrderButton(order: o, colors: colors),
+                      ],
+                    ],
+                  ),
+                );
+              },
             ),
           ),
         ],
@@ -302,11 +324,6 @@ class _TrackingSteps extends StatelessWidget {
   final AppColors colors;
   const _TrackingSteps({required this.status, required this.colors});
 
-  // Steps representation matching the real order flow:
-  // 1. الطلب مقبول من المتجر + الدليفري (status 0-3)
-  // 2. التحضير (status 3-5)
-  // 3. السائق في الطريق (status 5-7)
-  // 4. تم التوصيل (status 7)
   static const _steps = [
     (icon: Icons.check_circle_outline_rounded, label: 'تم قبول الطلب'),
     (icon: Icons.restaurant_rounded, label: 'جاري تحضير الطلب'),
@@ -316,40 +333,31 @@ class _TrackingSteps extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Determine how many steps are completed:
     int completedCount = 0;
     int currentStep = -1;
 
     if (status == 8 || status == 9) {
-      // Cancelled or Rejected: no active step
       completedCount = 0;
       currentStep = -1;
     } else if (status < 2) {
-      // status 0 (Created) or 1 (PendingForPayment): waiting for restaurant to accept
       completedCount = 0;
-      currentStep = 0; // step 1 pulsing
+      currentStep = 0;
     } else if (status == 2) {
-      // PendingForDelivery: restaurant accepted, waiting for captain
       completedCount = 0;
-      currentStep = 0; // step 1 still pulsing (not yet confirmed by captain)
+      currentStep = 0;
     } else if (status == 3) {
-      // Confirmed by captain: step 1 done, step 2 starting
       completedCount = 1;
-      currentStep = 1; // step 2 (تحضير) pulsing
+      currentStep = 1;
     } else if (status == 4) {
-      // Preparing
       completedCount = 1;
-      currentStep = 1; // step 2 (تحضير) pulsing
+      currentStep = 1;
     } else if (status == 5) {
-      // ReadyForPickup: prep done, waiting for driver pickup
       completedCount = 2;
-      currentStep = -1; // step 2 done, step 3 not yet started
+      currentStep = -1;
     } else if (status == 6) {
-      // OutForDelivery: driver is on the way
       completedCount = 2;
-      currentStep = 2; // step 3 (السائق في الطريق) pulsing
+      currentStep = 2;
     } else if (status == 7) {
-      // Delivered: all done
       completedCount = 4;
       currentStep = -1;
     }
@@ -400,12 +408,10 @@ class _StepRow extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── Timeline column ──────────────────────────────────────────────
         SizedBox(
           width: 28.w,
           child: Column(
             children: [
-              // animated dot
               AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 width: isCurrent ? 22.w : 16.w,
@@ -445,7 +451,6 @@ class _StepRow extends StatelessWidget {
           ),
         ),
         12.horizontalSpace,
-        // ── Label ────────────────────────────────────────────────────────
         Padding(
           padding: EdgeInsets.only(top: 1.h, bottom: isLast ? 0 : 20.h),
           child: Row(
@@ -546,7 +551,6 @@ class _VendorRow extends StatelessWidget {
             : '${ApiConstants.streamUrl}$rawPhoto')
         : '';
 
-    // Build product summary line
     String productSummary = '';
     if (order.products.isNotEmpty) {
       productSummary = order.products
@@ -560,7 +564,6 @@ class _VendorRow extends StatelessWidget {
       children: [
         Row(
           children: [
-            // Vendor avatar
             ClipOval(
               child: photoUrl.isNotEmpty
                   ? CachedNetworkImage(
@@ -630,6 +633,211 @@ class _VendorRow extends StatelessWidget {
     );
   }
 }
+
+// ─── Order Details Expandable Section Widget ─────────────────────────────────
+class _OrderDetailsCard extends StatefulWidget {
+  final OrderDto order;
+  final AppColors colors;
+
+  const _OrderDetailsCard({required this.order, required this.colors});
+
+  @override
+  State<_OrderDetailsCard> createState() => _OrderDetailsCardState();
+}
+
+class _OrderDetailsCardState extends State<_OrderDetailsCard> {
+  bool _isExpanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = widget.colors;
+    final order = widget.order;
+    final products = order.products;
+    final subTotal = products.fold(0.0, (sum, p) => sum + (p.price * p.quantity));
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.containerBackground,
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(color: colors.border.withValues(alpha: 0.6)),
+      ),
+      child: Column(
+        children: [
+          // Header button to click and toggle details
+          InkWell(
+            onTap: () => setState(() => _isExpanded = !_isExpanded),
+            borderRadius: BorderRadius.circular(14.r),
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
+              child: Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(8.r),
+                    decoration: BoxDecoration(
+                      color: colors.primary.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.receipt_long_rounded,
+                      color: colors.primary,
+                      size: 20.sp,
+                    ),
+                  ),
+                  12.horizontalSpace,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'تفاصيل الطلب والأصناف',
+                          style: AppTextStyles.text14w700(color: colors.textPrimary),
+                        ),
+                        4.verticalSpace,
+                        Text(
+                          products.isNotEmpty
+                              ? '${products.length} أصناف • ${formatPrice(order.totalPrice)} ${AppStrings.currency}'
+                              : 'اضغط لعرض كامل الفاتورة والأصناف',
+                          style: AppTextStyles.text12w400(color: colors.textSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    _isExpanded
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.keyboard_arrow_down_rounded,
+                    color: colors.textSecondary,
+                    size: 24.sp,
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Expanded items details & breakdown
+          if (_isExpanded) ...[
+            Divider(color: colors.divider, height: 1),
+            Padding(
+              padding: EdgeInsets.all(14.r),
+              child: Column(
+                children: [
+                  if (products.isNotEmpty)
+                    ...products.map((item) {
+                      final rawPhoto = item.photo;
+                      final photoUrl = (rawPhoto != null && rawPhoto.isNotEmpty)
+                          ? (rawPhoto.startsWith('http')
+                              ? rawPhoto
+                              : '${ApiConstants.streamUrl}$rawPhoto')
+                          : '';
+
+                      return Padding(
+                        padding: EdgeInsets.only(bottom: 10.h),
+                        child: Row(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8.r),
+                              child: photoUrl.isNotEmpty
+                                  ? CachedNetworkImage(
+                                      imageUrl: photoUrl,
+                                      width: 40.w,
+                                      height: 40.w,
+                                      fit: BoxFit.cover,
+                                      placeholder: (_, __) => Container(
+                                        color: colors.shimmerBase,
+                                      ),
+                                      errorWidget: (_, __, ___) => Container(
+                                        color: colors.shimmerBase,
+                                        child: Icon(Icons.fastfood_rounded,
+                                            size: 20.sp, color: colors.textHint),
+                                      ),
+                                    )
+                                  : Container(
+                                      width: 40.w,
+                                      height: 40.w,
+                                      color: colors.shimmerBase,
+                                      child: Icon(Icons.fastfood_rounded,
+                                          size: 20.sp, color: colors.textHint),
+                                    ),
+                            ),
+                            10.horizontalSpace,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item.productName ?? 'صنف',
+                                    style: AppTextStyles.text13w600(
+                                        color: colors.textPrimary),
+                                  ),
+                                  2.verticalSpace,
+                                  Text(
+                                    'الكمية: ${item.quantity}',
+                                    style: AppTextStyles.text11w400(
+                                        color: colors.textSecondary),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Text(
+                              '${formatPrice(item.price * item.quantity)} ${AppStrings.currency}',
+                              style: AppTextStyles.text13w700(
+                                  color: colors.textPrimary),
+                            ),
+                          ],
+                        ),
+                      );
+                    })
+                  else if (order.offerId != null)
+                    Padding(
+                      padding: EdgeInsets.symmetric(vertical: 6.h),
+                      child: Text(
+                        'طلب عرض خاص كامل',
+                        style: AppTextStyles.text13w600(color: colors.textPrimary),
+                      ),
+                    ),
+
+                  10.verticalSpace,
+                  Divider(color: colors.divider),
+                  8.verticalSpace,
+
+                  // Summary breakdown
+                  _priceRow('المجموع الفرعي', '${formatPrice(subTotal)} ${AppStrings.currency}', colors),
+                  6.verticalSpace,
+                  _priceRow('رسوم التوصيل', '${formatPrice(order.deliveryFee)} ${AppStrings.currency}', colors),
+                  8.verticalSpace,
+                  Divider(color: colors.divider),
+                  8.verticalSpace,
+                  _priceRow('الإجمالي النهائي', '${formatPrice(order.totalPrice)} ${AppStrings.currency}', colors, isTotal: true),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _priceRow(String label, String value, AppColors colors, {bool isTotal = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: isTotal
+              ? AppTextStyles.text14w700(color: colors.textPrimary)
+              : AppTextStyles.text12w400(color: colors.textSecondary),
+        ),
+        Text(
+          value,
+          style: isTotal
+              ? AppTextStyles.text15w700(color: colors.primary)
+              : AppTextStyles.text13w600(color: colors.textPrimary),
+        ),
+      ],
+    );
+  }
+}
+
 
 // ─── Driver Row ───────────────────────────────────────────────────────────────
 class _DriverRow extends StatelessWidget {
@@ -821,7 +1029,7 @@ class _CancelOrderButtonState extends ConsumerState<_CancelOrderButton> {
             ? SizedBox(
                 width: 20.w,
                 height: 20.w,
-                child: LoadingButton(color: widget.colors.error,  ),
+                child: LoadingButton(color: widget.colors.error),
               )
             : Text(
                 'إلغاء الطلب',
@@ -887,7 +1095,6 @@ class _LiveOrderTrackingMapState extends ConsumerState<_LiveOrderTrackingMap> {
   RouteResult? _roadRouteResult;
   bool _isAutoCentering = true;
 
-  // Track previous captain position to detect real movement
   double? _prevCaptainLat;
   double? _prevCaptainLng;
 
@@ -901,7 +1108,6 @@ class _LiveOrderTrackingMapState extends ConsumerState<_LiveOrderTrackingMap> {
     final capLat = o.delivery?.location?.latitude;
     final capLng = o.delivery?.location?.longitude;
 
-    // Detect meaningful captain movement (> ~20 meters)
     final captainMoved = capLat != null &&
         capLng != null &&
         capLat != 0 &&
@@ -914,7 +1120,6 @@ class _LiveOrderTrackingMapState extends ConsumerState<_LiveOrderTrackingMap> {
       _prevCaptainLat = capLat;
       _prevCaptainLng = capLng;
 
-      // Auto-follow captain when active
       if (_isAutoCentering) {
         _mapController.move(
           ll.LatLng(capLat, capLng),
@@ -922,7 +1127,6 @@ class _LiveOrderTrackingMapState extends ConsumerState<_LiveOrderTrackingMap> {
         );
       }
 
-      // Invalidate route cache and re-fetch
       MapService.invalidateRouteCache(ll.LatLng(capLat, capLng));
       _fetchRoadRoute(o);
     }
@@ -959,11 +1163,9 @@ class _LiveOrderTrackingMapState extends ConsumerState<_LiveOrderTrackingMap> {
 
   @override
   Widget build(BuildContext context) {
-    // Watch live updates directly from gRPC stream
     final liveOrderAsync = ref.watch(trackOrderProvider(widget.order.id));
     final o = liveOrderAsync.value ?? widget.order;
 
-    // Trigger captain-movement side effects after build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final liveVal = liveOrderAsync.value;
       if (liveVal != null) _onOrderUpdate(liveVal);
@@ -987,7 +1189,6 @@ class _LiveOrderTrackingMapState extends ConsumerState<_LiveOrderTrackingMap> {
     final markers = <Marker>[];
     final polylines = <Polyline>[];
 
-    // Real OSRM Road Polyline
     final routePoints = _roadRouteResult?.points ?? [];
     if (routePoints.isNotEmpty) {
       polylines.add(
@@ -1003,7 +1204,6 @@ class _LiveOrderTrackingMapState extends ConsumerState<_LiveOrderTrackingMap> {
       );
     }
 
-    // Store marker
     if (hasStore) {
       markers.add(
         Marker(
@@ -1022,7 +1222,6 @@ class _LiveOrderTrackingMapState extends ConsumerState<_LiveOrderTrackingMap> {
       );
     }
 
-    // Customer destination marker
     if (hasDest) {
       markers.add(
         Marker(
@@ -1041,27 +1240,16 @@ class _LiveOrderTrackingMapState extends ConsumerState<_LiveOrderTrackingMap> {
       );
     }
 
-    // Live Captain / Driver Marker (when out for delivery)
     if (o.status == 6 && (hasCaptain || hasDest)) {
       final capPoint = hasCaptain ? ll.LatLng(captainLat, captainLng) : ll.LatLng(destLat, destLng);
       markers.add(
         Marker(
           point: capPoint,
-          width: 48.w,
-          height: 48.w,
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.orange,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: widget.colors.primary.withValues(alpha: 0.4),
-                  blurRadius: 10,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-            child: const Icon(Icons.delivery_dining_rounded, color: Colors.white, size: 26),
+          width: 54.w,
+          height: 54.w,
+          child: Image.asset(
+            'assets/icons/delivarey-mab.png',
+            fit: BoxFit.contain,
           ),
         ),
       );
@@ -1092,7 +1280,7 @@ class _LiveOrderTrackingMapState extends ConsumerState<_LiveOrderTrackingMap> {
           ],
         ),
 
-        // Live Route ETA & Distance Banner (أعلى الخريطة)
+        // Live Route ETA & Distance Banner
         if (_roadRouteResult != null && _roadRouteResult!.distanceMeters > 0)
           Positioned(
             top: 105.h,
@@ -1149,14 +1337,13 @@ class _LiveOrderTrackingMapState extends ConsumerState<_LiveOrderTrackingMap> {
             ),
           ),
 
-        // Floating Uber-Style Controls Panel (Zoom In +, Zoom Out -, Recenter 🎯)
+        // Map controls (zoom in/out & recenter FAB)
         Positioned(
-          bottom: 240.h,
+          top: 175.h,
           left: 20.w,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Zoom Controls Pill
               Container(
                 decoration: BoxDecoration(
                   color: widget.colors.surface,
@@ -1174,7 +1361,6 @@ class _LiveOrderTrackingMapState extends ConsumerState<_LiveOrderTrackingMap> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Zoom In (+)
                     InkWell(
                       onTap: () {
                         final newZoom = (_mapController.camera.zoom + 0.8).clamp(1.0, 19.0);
@@ -1198,7 +1384,6 @@ class _LiveOrderTrackingMapState extends ConsumerState<_LiveOrderTrackingMap> {
                       width: 28.w,
                       color: widget.colors.border.withValues(alpha: 0.6),
                     ),
-                    // Zoom Out (-)
                     InkWell(
                       onTap: () {
                         final newZoom = (_mapController.camera.zoom - 0.8).clamp(1.0, 19.0);
@@ -1222,7 +1407,6 @@ class _LiveOrderTrackingMapState extends ConsumerState<_LiveOrderTrackingMap> {
               ),
               10.verticalSpace,
 
-              // Recenter FAB Button (🎯)
               Material(
                 color: _isAutoCentering ? widget.colors.primary : widget.colors.surface,
                 elevation: 6,
@@ -1232,10 +1416,9 @@ class _LiveOrderTrackingMapState extends ConsumerState<_LiveOrderTrackingMap> {
                     setState(() => _isAutoCentering = true);
                     final capLat = o.delivery?.location?.latitude;
                     final capLng = o.delivery?.location?.longitude;
-                    // Recenter → captain if out for delivery, else customer destination
                     final hasCap = capLat != null && capLng != null && capLat != 0 && capLng != 0;
-                    final targetLat = (o.status == 6 && hasCap) ? capLat! : centerLat;
-                    final targetLng = (o.status == 6 && hasCap) ? capLng! : centerLng;
+                    final targetLat = (o.status == 6 && hasCap) ? capLat : centerLat;
+                    final targetLng = (o.status == 6 && hasCap) ? capLng : centerLng;
                     _mapController.move(ll.LatLng(targetLat, targetLng), 15.5);
                   },
                   customBorder: const CircleBorder(),
@@ -1270,5 +1453,3 @@ class _LiveOrderTrackingMapState extends ConsumerState<_LiveOrderTrackingMap> {
     );
   }
 }
-
-

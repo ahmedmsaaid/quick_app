@@ -1,3 +1,5 @@
+// ignore_for_file: unused_element, unused_import
+import 'dart:async';
 import 'dart:ui';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -24,10 +26,12 @@ import 'package:base_app/features/customer/home/data/models/rating_models.dart';
 import 'package:base_app/core/network/api_result.dart';
 
 class StoreProductDetailsScreen extends ConsumerStatefulWidget {
-  const StoreProductDetailsScreen({super.key, required this.product, this.vendorId});
+  const StoreProductDetailsScreen({super.key, required this.product, this.vendorId, this.isClosed, this.isBusy});
 
   final ProductDetailDto product;
   final int? vendorId;
+  final bool? isClosed;
+  final bool? isBusy;
 
   @override
   ConsumerState<StoreProductDetailsScreen> createState() =>
@@ -66,6 +70,14 @@ class _StoreProductDetailsScreenState
   }
 
   void _addToCart() async {
+    if (widget.isBusy == true) {
+      CustomToast.error(context, 'المتجر مشغول حالياً، لا يمكن إضافة طلبات الآن');
+      return;
+    }
+    if (widget.isClosed == true) {
+      CustomToast.error(context, 'المتجر مغلق مؤقتاً، لا يمكن إضافة طلبات الآن');
+      return;
+    }
     await _addController.forward();
     await _addController.reverse();
     ref.read(cartProvider.notifier).addItem(product, quantity: _quantity, vendorId: widget.vendorId);
@@ -346,6 +358,7 @@ class _StoreProductDetailsScreenState
                               ),
                               12.verticalSpace,
 
+                              /*
                               // Rating Box link
                               GestureDetector(
                                 onTap: () => _showProductRatingsListBottomSheet(context),
@@ -368,6 +381,7 @@ class _StoreProductDetailsScreenState
                                   ),
                                 ),
                               ),
+                              */
                             ],
                           ),
                         ),
@@ -466,6 +480,7 @@ class _StoreProductDetailsScreenState
                             ],
                           ),
                         ),
+                        /*
                         24.verticalSpace,
 
                         // ─── Rating banner ───
@@ -511,6 +526,7 @@ class _StoreProductDetailsScreenState
                             ),
                           ),
                         ),
+                        */
                       ],
                     ),
                   ),

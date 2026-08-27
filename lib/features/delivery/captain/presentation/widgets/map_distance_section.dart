@@ -203,21 +203,11 @@ class _MapDistanceSectionState extends State<MapDistanceSection> {
       markers.add(
         Marker(
           point: ll.LatLng(pos.latitude, pos.longitude),
-          width: 48.w,
-          height: 48.w,
-          child: Container(
-            decoration: BoxDecoration(
-              color: colors.primary,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: colors.primary.withValues(alpha: 0.4),
-                  blurRadius: 10,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-            child: const Icon(Icons.navigation_rounded, color: Colors.white, size: 24),
+          width: 54.w,
+          height: 54.w,
+          child: Image.asset(
+            'assets/icons/delivarey-mab.png',
+            fit: BoxFit.contain,
           ),
         ),
       );
@@ -379,7 +369,7 @@ class _MapDistanceSectionState extends State<MapDistanceSection> {
                         4.horizontalSpace,
                         Flexible(
                           child: Text(
-                            "${_roadRouteResult!.formattedDistance} • ${_roadRouteResult!.formattedDuration}",
+                            _roadRouteResult!.formattedDistance,
                             style: AppTextStyles.text13w700(color: colors.primary),
                             textAlign: TextAlign.end,
                             overflow: TextOverflow.ellipsis,

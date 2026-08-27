@@ -1,6 +1,7 @@
 import 'package:base_app/core/routes/app_routes.dart';
 import 'package:base_app/core/utils/format_price.dart';
 import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
+// ignore_for_file: unused_import
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,23 +13,33 @@ import 'package:base_app/features/customer/checkout/data/models/order_models.dar
 import 'package:base_app/core/network/api_constants.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:base_app/core/widgets/lading_button.dart';
+import 'package:base_app/core/widgets/custom_arrow_back.dart';
 import 'package:base_app/core/widgets/custom_toast.dart';
 
+import 'package:base_app/features/customer/main_nav/presentation/riverpod/user_nav_provider.dart';
+
 class OrdersScreen extends ConsumerWidget {
-  const OrdersScreen({super.key});
+  const OrdersScreen({super.key, this.initialTabIndex});
+
+  final int? initialTabIndex;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColors(context);
     final ordersState = ref.watch(ordersProvider);
+    final initialTabFromProvider = ref.watch(ordersInitialTabProvider);
+    final activeTab = (initialTabIndex ?? initialTabFromProvider).clamp(0, 1);
 
     return DefaultTabController(
+      key: ValueKey('orders_tab_$activeTab'),
       length: 2,
+      initialIndex: activeTab,
       child: Scaffold(
         backgroundColor: colors.background,
         appBar: AppBar(
           backgroundColor: colors.surface,
           elevation: 0,
+          leading: Navigator.canPop(context) ? const CustomArrowBack() : null,
           title: Text(
             AppStrings.myBookings,
             style: AppTextStyles.text18w700(color: colors.textPrimary),
@@ -294,6 +305,7 @@ class OrdersScreen extends ConsumerWidget {
               width: double.infinity,
               child: Row(
                 children: [
+                  /*
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () {
@@ -315,6 +327,7 @@ class OrdersScreen extends ConsumerWidget {
                     ),
                   ),
                   10.horizontalSpace,
+                  */
                   Expanded(
                     child: _ReorderButton(order: order),
                   ),

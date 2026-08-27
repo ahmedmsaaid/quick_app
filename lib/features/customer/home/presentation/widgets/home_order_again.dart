@@ -12,6 +12,7 @@ import 'package:base_app/features/customer/orders/presentation/riverpod/orders_p
 import 'package:base_app/features/customer/checkout/data/models/order_models.dart';
 import 'package:base_app/features/customer/profile/presentation/riverpod/profile_provider.dart';
 import 'package:base_app/core/widgets/custom_toast.dart';
+import 'package:base_app/features/customer/main_nav/presentation/riverpod/user_nav_provider.dart';
 
 class HomeOrderAgain extends ConsumerStatefulWidget {
   const HomeOrderAgain({super.key});
@@ -22,6 +23,15 @@ class HomeOrderAgain extends ConsumerStatefulWidget {
 
 class _HomeOrderAgainState extends ConsumerState<HomeOrderAgain> {
   final Set<int> _loadingOrderIds = {};
+
+  void _navigateToCompletedOrders() {
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    }
+    ref.read(ordersInitialTabProvider.notifier).state = 1;
+    ref.read(userNavIndexProvider.notifier).state = 2;
+    ref.read(ordersProvider.notifier).loadOrders();
+  }
 
   String _getTimeAgo(String? createdOnStr) {
     if (createdOnStr == null || createdOnStr.isEmpty) return 'منذ فترة';
@@ -108,6 +118,7 @@ class _HomeOrderAgainState extends ConsumerState<HomeOrderAgain> {
     final pastOrders = ordersState.orders
         .where((o) => o.status != 8 && o.status != 9)
         .toList();
+    final displayOrders = pastOrders.take(5).toList();
 
     // Loading state
     if (ordersState.status == OrdersStatus.loading && pastOrders.isEmpty) {
@@ -116,7 +127,12 @@ class _HomeOrderAgainState extends ConsumerState<HomeOrderAgain> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SeeAllWidget(title: 'اطلب مرة أخرى', onTap: () {}),
+            SeeAllWidget(
+              title: 'اطلب مرة أخرى',
+              onTap: () {
+                _navigateToCompletedOrders();
+              },
+            ),
             Expanded(
               child: Center(
                 child: LoadingButton(
@@ -136,7 +152,9 @@ class _HomeOrderAgainState extends ConsumerState<HomeOrderAgain> {
       children: [
         SeeAllWidget(
           title: 'اطلب مرة أخرى',
-          onTap: () {},
+          onTap: () {
+            _navigateToCompletedOrders();
+          },
         ),
         Padding(
           padding:   EdgeInsets.symmetric(horizontal: 20.w),
@@ -145,9 +163,9 @@ class _HomeOrderAgainState extends ConsumerState<HomeOrderAgain> {
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               padding: EdgeInsets.symmetric(horizontal: 20.w),
-              itemCount: pastOrders.length,
+              itemCount: displayOrders.length,
               itemBuilder: (context, index) {
-                final order = pastOrders[index];
+                final order = displayOrders[index];
                 final String title = _getOrderTitle(order);
                 final String imageUrl = _getOrderImageUrl(order);
                 final bool isLoading = _loadingOrderIds.contains(order.id);

@@ -13,6 +13,8 @@ import 'package:base_app/features/customer/home/presentation/riverpod/home_provi
 import 'package:base_app/features/customer/orders/presentation/riverpod/orders_provider.dart';
 import 'package:base_app/core/localizations/app_strings.g.dart';
 
+import 'package:base_app/features/customer/main_nav/presentation/riverpod/user_nav_provider.dart';
+
 class UserNavScreen extends ConsumerStatefulWidget {
   const UserNavScreen({super.key});
 
@@ -21,7 +23,6 @@ class UserNavScreen extends ConsumerStatefulWidget {
 }
 
 class _UserNavScreenState extends ConsumerState<UserNavScreen> {
-  int _selectedIndex = 0;
   final Map<int, DateTime> _lastRefreshTimes = {};
 
   @override
@@ -61,15 +62,13 @@ class _UserNavScreenState extends ConsumerState<UserNavScreen> {
     const ProfileScreen(),
   ];
 
-  Widget _buildNavItem(int index, AppColors colors) {
-    final isSelected = _selectedIndex == index;
+  Widget _buildNavItem(int index, int selectedIndex, AppColors colors) {
+    final isSelected = selectedIndex == index;
     final String label = _getLabel(index);
 
     return GestureDetector(
       onTap: () {
-        setState(() {
-          _selectedIndex = index;
-        });
+        ref.read(userNavIndexProvider.notifier).state = index;
         _refreshTabEndpoint(index);
       },
       behavior: HitTestBehavior.opaque,
@@ -183,10 +182,11 @@ class _UserNavScreenState extends ConsumerState<UserNavScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors(context);
+    final selectedIndex = ref.watch(userNavIndexProvider);
 
     return Scaffold(
       extendBody: true,
-      body: _pages[_selectedIndex],
+      body: _pages[selectedIndex],
       bottomNavigationBar: Container(
         height: 64.h,
         margin: EdgeInsets.fromLTRB(16.w, 0, 16.w, 8.h),
@@ -204,7 +204,7 @@ class _UserNavScreenState extends ConsumerState<UserNavScreen> {
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: List.generate(4, (index) => _buildNavItem(index, colors)),
+          children: List.generate(4, (index) => _buildNavItem(index, selectedIndex, colors)),
         ),
       ),
     );

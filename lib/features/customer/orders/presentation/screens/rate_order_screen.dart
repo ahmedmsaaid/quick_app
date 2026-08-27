@@ -1,3 +1,4 @@
+// ignore_for_file: unused_import, unused_element, unused_local_variable
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,13 +7,8 @@ import 'package:base_app/core/localizations/app_strings.g.dart';
 import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/styles/app_text_style.dart';
 import 'package:base_app/core/widgets/custom_arrow_back.dart';
-import 'package:base_app/core/widgets/custom_button.dart';
-import 'package:base_app/core/widgets/custom_toast.dart';
-import 'package:base_app/core/widgets/custom_text_field.dart';
-import 'package:base_app/core/widgets/lading_button.dart';
 import 'package:base_app/core/network/api_constants.dart';
 import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
-import 'package:base_app/features/customer/home/presentation/riverpod/rating_provider.dart';
 
 class RateOrderScreen extends ConsumerStatefulWidget {
   final UserDto? vendor;
@@ -24,46 +20,9 @@ class RateOrderScreen extends ConsumerStatefulWidget {
 }
 
 class _RateOrderScreenState extends ConsumerState<RateOrderScreen> {
-  int _rating = 5;
-  final _commentController = TextEditingController();
-
-  @override
-  void dispose() {
-    _commentController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _submitRating() async {
-    if (_rating == 0) {
-      CustomToast.error(context, "يرجى تحديد التقييم بالنجوم أولاً");
-      return;
-    }
-
-    final vendorId = widget.vendor?.id ?? 1;
-    final note = _commentController.text.trim();
-
-    final success = await ref.read(ratingProvider.notifier).submitUserRating(
-          userId: vendorId,
-          value: _rating,
-          note: note.isEmpty ? "تقييم ممتاز" : note,
-        );
-
-    if (!mounted) return;
-
-    if (success) {
-      CustomToast.success(context, AppStrings.thanksForRatingMsg);
-      Navigator.pop(context);
-    } else {
-      final errorMsg = ref.read(ratingProvider).errorMessage;
-      CustomToast.error(context, errorMsg ?? AppStrings.errorOccurred);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final colors = AppColors(context);
-    final ratingState = ref.watch(ratingProvider);
-    final isLoading = ratingState.status == RatingStatus.loading;
 
     // Resolve vendor image URL
     final String? photo = widget.vendor?.photo ?? widget.vendor?.avatar;
@@ -126,6 +85,7 @@ class _RateOrderScreenState extends ConsumerState<RateOrderScreen> {
               textAlign: TextAlign.center,
             ),
             30.verticalSpace,
+            /*
             // Star rating row
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -156,6 +116,12 @@ class _RateOrderScreenState extends ConsumerState<RateOrderScreen> {
                     text: AppStrings.sendRatingBtn,
                     onPressed: _submitRating,
                   ),
+            */
+            30.verticalSpace,
+            Text(
+              "خدمة التقييمات غير متاحة حالياً",
+              style: AppTextStyles.text14w600(color: colors.textSecondary),
+            ),
           ],
         ),
       ),

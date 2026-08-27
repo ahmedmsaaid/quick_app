@@ -179,8 +179,16 @@ class OrderDto {
       creatorId: json['creatorId'] is int ? json['creatorId'] as int : 0,
       createdOn: json['createdOn']?.toString(),
       products: products,
-      user: json['user'] != null ? UserDto.fromJson(json['user'] as Map<String, dynamic>) : null,
-      creator: json['creator'] != null ? UserDto.fromJson(json['creator'] as Map<String, dynamic>) : null,
+      user: json['user'] != null
+          ? UserDto.fromJson(json['user'] as Map<String, dynamic>)
+          : (json['User'] != null
+              ? UserDto.fromJson(json['User'] as Map<String, dynamic>)
+              : null),
+      creator: json['creator'] != null
+          ? UserDto.fromJson(json['creator'] as Map<String, dynamic>)
+          : (json['Creator'] != null
+              ? UserDto.fromJson(json['Creator'] as Map<String, dynamic>)
+              : null),
       delivery: json['delivery'] != null
           ? UserDto.fromJson(json['delivery'] as Map<String, dynamic>)
           : (json['Delivery'] != null

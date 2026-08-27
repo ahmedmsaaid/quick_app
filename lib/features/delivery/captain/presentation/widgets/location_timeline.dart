@@ -29,7 +29,9 @@ class LocationTimeline extends StatelessWidget {
     final destLat = order.latitude != 0 ? order.latitude : (order.creator?.location?.latitude ?? 0.0);
     final destLng = order.longitude != 0 ? order.longitude : (order.creator?.location?.longitude ?? 0.0);
 
-    final storeName = order.user?.name ?? "متجر غير معروف";
+    final storeName = (order.user?.name != null && order.user!.name!.isNotEmpty)
+        ? order.user!.name!
+        : "المتجر";
     final storeAddress = (vendorLocation?.address != null && vendorLocation!.address!.isNotEmpty)
         ? vendorLocation!.address!
         : (order.userLocation?.address != null && order.userLocation!.address!.isNotEmpty)
@@ -38,16 +40,20 @@ class LocationTimeline extends StatelessWidget {
                 ? order.user!.address!
                 : (storeLat != null && storeLng != null && storeLat != 0 && storeLng != 0)
                     ? "الموقع: ${storeLat.toStringAsFixed(5)}, ${storeLng.toStringAsFixed(5)}"
-                    : "عنوان غير متوفر";
+                    : "عنوان المتجر غير متوفر";
 
-    final customerName = order.creator?.name ?? "زبون غير معروف";
+    final customerName = (order.creator?.name != null && order.creator!.name!.isNotEmpty)
+        ? order.creator!.name!
+        : ((order.user?.name != null && order.user!.name!.isNotEmpty && order.user!.name != storeName)
+            ? order.user!.name!
+            : "العميل");
     final customerAddress = (order.address != null && order.address!.isNotEmpty)
         ? order.address!
         : (order.creator?.address != null && order.creator!.address!.isNotEmpty)
             ? order.creator!.address!
             : (destLat != 0 && destLng != 0)
                 ? "الموقع: ${destLat.toStringAsFixed(5)}, ${destLng.toStringAsFixed(5)}"
-                : "عنوان غير متوفر";
+                : "عنوان العميل غير متوفر";
 
     return Container(
       padding: EdgeInsets.all(20.r),
@@ -89,7 +95,7 @@ class LocationTimeline extends StatelessWidget {
             isLast: true,
             avatarUrl: _getImageUrl(order.creator?.photo ?? order.creator?.avatar),
             phone: order.creator?.phone,
-            recipientId: order.creatorId ?? order.userId,
+            recipientId: order.creatorId != 0 ? order.creatorId : order.userId,
             roleType: RoleTypeEnum.customer,
           ),
         ],

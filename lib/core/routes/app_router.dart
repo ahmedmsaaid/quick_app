@@ -24,6 +24,7 @@ import 'package:base_app/features/customer/main_nav/presentation/screens/user_na
 import 'package:base_app/features/customer/checkout/presentation/screens/checkout_screen.dart';
 import 'package:base_app/features/customer/orders/presentation/screens/order_tracking_screen.dart';
 import 'package:base_app/features/customer/orders/presentation/screens/rate_order_screen.dart';
+import 'package:base_app/features/customer/orders/presentation/screens/orders_screen.dart';
 import 'package:base_app/features/customer/vendor_list/presentation/screens/vendor_list_screen.dart';
 import 'package:base_app/features/customer/home/presentation/screens/search_results_screen.dart';
 import 'package:base_app/features/customer/profile/presentation/screens/profile_screen.dart';
@@ -252,6 +253,8 @@ abstract class AppRouter {
             StoreProductDetailsScreen(
               product: args['product'] as ProductDetailDto,
               vendorId: args['vendorId'] as int?,
+              isClosed: args['isClosed'] as bool?,
+              isBusy: args['isBusy'] as bool?,
             ),
             settings,
           );
@@ -263,8 +266,24 @@ abstract class AppRouter {
       case AppRoutes.profileScreen:
         return _buildAnimatedRoute(const ProfileScreen(), settings);
       case AppRoutes.products:
-        final CategoryDto category = settings.arguments as CategoryDto;
-        return _buildAnimatedRoute(CategoryProductsScreen(category: category), settings);
+        if (settings.arguments is CategoryDto) {
+          final CategoryDto category = settings.arguments as CategoryDto;
+          return _buildAnimatedRoute(CategoryProductsScreen(category: category), settings);
+        } else if (settings.arguments is Map<String, dynamic>) {
+          final Map<String, dynamic> args = settings.arguments as Map<String, dynamic>;
+          final CategoryDto category = args['category'] as CategoryDto;
+          final List<CategoryDto>? categoriesList = args['categoriesList'] as List<CategoryDto>?;
+          return _buildAnimatedRoute(
+            CategoryProductsScreen(category: category, categoriesList: categoriesList),
+            settings,
+          );
+        }
+        return _buildAnimatedRoute(
+          const Scaffold(body: Center(child: Text('Invalid Arguments'))),
+          settings,
+        );
+      case AppRoutes.ordersScreen:
+        return _buildAnimatedRoute(const OrdersScreen(), settings);
 
       default:
         return _buildAnimatedRoute(

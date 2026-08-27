@@ -52,7 +52,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final success = await ref.read(authProvider.notifier).login(
       countryCode: _countryCode,
       rawPhone: _phoneController.text.trim(),
-      password: _passwordController.text,
+      password: _passwordController.text.trim(),
       isUser: widget.isUser,
     );
 
@@ -144,7 +144,59 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             color: colors.textSecondary,
                           ),
                         ),
-                        16.verticalSpace,
+                        14.verticalSpace,
+
+                        // ── Quick Fill Credentials Buttons ─────────────────────────────
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () {
+                                  setState(() {
+                                    _phoneController.text = "01020183843";
+                                    _passwordController.text = "Ahmed@123123";
+                                  });
+                                },
+                                icon: Icon(Icons.person_rounded, size: 16.sp, color: colors.primary),
+                                label: Text(
+                                  'تعبئة يوزر 👤',
+                                  style: AppTextStyles.text12w600(color: colors.primary),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  padding: EdgeInsets.symmetric(vertical: 8.h),
+                                  side: BorderSide(color: colors.primary.withValues(alpha: 0.4)),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10.r),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            10.horizontalSpace,
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () {
+                                  setState(() {
+                                    _phoneController.text = "01110019623";
+                                    _passwordController.text = "Ahmed@123123";
+                                  });
+                                },
+                                icon: Icon(Icons.two_wheeler_rounded, size: 16.sp, color: colors.secondary),
+                                label: Text(
+                                  'تعبئة دليفري 🏍️',
+                                  style: AppTextStyles.text12w600(color: colors.secondary),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  padding: EdgeInsets.symmetric(vertical: 8.h),
+                                  side: BorderSide(color: colors.secondary.withValues(alpha: 0.4)),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10.r),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        14.verticalSpace,
 
                         // Phone Field
                         CustomPhoneTextField(

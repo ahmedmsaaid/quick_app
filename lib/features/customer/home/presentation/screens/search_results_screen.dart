@@ -389,6 +389,7 @@ class _SearchResultsScreenState extends ConsumerState<SearchResultsScreen> {
                         '${product.hasDiscount ? (product.price * (1 - product.discountPercentage / 100)).toStringAsFixed(0) : product.price.toStringAsFixed(0)} ${AppStrings.currency}',
                         style: AppTextStyles.text14w700(color: colors.primary),
                       ),
+                      /*
                       Row(
                         children: [
                           Icon(Icons.star, color: Colors.amber, size: 16.sp),
@@ -399,6 +400,7 @@ class _SearchResultsScreenState extends ConsumerState<SearchResultsScreen> {
                           ),
                         ],
                       ),
+                      */
                     ],
                   ),
                 ],

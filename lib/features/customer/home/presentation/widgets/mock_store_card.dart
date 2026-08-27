@@ -133,6 +133,7 @@ class MockStoreCard extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      /*
                       Row(
                         children: [
                           Icon(Icons.star_rounded, color: Colors.amber, size: 14.sp),
@@ -148,6 +149,7 @@ class MockStoreCard extends StatelessWidget {
                           ),
                         ],
                       ),
+                      */
                       Icon(
                         Icons.arrow_forward_ios_rounded,
                         color: colors.textHint,

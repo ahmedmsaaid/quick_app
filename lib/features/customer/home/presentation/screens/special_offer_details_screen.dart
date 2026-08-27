@@ -521,6 +521,18 @@ class _SpecialOfferDetailsScreenState extends ConsumerState<SpecialOfferDetailsS
                       child: CustomAppButton(
                         text: AppStrings.orderNowBtn,
                         onPressed: () {
+                          final creator = currentOffer.creator;
+                          if (creator != null) {
+                            if (creator.busy == true) {
+                              CustomToast.error(context, 'المتجر مشغول حالياً، لا يمكن طلب العرض الآن');
+                              return;
+                            }
+                            if (!(creator.active ?? true) || creator.status == 0) {
+                              CustomToast.error(context, 'المتجر مغلق مؤقتاً، لا يمكن طلب العرض الآن');
+                              return;
+                            }
+                          }
+
                           if (currentOffer.offerType == 1 && _customProducts.isEmpty) {
                             CustomToast.error(context, 'الرجاء اختيار منتج واحد على الأقل لإتمام الطلب');
                             return;

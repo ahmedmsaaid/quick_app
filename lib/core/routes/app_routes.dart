@@ -54,4 +54,5 @@ class AppRoutes {
   static const String termsAndConditions = '/termsAndConditions';
   static const String aboutUs = '/aboutUs';
   static const String categoryProductsScreen = '/categoryProductsScreen';
+  static const String ordersScreen = '/ordersScreen';
 }

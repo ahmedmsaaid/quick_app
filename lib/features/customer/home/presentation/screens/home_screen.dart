@@ -232,7 +232,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 isSelected: false,
                                 onTap: () {
                                   context.pushNamed(
-                                    AppRoutes.categoryProductsScreen,
+                                    AppRoutes.products,
                                     arguments: cat,
                                   );
                                 },

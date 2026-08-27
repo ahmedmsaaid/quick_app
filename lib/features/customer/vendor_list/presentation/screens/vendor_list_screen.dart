@@ -160,6 +160,10 @@ class _VendorListScreenState extends ConsumerState<VendorListScreen> {
       return _buildMarketCategoriesGrid(context, _marketCategories);
     }
 
+    if (state.status == VendorListStatus.loading || state.status == VendorListStatus.initial) {
+      return const Center(child: LoadingButton());
+    }
+
     if (state.status == VendorListStatus.error) {
       return _ErrorState(
         message: state.errorMessage ?? AppStrings.errorOccurred,
@@ -172,9 +176,11 @@ class _VendorListScreenState extends ConsumerState<VendorListScreen> {
       );
     }
 
-    final displayVendors = isSupermarket
+    final filtered = isSupermarket
         ? state.vendors.where((v) => v.role == 1).toList()
         : state.vendors.where((v) => v.role == 0).toList();
+
+    final displayVendors = filtered.isNotEmpty ? filtered : state.vendors;
 
     if (displayVendors.isEmpty) {
       return const _EmptyState();
@@ -214,10 +220,10 @@ class _VendorListScreenState extends ConsumerState<VendorListScreen> {
       return const _EmptyState();
     }
 
-    final int columnCount = categories.length < 10 ? 3 : 4;
-    final double childAspectRatio = categories.length < 10 ? 0.78 : 0.70;
-    final double crossAxisSpacing = categories.length < 10 ? 12.w : 8.w;
-    final double mainAxisSpacing = categories.length < 10 ? 14.h : 10.h;
+    final int columnCount = 4;
+    final double childAspectRatio = 0.70;
+    final double crossAxisSpacing = 8.w;
+    final double mainAxisSpacing = 10.h;
 
     return GridView.builder(
       physics: const BouncingScrollPhysics(),
@@ -242,14 +248,11 @@ class _VendorListScreenState extends ConsumerState<VendorListScreen> {
 
   void _handleCategoryTap(MainCategoryDto category) {
     context.pushNamed(
-      AppRoutes.categoryProductsScreen,
-      arguments: CategoryDto(
-        id: category.id,
-        name: category.name,
-        description: category.description,
-        photo: category.photo,
-        type: category.userRole,
-        creatorId: 0,
+      AppRoutes.StoreScreen,
+      arguments: VendorListArgs(
+        title: category.name ?? 'المتاجر',
+        categoryId: category.id,
+        userRole: category.userRole,
       ),
     );
   }
@@ -403,17 +406,15 @@ class _VendorCard extends StatelessWidget {
                   5.verticalSpace,
                   Row(
                     children: [
+                      /*
                       Icon(Icons.star, color: Colors.amber, size: 14.sp),
                       2.horizontalSpace,
                       Text(
                         vendor.rating.toStringAsFixed(1),
                         style: AppTextStyles.text12w400(color: colors.textSecondary),
                       ),
+                      */
                       const Spacer(),
-                      Text(
-                        '15-25 د',
-                        style: AppTextStyles.text10w500(color: colors.primary),
-                      ),
                     ],
                   ),
                 ],
@@ -589,13 +590,6 @@ class _MarketBanner extends StatelessWidget {
               end: Alignment.bottomLeft,
             ),
             borderRadius: BorderRadius.circular(20.r),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF033E3B).withValues(alpha: 0.25),
-                blurRadius: 15,
-                offset: const Offset(0, 8),
-              ),
-            ],
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(20.r),

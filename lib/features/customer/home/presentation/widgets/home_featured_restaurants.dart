@@ -274,20 +274,8 @@ class HomeFeaturedRestaurants extends ConsumerWidget {
                                   ],
                                 ),
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment: MainAxisAlignment.end,
                                   children: [
-                                    Row(
-                                      children: [
-                                        Icon(Icons.access_time_filled_rounded,
-                                            color: colors.primary, size: 14.sp),
-                                        4.horizontalSpace,
-                                        Text(
-                                          "15-25 ${AppStrings.minsSuffix}",
-                                          style: AppTextStyles.text11w600(
-                                              color: colors.textSecondary),
-                                        ),
-                                      ],
-                                    ),
                                     Container(
                                       padding: EdgeInsets.symmetric(
                                           horizontal: 8.w, vertical: 3.h),
