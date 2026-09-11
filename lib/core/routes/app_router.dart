@@ -224,7 +224,8 @@ abstract class AppRouter {
       case AppRoutes.address:
         return _buildAnimatedRoute(const AddressScreen(), settings);
       case AppRoutes.addAddress:
-        return _buildAnimatedRoute(const AddAddressScreen(), settings);
+        final LocationDto? locationToEdit = settings.arguments as LocationDto?;
+        return _buildAnimatedRoute(AddAddressScreen(locationToEdit: locationToEdit), settings);
       case AppRoutes.wallet:
         return _buildAnimatedRoute(const WalletScreen(), settings);
       case AppRoutes.settings:
@@ -255,6 +256,7 @@ abstract class AppRouter {
               vendorId: args['vendorId'] as int?,
               isClosed: args['isClosed'] as bool?,
               isBusy: args['isBusy'] as bool?,
+              vendor: args['vendor'] as UserDto?,
             ),
             settings,
           );

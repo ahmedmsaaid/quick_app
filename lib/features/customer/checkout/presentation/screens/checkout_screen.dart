@@ -232,7 +232,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           children: [
             _buildSectionTitle(context, AppStrings.whereToDeliverLabel),
             10.verticalSpace,
-            _buildAddressCard(context, addressName),
+            _buildAddressCard(context, addressName, selectedLocation),
             25.verticalSpace,
             _buildSectionTitle(context, "فرع المطعم / الماركت"),
             10.verticalSpace,
@@ -282,8 +282,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     );
   }
 
-  Widget _buildAddressCard(BuildContext context, String addressName) {
+  Widget _buildAddressCard(BuildContext context, String addressName, LocationDto? selectedLocation) {
     final colors = AppColors(context);
+    final String title = (selectedLocation?.name != null && selectedLocation!.name!.trim().isNotEmpty)
+        ? selectedLocation.name!.trim()
+        : AppStrings.homeLabel;
+    final String fullAddress = selectedLocation?.address ?? addressName;
+
     return Container(
       padding: EdgeInsets.all(15.r),
       decoration: BoxDecoration(
@@ -300,11 +305,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  AppStrings.homeLabel,
+                  title,
                   style: AppTextStyles.text14w600(color: colors.textPrimary),
                 ),
                 Text(
-                  addressName,
+                  fullAddress,
                   style: AppTextStyles.text12w400(color: colors.textSecondary),
                 ),
               ],
@@ -685,7 +690,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
                 final String notesText = _notesController.text.trim();
                 final request = CreateOrderRequest(
-                  address: notesText.isNotEmpty ? notesText : addressName,
+                  address: addressName,
+                  note: notesText.isNotEmpty ? notesText : null,
                   longitude:
                       selectedLocation?.longitude ??
                       user.location?.longitude ??

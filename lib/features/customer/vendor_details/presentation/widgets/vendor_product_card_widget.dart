@@ -170,26 +170,35 @@ class VendorRestaurantProductCardWidget extends ConsumerWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            children: [
-                              if (product.hasDiscount) ...[
-                                Text(
-                                  '${product.price.toStringAsFixed(0)} ${AppStrings.currency}',
-                                  style: TextStyle(
-                                    fontSize: 11.sp,
-                                    color: colors.textSecondary,
-                                    decoration: TextDecoration.lineThrough,
-                                    fontFamily: 'Cairo',
+                          Expanded(
+                            child: Row(
+                              children: [
+                                if (product.hasDiscount) ...[
+                                  Flexible(
+                                    child: Text(
+                                      '${product.price.toStringAsFixed(0)} ${AppStrings.currency}',
+                                      style: TextStyle(
+                                        fontSize: 11.sp,
+                                        color: colors.textSecondary,
+                                        decoration: TextDecoration.lineThrough,
+                                        fontFamily: 'Cairo',
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  4.horizontalSpace,
+                                ],
+                                Flexible(
+                                  child: Text(
+                                    '${price.toStringAsFixed(0)} ${AppStrings.currency}',
+                                    style: AppTextStyles.text14w700(color: colors.primary),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-                                6.horizontalSpace,
                               ],
-                              Text(
-                                '${price.toStringAsFixed(0)} ${AppStrings.currency}',
-                                style: AppTextStyles.text14w700(color: colors.primary),
-                              ),
-                            ],
+                            ),
                           ),
+                          4.horizontalSpace,
                           VendorAddButtonWidget(
                             onTap: () {
                               if (isBusy) {
@@ -201,11 +210,7 @@ class VendorRestaurantProductCardWidget extends ConsumerWidget {
                                 return;
                               }
                               ref.read(cartProvider.notifier).addItem(product, vendorId: vendorId);
-                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                content: Text(AppStrings.addedToCartSuccessMsg),
-                                backgroundColor: colors.primary,
-                                duration: const Duration(seconds: 1),
-                              ));
+                              CustomToast.success(context, AppStrings.addedToCartSuccessMsg);
                             },
                             colors: colors,
                           ),
@@ -391,14 +396,7 @@ class VendorMarketProductCardWidget extends ConsumerWidget {
                                 return;
                               }
                               ref.read(cartProvider.notifier).addItem(product, vendorId: vendorId);
-                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                content: Text(
-                                  AppStrings.addedToCartSuccessMsg,
-                                  style: const TextStyle(fontFamily: 'Cairo'),
-                                ),
-                                backgroundColor: colors.primary,
-                                duration: const Duration(seconds: 1),
-                              ));
+                              CustomToast.success(context, AppStrings.addedToCartSuccessMsg);
                             },
                             child: Container(
                               padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
@@ -429,6 +427,203 @@ class VendorMarketProductCardWidget extends ConsumerWidget {
                                   ),
                                 ],
                               ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class VendorGrid4ProductCardWidget extends ConsumerWidget {
+  const VendorGrid4ProductCardWidget({
+    super.key,
+    required this.product,
+    required this.colors,
+    required this.vendorId,
+    this.isClosed = false,
+    this.isBusy = false,
+  });
+
+  final ProductDetailDto product;
+  final AppColors colors;
+  final int vendorId;
+  final bool isClosed;
+  final bool isBusy;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final String imageUrl = _imageUrl(product.photo);
+    final double price = product.hasDiscount
+        ? product.price * (1 - product.discountPercentage / 100)
+        : product.price;
+
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(12.r),
+          border: Border.all(color: colors.border.withValues(alpha: 0.6)),
+          boxShadow: [
+            BoxShadow(
+              color: colors.shadow.withValues(alpha: 0.04),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12.r),
+          onTap: () => context.pushNamed(
+            AppRoutes.storeProductDetailsScreen,
+            arguments: {
+              'product': product,
+              'vendorId': vendorId,
+              'isClosed': isClosed,
+              'isBusy': isBusy,
+            },
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(12.r)),
+                child: SizedBox(
+                  height: 60.h,
+                  width: double.infinity,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      imageUrl.isNotEmpty
+                          ? CachedNetworkImage(
+                              imageUrl: imageUrl,
+                              fit: BoxFit.cover,
+                              placeholder: (_, __) => Container(color: colors.shimmerBase),
+                              errorWidget: (_, __, ___) => _imgFallback(colors, double.infinity, double.infinity, Icons.fastfood),
+                            )
+                          : _imgFallback(colors, double.infinity, double.infinity, Icons.fastfood),
+                      Positioned(
+                        top: 4.r,
+                        left: 4.r,
+                        child: VendorFavoriteToggleWidget(product: product),
+                      ),
+                      if (product.hasDiscount)
+                        Positioned(
+                          top: 4.r,
+                          right: 4.r,
+                          child: Container(
+                            padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+                            decoration: BoxDecoration(
+                              color: colors.error,
+                              borderRadius: BorderRadius.circular(6.r),
+                            ),
+                            child: Text(
+                              '-${product.discountPercentage.toStringAsFixed(0)}%',
+                              style: TextStyle(
+                                fontSize: 8.sp,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                fontFamily: 'Cairo',
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.all(5.r),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        product.name ?? '',
+                        style: TextStyle(
+                          fontSize: 10.sp,
+                          fontWeight: FontWeight.bold,
+                          color: colors.textPrimary,
+                          fontFamily: 'Cairo',
+                          height: 1.2,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (product.hasDiscount)
+                                  Text(
+                                    product.price.toStringAsFixed(0),
+                                    style: TextStyle(
+                                      fontSize: 8.5.sp,
+                                      color: colors.textHint,
+                                      decoration: TextDecoration.lineThrough,
+                                      fontFamily: 'Cairo',
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                Text(
+                                  '${price.toStringAsFixed(0)} ${AppStrings.currency}',
+                                  style: TextStyle(
+                                    fontSize: 9.5.sp,
+                                    fontWeight: FontWeight.w900,
+                                    color: colors.primary,
+                                    fontFamily: 'Cairo',
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                          2.horizontalSpace,
+                          GestureDetector(
+                            onTap: () {
+                              if (isBusy) {
+                                CustomToast.error(context, 'المتجر مشغول حالياً، لا يمكن إضافة طلبات الآن');
+                                return;
+                              }
+                              if (isClosed) {
+                                CustomToast.error(context, 'المتجر مغلق مؤقتاً، لا يمكن إضافة طلبات الآن');
+                                return;
+                              }
+                              ref.read(cartProvider.notifier).addItem(product, vendorId: vendorId);
+                              CustomToast.success(context, AppStrings.addedToCartSuccessMsg);
+                            },
+                            child: Container(
+                              width: 22.r,
+                              height: 22.r,
+                              decoration: BoxDecoration(
+                                gradient: AppColors.gradient,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: colors.primary.withValues(alpha: 0.25),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Icon(Icons.add, color: Colors.white, size: 13.sp),
                             ),
                           ),
                         ],

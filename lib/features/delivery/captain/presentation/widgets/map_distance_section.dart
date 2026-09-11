@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -200,14 +201,30 @@ class _MapDistanceSectionState extends State<MapDistanceSection> {
     final List<Polyline> polylines = [];
 
     if (pos != null) {
+      final capPoint = ll.LatLng(pos.latitude, pos.longitude);
+      final bool isPickedUp = widget.orderState >= 3;
+      final targetPoint = isPickedUp
+          ? (hasDestLoc ? ll.LatLng(destLat, destLng) : capPoint)
+          : (hasStoreLoc ? ll.LatLng(storeLat, storeLng) : capPoint);
+
+      double bearingAngle = 0.0;
+      if (pos.heading > 0) {
+        bearingAngle = pos.heading * (math.pi / 180.0);
+      } else {
+        bearingAngle = _calculateBearing(capPoint, _roadRouteResult?.points ?? [], targetPoint);
+      }
+
       markers.add(
         Marker(
-          point: ll.LatLng(pos.latitude, pos.longitude),
+          point: capPoint,
           width: 54.w,
           height: 54.w,
-          child: Image.asset(
-            'assets/icons/delivarey-mab.png',
-            fit: BoxFit.contain,
+          child: Transform.rotate(
+            angle: bearingAngle,
+            child: Image.asset(
+              'assets/icons/delivarey-mab.png',
+              fit: BoxFit.contain,
+            ),
           ),
         ),
       );
@@ -532,5 +549,39 @@ class _MapDistanceSectionState extends State<MapDistanceSection> {
         ],
       ),
     );
+  }
+
+  double _calculateBearing(ll.LatLng current, List<ll.LatLng> routePoints, ll.LatLng target) {
+    if (routePoints.length >= 2) {
+      int closestIndex = 0;
+      double minDist = double.infinity;
+      for (int i = 0; i < routePoints.length; i++) {
+        final d = (routePoints[i].latitude - current.latitude) * (routePoints[i].latitude - current.latitude) +
+            (routePoints[i].longitude - current.longitude) * (routePoints[i].longitude - current.longitude);
+        if (d < minDist) {
+          minDist = d;
+          closestIndex = i;
+        }
+      }
+      if (closestIndex < routePoints.length - 1) {
+        return _calculateAngle(current, routePoints[closestIndex + 1]);
+      }
+    }
+    if (current.latitude != target.latitude || current.longitude != target.longitude) {
+      return _calculateAngle(current, target);
+    }
+    return 0.0;
+  }
+
+  double _calculateAngle(ll.LatLng start, ll.LatLng end) {
+    final double dLng = (end.longitude - start.longitude) * (math.pi / 180.0);
+    final double startLat = start.latitude * (math.pi / 180.0);
+    final double endLat = end.latitude * (math.pi / 180.0);
+
+    final double y = math.sin(dLng) * math.cos(endLat);
+    final double x = math.cos(startLat) * math.sin(endLat) -
+        math.sin(startLat) * math.cos(endLat) * math.cos(dLng);
+
+    return math.atan2(y, x);
   }
 }

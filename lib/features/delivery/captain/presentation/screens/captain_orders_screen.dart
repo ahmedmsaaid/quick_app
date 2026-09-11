@@ -103,8 +103,14 @@ class CaptainOrdersScreen extends ConsumerWidget {
 
   Widget _buildOrderCard(BuildContext context, OrderDto order, bool isActive) {
     final colors = AppColors(context);
-    final storeName = order.creator?.name ?? 'متجر غير معروف';
-    final customerName = order.user?.name ?? 'زبون غير معروف';
+    final storeName = (order.user?.name != null && order.user!.name!.isNotEmpty)
+        ? order.user!.name!
+        : (order.userLocation?.name != null && order.userLocation!.name!.isNotEmpty
+            ? order.userLocation!.name!
+            : 'متجر غير معروف');
+    final customerName = (order.creator?.name != null && order.creator!.name!.isNotEmpty)
+        ? order.creator!.name!
+        : 'زبون غير معروف';
     final earnings = order.deliveryFee;
 
     String statusLabelText = isActive ? AppStrings.onWayLabel : AppStrings.arrivedDoneLabel;

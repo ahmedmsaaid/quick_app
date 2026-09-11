@@ -78,83 +78,111 @@ class CaptainOrders extends _$CaptainOrders {
     return const CaptainOrdersState();
   }
 
-  Future<void> loadAll() async {
-    if (state.status == CaptainOrdersStatus.loading) return;
-    state = state.copyWith(status: CaptainOrdersStatus.loading);
+  Future<void> loadAll({bool forceRefresh = false}) async {
+    if (state.status == CaptainOrdersStatus.loading && !forceRefresh) return;
+    state = state.copyWith(
+      status: CaptainOrdersStatus.loading,
+      errorMessage: null,
+    );
 
-    final profileState = ref.read(profileProvider);
-    final user = profileState.user;
-    if (user == null) {
-      if (profileState.status == ProfileStatus.loading ||
-          profileState.status == ProfileStatus.initial) {
+    try {
+      var profileState = ref.read(profileProvider);
+      if (profileState.user == null) {
+        await ref.read(profileProvider.notifier).loadProfile();
+        profileState = ref.read(profileProvider);
+      }
+
+      final user = profileState.user;
+      if (user == null) {
+        state = state.copyWith(
+          status: CaptainOrdersStatus.error,
+          errorMessage: 'الرجاء تسجيل الدخول أولاً لرؤية الطلبات',
+        );
         return;
       }
-      state = state.copyWith(
-        status: CaptainOrdersStatus.error,
-        errorMessage: 'الرجاء تسجيل الدخول أولاً لرؤية الطلبات',
+
+      final apiService = ref.read(ordersApiServiceProvider);
+
+      final availableFuture = apiService.getOrdersWithFilters(
+        includesPath: const ['User', 'Creator', 'UserLocation'],
+        filters: {'DeliveryId': user?.id},
+        pageSize: 100,
       );
-      return;
-    }
 
-    final apiService = ref.read(ordersApiServiceProvider);
+      final myOrdersFuture = apiService.getOrdersWithFilters(
+        includesPath: const ['User', 'Creator', 'UserLocation'],
+        filters: {'DeliveryId': user.id},
+        pageSize: 100,
+      );
 
-    // ✅ call واحدة بس — بفلتر DeliveryId وعناصر أساسية فقط لتقليل حجم الريسبونس في الهوم
-    final result = await apiService.getOrdersWithFilters(
-      includesPath: const ['Creator'],
-      filters: {'DeliveryId': user?.id},
-      pageSize: 100,
-    );
+      final results = await Future.wait([availableFuture, myOrdersFuture]);
+      if (!ref.mounted) return;
 
-    if (!ref.mounted) return;
+      final availableResult = results[0];
+      final myOrdersResult = results[1];
 
-    result.when(
-      success: (response) {
-        final list = response.result ?? [];
+      List<OrderDto> availableOrders = [];
+      availableResult.when(
+        success: (response) {
+          final list = response.result ?? [];
+          availableOrders = list
+              .where((o) => o.status == 2 && (o.deliveryId == null || o.deliveryId == 0 || o.deliveryId == user.id))
+              .toList();
+        },
+        failure: (_) {},
+      );
 
-        // ✅ تقسيم النتيجة هنا
-        final available = list
-            .where((o) => o.status == 2 )
-            .toList();
+      List<OrderDto> activeOrders = [];
+      List<OrderDto> finishedOrders = [];
+      double todayEarnings = 0.0;
+      int todayOrdersCount = 0;
 
-        final active = list
-            .where(
-              (o) => o.deliveryId == user.id && o.status >= 2 && o.status <= 6,
-            )
-            .toList();
+      myOrdersResult.when(
+        success: (response) {
+          final list = response.result ?? [];
+          activeOrders = list
+              .where((o) => o.deliveryId == user.id && o.status >= 2 && o.status <= 6)
+              .toList();
+          finishedOrders = list
+              .where((o) => o.deliveryId == user.id && o.status == 7)
+              .toList();
 
-        final finished = list
-            .where((o) => o.deliveryId == user.id && o.status == 7)
-            .toList();
+          final now = DateTime.now();
+          final todayStart = DateTime(now.year, now.month, now.day);
+          final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
 
-        // إحصائيات اليوم
-        final now = DateTime.now();
-        final todayStart = DateTime(now.year, now.month, now.day);
-        final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
+          final todayCompleted = finishedOrders.where((o) {
+            if (o.createdOn == null) return false;
+            try {
+              final date = DateTime.parse(o.createdOn!);
+              return date.isAfter(todayStart) && date.isBefore(todayEnd);
+            } catch (_) {
+              return false;
+            }
+          }).toList();
 
-        final todayCompleted = finished.where((o) {
-          if (o.createdOn == null) return false;
-          try {
-            final date = DateTime.parse(o.createdOn!);
-            return date.isAfter(todayStart) && date.isBefore(todayEnd);
-          } catch (_) {
-            return false;
-          }
-        }).toList();
+          todayOrdersCount = todayCompleted.length;
+          todayEarnings = todayCompleted.fold(0.0, (sum, o) => sum + o.deliveryFee);
+        },
+        failure: (_) {},
+      );
 
-        state = CaptainOrdersState(
-          status: CaptainOrdersStatus.loaded,
-          availableOrders: available,
-          activeOrders: active,
-          finishedOrders: finished,
-          todayOrdersCount: todayCompleted.length,
-          todayEarnings: todayCompleted.fold(0.0, (sum, o) => sum + o.deliveryFee),
+      state = state.copyWith(
+        status: CaptainOrdersStatus.loaded,
+        availableOrders: availableOrders,
+        activeOrders: activeOrders,
+        finishedOrders: finishedOrders,
+        todayOrdersCount: todayOrdersCount,
+        todayEarnings: todayEarnings,
+      );
+    } catch (e) {
+      if (ref.mounted) {
+        state = state.copyWith(
+          status: CaptainOrdersStatus.error,
+          errorMessage: 'حدث خطأ أثناء جلب الطلبات',
         );
-      },
-      failure: (e) => state = state.copyWith(
-        status: CaptainOrdersStatus.error,
-        errorMessage: e.message,
-      ),
-    );
+      }
+    }
   }
 
   /// قبول طلب متاح (update status من 2 إلى 3)
@@ -283,8 +311,8 @@ class CaptainMyOrders extends _$CaptainMyOrders {
 
     // جيب طلبات الكابتن بفلتر deliveryId والبيانات الأساسية فقط لتقليل حجم الريسبونس
     final result = await apiService.getOrdersWithFilters(
-      filters: {'DeliveryId': user.id},
-      includesPath: const ['Creator'],
+      // filters: {'DeliveryId': user.id},
+      includesPath: const ['User', 'Creator', 'UserLocation'],
       pageSize: 100,
     );
     if (!ref.mounted) return;

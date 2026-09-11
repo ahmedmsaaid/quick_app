@@ -35,7 +35,7 @@ class VendorListScreen extends ConsumerStatefulWidget {
 
 class _VendorListScreenState extends ConsumerState<VendorListScreen> {
   int _selectedFilterIndex = 0;
-  bool _isLoading = false;
+  final bool _isLoading = false;
   List<MainCategoryDto> _marketCategories = [];
   bool _isLoadingCategories = false;
   String? _categoriesError;
@@ -220,10 +220,10 @@ class _VendorListScreenState extends ConsumerState<VendorListScreen> {
       return const _EmptyState();
     }
 
-    final int columnCount = 4;
-    final double childAspectRatio = 0.70;
-    final double crossAxisSpacing = 8.w;
-    final double mainAxisSpacing = 10.h;
+    final int columnCount = 2;
+    final double childAspectRatio = 0.95;
+    final double crossAxisSpacing = 12.w;
+    final double mainAxisSpacing = 12.h;
 
     return GridView.builder(
       physics: const BouncingScrollPhysics(),
@@ -361,26 +361,67 @@ class _VendorCard extends StatelessWidget {
             Expanded(
               child: ClipRRect(
                 borderRadius: BorderRadius.vertical(top: Radius.circular(15.r)),
-                child: imageUrl.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: imageUrl,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        placeholder: (_, __) => Container(
-                          color: colors.border.withValues(alpha: 0.5),
-                          child: const LoadingButton(size: 30),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    imageUrl.isNotEmpty
+                        ? CachedNetworkImage(
+                            imageUrl: imageUrl,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            placeholder: (_, __) => Container(
+                              color: colors.border.withValues(alpha: 0.5),
+                              child: const LoadingButton(size: 30),
+                            ),
+                            errorWidget: (_, __, ___) => Image.asset(
+                              'assets/image/logo.png',
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                        : Image.asset(
+                            'assets/image/logo.png',
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          ),
+                    if (vendor.busy == true || !(vendor.active ?? true)) ...[
+                      Positioned.fill(
+                        child: Container(
+                          color: Colors.black.withValues(alpha: 0.45),
                         ),
-                        errorWidget: (_, __, ___) => Image.asset(
-                          'assets/image/logo.png',
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                        ),
-                      )
-                    : Image.asset(
-                        'assets/image/logo.png',
-                        width: double.infinity,
-                        fit: BoxFit.cover,
                       ),
+                      Positioned(
+                        top: 8.r,
+                        right: 8.r,
+                        child: Container(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 10.w, vertical: 4.h),
+                          decoration: BoxDecoration(
+                            color: (vendor.busy == true)
+                                ? Colors.orange.withValues(alpha: 0.95)
+                                : Colors.red.withValues(alpha: 0.95),
+                            borderRadius: BorderRadius.circular(10.r),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.25),
+                                blurRadius: 6,
+                              ),
+                            ],
+                          ),
+                          child: Text(
+                            (vendor.busy == true) ? 'مشغول' : AppStrings.closedStatus,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Cairo',
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ),
             Padding(

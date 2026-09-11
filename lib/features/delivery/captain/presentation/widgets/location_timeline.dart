@@ -79,7 +79,7 @@ class LocationTimeline extends StatelessWidget {
             storeAddress,
             Colors.blue,
             avatarUrl: null,
-            phone: order.user?.phone,
+            phone: null,
             recipientId: order.userLocation?.creatorId ?? order.userId,
             roleType: order.type == 0 ? RoleTypeEnum.restaurant : RoleTypeEnum.market,
             showChat: false,

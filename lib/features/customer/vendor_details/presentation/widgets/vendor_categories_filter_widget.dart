@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:base_app/core/styles/app_colors.dart';
-import 'package:base_app/core/routes/app_routes.dart';
-import 'package:base_app/core/utils/extensions.dart';
-import 'package:base_app/core/network/api_constants.dart';
+import 'package:base_app/core/styles/app_text_style.dart';
 import 'package:base_app/features/customer/home/data/models/category_model.dart';
 import 'package:base_app/features/customer/vendor_details/presentation/riverpod/vendor_details_provider.dart';
 
@@ -16,16 +13,27 @@ class VendorCategoriesHeaderDelegate extends SliverPersistentHeaderDelegate {
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Material(
-      elevation: overlapsContent ? 4 : 0,
+      elevation: overlapsContent ? 3 : 0,
       color: AppColors(context).surface,
-      child: child,
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors(context).surface,
+          border: Border(
+            bottom: BorderSide(
+              color: AppColors(context).border.withValues(alpha: 0.5),
+              width: 1,
+            ),
+          ),
+        ),
+        child: child,
+      ),
     );
   }
 
   @override
-  double get minExtent => 52.h;
+  double get minExtent => 46.h;
   @override
-  double get maxExtent => 52.h;
+  double get maxExtent => 46.h;
   @override
   bool shouldRebuild(covariant VendorCategoriesHeaderDelegate old) => old.child != child;
 }
@@ -44,30 +52,118 @@ class VendorCategoriesFilterWidget extends StatelessWidget {
   final AppColors colors;
   final VoidCallback onTapOffers;
 
-  String _imageUrl(String? path) {
-    if (path == null || path.isEmpty) return '';
-    if (path.startsWith('http')) return path;
-    return '${ApiConstants.streamUrl}$path';
+  void _showCategoriesBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: colors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40.w,
+                height: 4.h,
+                decoration: BoxDecoration(
+                  color: colors.border,
+                  borderRadius: BorderRadius.circular(2.r),
+                ),
+              ),
+            ),
+            14.verticalSpace,
+            Text(
+              'أقسام القائمة 📋',
+              style: AppTextStyles.text16w700(color: colors.textPrimary),
+            ),
+            12.verticalSpace,
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: state.categories.length,
+                separatorBuilder: (_, __) => Divider(
+                  color: colors.border.withValues(alpha: 0.4),
+                  height: 1,
+                ),
+                itemBuilder: (ctx, i) {
+                  final cat = state.categories[i];
+                  final bool selected = state.selectedCategory?.id == cat.id;
+                  final bool isOffers = cat.id == -999;
+                  final bool isAll = cat.id == -888;
+                  final String displayName = isAll
+                      ? 'اختيارات على ذوقك'
+                      : (cat.name ?? '');
+
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Container(
+                      width: 32.r,
+                      height: 32.r,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: selected
+                            ? colors.primary.withValues(alpha: 0.15)
+                            : colors.containerBackground,
+                      ),
+                      child: Center(
+                        child: isOffers
+                            ? Text('🔥', style: TextStyle(fontSize: 14.sp))
+                            : (isAll
+                                ? Icon(Icons.star_rounded, size: 18.sp, color: colors.primary)
+                                : Icon(Icons.fastfood_rounded, size: 16.sp, color: colors.textSecondary)),
+                      ),
+                    ),
+                    title: Text(
+                      displayName,
+                      style: AppTextStyles.text14w600(
+                        color: selected ? colors.primary : colors.textPrimary,
+                      ),
+                    ),
+                    trailing: selected
+                        ? Icon(Icons.check_circle_rounded, color: colors.primary, size: 20.sp)
+                        : Icon(Icons.arrow_forward_ios_rounded, size: 14.sp, color: colors.textSecondary),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      if (isOffers) {
+                        onTapOffers();
+                      } else {
+                        notifier.selectCategory(cat);
+                      }
+                    },
+                  );
+                },
+              ),
+            ),
+            10.verticalSpace,
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     if (state.categoriesStatus == VendorDetailsStatus.loading) {
       return SizedBox(
-        height: 52.h,
+        height: 46.h,
         child: ListView.separated(
           padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
           scrollDirection: Axis.horizontal,
-          itemCount: 5,
-          separatorBuilder: (_, __) => 10.horizontalSpace,
+          itemCount: 4,
+          separatorBuilder: (_, __) => 16.horizontalSpace,
           itemBuilder: (_, __) => Shimmer.fromColors(
             baseColor: colors.shimmerBase,
             highlightColor: colors.shimmerHighlight,
             child: Container(
-              width: 100.w,
+              width: 80.w,
+              height: 20.h,
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(25.r),
+                borderRadius: BorderRadius.circular(4.r),
               ),
             ),
           ),
@@ -75,102 +171,102 @@ class VendorCategoriesFilterWidget extends StatelessWidget {
       );
     }
 
-    if (state.categories.isEmpty) return const SizedBox(height: 52.0);
+    if (state.categories.isEmpty) return const SizedBox(height: 46.0);
 
     return SizedBox(
-      height: 52.h,
-      child: ListView.separated(
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-        scrollDirection: Axis.horizontal,
-        itemCount: state.categories.length,
-        separatorBuilder: (_, __) => 10.horizontalSpace,
-        itemBuilder: (_, i) {
-          final CategoryDto cat = state.categories[i];
-          final bool selected = state.selectedCategory?.id == cat.id;
-          final bool isOffersCategory = cat.id == -999;
-          final String imageUrl = _imageUrl(cat.photo);
+      height: 46.h,
+      child: Row(
+        children: [
+          // 1. Horizontal Tab Categories
+          Expanded(
+            child: ListView.separated(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              scrollDirection: Axis.horizontal,
+              itemCount: state.categories.length,
+              separatorBuilder: (_, __) => 18.horizontalSpace,
+              itemBuilder: (_, i) {
+                final CategoryDto cat = state.categories[i];
+                final bool selected = state.selectedCategory?.id == cat.id;
+                final bool isOffersCategory = cat.id == -999;
+                final bool isAllCategory = cat.id == -888;
 
-          return GestureDetector(
-            onTap: () {
-              if (isOffersCategory) {
-                onTapOffers();
-              } else {
-                context.pushNamed(
-                  AppRoutes.products,
-                  arguments: {
-                    'category': cat,
-                    'categoriesList': state.categories.where((c) => c.id != -999).toList(),
+                final String label = isAllCategory
+                    ? 'اختيارات على ذوقك'
+                    : (cat.name ?? '');
+
+                return GestureDetector(
+                  onTap: () {
+                    if (isOffersCategory) {
+                      onTapOffers();
+                    } else {
+                      notifier.selectCategory(cat);
+                    }
                   },
+                  behavior: HitTestBehavior.opaque,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Padding(
+                        padding: EdgeInsets.symmetric(vertical: 6.h),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (isAllCategory || isOffersCategory) ...[
+                              Text(
+                                '🔥 ',
+                                style: TextStyle(fontSize: 14.sp),
+                              ),
+                            ],
+                            Text(
+                              label,
+                              style: TextStyle(
+                                fontSize: 13.sp,
+                                fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
+                                color: selected ? colors.textPrimary : colors.textSecondary,
+                                fontFamily: 'Cairo',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Underline indicator for active tab (matching screenshot)
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        height: 3.h,
+                        width: selected ? 32.w : 0,
+                        decoration: BoxDecoration(
+                          color: selected ? colors.textPrimary : Colors.transparent,
+                          borderRadius: BorderRadius.circular(2.r),
+                        ),
+                      ),
+                    ],
+                  ),
                 );
-              }
-            },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 220),
-              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
-              decoration: BoxDecoration(
-                color: selected ? colors.primary : colors.surface,
-                borderRadius: BorderRadius.circular(25.r),
-                border: Border.all(
-                  color: selected ? colors.primary : colors.border.withValues(alpha: 0.6),
-                  width: 1.5,
+              },
+            ),
+          ),
+
+          // 2. Trailing Menu Icon `≡` (Left in RTL)
+          Padding(
+            padding: EdgeInsetsDirectional.only(end: 12.w),
+            child: GestureDetector(
+              onTap: () => _showCategoriesBottomSheet(context),
+              behavior: HitTestBehavior.opaque,
+              child: Container(
+                padding: EdgeInsets.all(6.r),
+                decoration: BoxDecoration(
+                  color: colors.containerBackground,
+                  borderRadius: BorderRadius.circular(8.r),
                 ),
-                boxShadow: selected
-                    ? [BoxShadow(color: colors.primary.withValues(alpha: 0.25), blurRadius: 6, offset: const Offset(0, 2))]
-                    : [],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 22.r,
-                    height: 22.r,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: selected
-                          ? Colors.white24
-                          : (isOffersCategory ? Colors.orange.withValues(alpha: 0.15) : colors.containerBackground),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(11.r),
-                      child: isOffersCategory
-                          ? Icon(
-                              Icons.local_fire_department_rounded,
-                              size: 13.sp,
-                              color: selected ? Colors.white : Colors.deepOrange,
-                            )
-                          : imageUrl.isNotEmpty
-                              ? CachedNetworkImage(
-                                  imageUrl: imageUrl,
-                                  fit: BoxFit.cover,
-                                  placeholder: (_, __) => Container(color: colors.shimmerBase),
-                                  errorWidget: (_, __, ___) => Icon(
-                                    Icons.fastfood_rounded,
-                                    size: 12.sp,
-                                    color: selected ? Colors.white : colors.textSecondary,
-                                  ),
-                                )
-                              : Icon(
-                                  Icons.fastfood_rounded,
-                                  size: 12.sp,
-                                  color: selected ? Colors.white : colors.textSecondary,
-                                ),
-                    ),
-                  ),
-                  8.horizontalSpace,
-                  Text(
-                    cat.name ?? '',
-                    style: TextStyle(
-                      fontSize: 12.sp,
-                      fontWeight: selected ? FontWeight.bold : FontWeight.w600,
-                      color: selected ? Colors.white : colors.textSecondary,
-                      fontFamily: 'Cairo',
-                    ),
-                  ),
-                ],
+                child: Icon(
+                  Icons.menu_rounded,
+                  size: 20.sp,
+                  color: colors.textPrimary,
+                ),
               ),
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }

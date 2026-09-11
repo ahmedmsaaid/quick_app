@@ -1,13 +1,5 @@
 import 'package:base_app/core/exports/exports.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:base_app/core/localizations/app_strings.g.dart';
-import 'package:base_app/core/styles/app_colors.dart';
-import 'package:base_app/core/styles/app_text_style.dart';
 import 'package:base_app/core/routes/app_routes.dart';
-import 'package:base_app/core/utils/extensions.dart';
-import 'package:base_app/core/network/api_constants.dart';
 import 'package:base_app/features/customer/profile/presentation/riverpod/profile_provider.dart';
 import 'package:base_app/features/customer/home/presentation/widgets/location_bottom_sheet.dart';
 import 'package:base_app/features/shared/notifications/presentation/riverpod/notifications_provider.dart';
@@ -79,9 +71,11 @@ class _HomeSpeedHeaderState extends ConsumerState<HomeSpeedHeader> {
         (loc) => loc.base,
         orElse: () => profileState.locations.first,
       );
-      addressName = baseLoc.address ?? AppStrings.homeLocation;
+      addressName = (baseLoc.name != null && baseLoc.name!.trim().isNotEmpty)
+          ? baseLoc.name!.trim()
+          : (baseLoc.address ?? AppStrings.homeLocation);
     } else if (user?.address != null && user?.address?.isNotEmpty == true) {
-      addressName = user?.address??"";
+      addressName = user?.address ?? "";
     }
 
     return Container(
@@ -179,7 +173,7 @@ class _HomeSpeedHeaderState extends ConsumerState<HomeSpeedHeader> {
                       children: [
                         // Cart Button
                         GestureDetector(
-                          onTap: () => context.pushNamed(AppRoutes.cartScreen),
+                          onTap: () => Navigator.of(context).pushNamed(AppRoutes.cartScreen),
                           child: Container(
                             width: 36.w,
                             height: 36.h,

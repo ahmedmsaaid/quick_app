@@ -149,18 +149,45 @@ class VendorProductsContentWidget extends StatelessWidget {
         child: VendorEmptyProductsWidget(colors: colors),
       );
     }
+    if (!isMarket) {
+      return SliverPadding(
+        padding: EdgeInsets.symmetric(horizontal: 16.w),
+        sliver: SliverGrid(
+          delegate: SliverChildBuilderDelegate(
+            (ctx, i) => VendorGrid4ProductCardWidget(
+              product: state.products[i],
+              colors: colors,
+              vendorId: vendorId,
+              isClosed: isClosed,
+              isBusy: isBusy,
+            ),
+            childCount: state.products.length,
+          ),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 4,
+            childAspectRatio: 0.65,
+            crossAxisSpacing: 8.w,
+            mainAxisSpacing: 10.h,
+          ),
+        ),
+      );
+    }
     return SliverPadding(
       padding: EdgeInsets.symmetric(horizontal: 16.w),
       sliver: SliverGrid(
         delegate: SliverChildBuilderDelegate(
-          (ctx, i) => isMarket
-              ? VendorMarketProductCardWidget(product: state.products[i], colors: colors, vendorId: vendorId, isClosed: isClosed, isBusy: isBusy)
-              : VendorRestaurantProductCardWidget(product: state.products[i], colors: colors, vendorId: vendorId, isClosed: isClosed, isBusy: isBusy),
+          (ctx, i) => VendorMarketProductCardWidget(
+            product: state.products[i],
+            colors: colors,
+            vendorId: vendorId,
+            isClosed: isClosed,
+            isBusy: isBusy,
+          ),
           childCount: state.products.length,
         ),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          childAspectRatio: isMarket ? 0.68 : 0.9,
+          childAspectRatio: 0.68,
           crossAxisSpacing: 12.w,
           mainAxisSpacing: 12.h,
         ),

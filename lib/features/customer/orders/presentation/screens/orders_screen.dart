@@ -504,15 +504,11 @@ class _CancelOrderCardButtonState extends ConsumerState<_CancelOrderCardButton> 
 
     if (success) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تم إلغاء الطلب بنجاح')),
-        );
+        CustomToast.success(context, 'تم إلغاء الطلب بنجاح');
       }
     } else {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('فشل إلغاء الطلب، يرجى المحاولة لاحقاً')),
-        );
+        CustomToast.error(context, 'فشل إلغاء الطلب، يرجى المحاولة لاحقاً');
       }
     }
   }

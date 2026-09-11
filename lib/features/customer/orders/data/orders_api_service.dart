@@ -96,6 +96,7 @@ class OrdersApiService {
   Future<ApiResult<ApiResponse<bool>>> updateOrderStatus({
     required int orderId,
     required int status,
+    int? deliveryId,
     String? rowVersion,
   }) async {
     try {
@@ -104,6 +105,7 @@ class OrdersApiService {
         data: {
           'id': orderId,
           'status': status,
+          if (deliveryId != null) 'deliveryId': deliveryId,
           if (rowVersion != null) 'rowVersion': rowVersion,
         },
       );

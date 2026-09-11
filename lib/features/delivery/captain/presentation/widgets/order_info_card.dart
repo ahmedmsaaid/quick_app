@@ -98,6 +98,43 @@ class OrderInfoCard extends StatelessWidget {
               ),
             ],
           ),
+          if (order.note != null && order.note!.isNotEmpty) ...[
+            15.verticalSpace,
+            Divider(color: colors.divider.withValues(alpha: 0.5)),
+            12.verticalSpace,
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(12.r),
+              decoration: BoxDecoration(
+                color: colors.primary.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(10.r),
+                border: Border.all(color: colors.primary.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.notes_rounded, color: colors.primary, size: 18.sp),
+                  8.horizontalSpace,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "ملاحظات العمـيل:",
+                          style: AppTextStyles.text11w700(color: colors.primary),
+                        ),
+                        4.verticalSpace,
+                        Text(
+                          order.note!,
+                          style: AppTextStyles.text12w500(color: colors.textPrimary),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

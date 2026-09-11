@@ -27,6 +27,7 @@ class CreateOrderProductRequest {
 
 class CreateOrderRequest {
   final String address;
+  final String? note;
   final double longitude;
   final double latitude;
   final int paymentMethod; // 0 for COD, 1 for Online
@@ -41,6 +42,7 @@ class CreateOrderRequest {
 
   CreateOrderRequest({
     required this.address,
+    this.note,
     required this.longitude,
     required this.latitude,
     required this.paymentMethod,
@@ -66,6 +68,9 @@ class CreateOrderRequest {
       'type': type,
       'userId': userId,
     };
+    if (note != null && note!.isNotEmpty) {
+      data['note'] = note;
+    }
     if (offerId != null) {
       data['offerId'] = offerId;
     }
@@ -111,6 +116,7 @@ class OrderProductDto {
 class OrderDto {
   final int id;
   final String? address;
+  final String? note;
   final double longitude;
   final double latitude;
   final int paymentMethod;
@@ -135,6 +141,7 @@ class OrderDto {
   OrderDto({
     required this.id,
     this.address,
+    this.note,
     required this.longitude,
     required this.latitude,
     required this.paymentMethod,
@@ -166,6 +173,7 @@ class OrderDto {
     return OrderDto(
       id: json['id'] is int ? json['id'] as int : 0,
       address: json['address']?.toString(),
+      note: json['note']?.toString() ?? json['notes']?.toString(),
       longitude: (json['longitude'] as num?)?.toDouble() ?? 0.0,
       latitude: (json['latitude'] as num?)?.toDouble() ?? 0.0,
       paymentMethod: json['paymentMethod'] is int ? json['paymentMethod'] as int : 0,
@@ -214,6 +222,7 @@ class OrderDto {
   OrderDto copyWith({
     int? id,
     String? address,
+    String? note,
     double? longitude,
     double? latitude,
     int? paymentMethod,
@@ -238,6 +247,7 @@ class OrderDto {
     return OrderDto(
       id: id ?? this.id,
       address: address ?? this.address,
+      note: note ?? this.note,
       longitude: longitude ?? this.longitude,
       latitude: latitude ?? this.latitude,
       paymentMethod: paymentMethod ?? this.paymentMethod,

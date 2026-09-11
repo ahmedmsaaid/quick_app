@@ -133,9 +133,9 @@ class LocationBottomSheet extends ConsumerWidget {
       child: Container(
         padding: EdgeInsets.all(15.r),
         decoration: BoxDecoration(
-          color: colors.primary.withOpacity(0.05),
+          color: colors.primary.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(color: colors.primary.withOpacity(0.2)),
+          border: Border.all(color: colors.primary.withValues(alpha: 0.2)),
         ),
         child: Row(
           children: [
@@ -202,12 +202,14 @@ class LocationBottomSheet extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    loc.base ? "العنوان الافتراضي" : "عنوان محفوظ",
-                    style: AppTextStyles.text12w400(color: isSelected ? colors.primary : colors.textSecondary),
+                    (loc.name != null && loc.name!.trim().isNotEmpty)
+                        ? loc.name!.trim()
+                        : (loc.base ? "العنوان الافتراضي" : "عنوان محفوظ"),
+                    style: AppTextStyles.text14w700(color: isSelected ? colors.primary : colors.textPrimary),
                   ),
                   Text(
                     loc.address ?? '',
-                    style: AppTextStyles.text14w600(color: colors.textPrimary),
+                    style: AppTextStyles.text12w400(color: colors.textSecondary),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),

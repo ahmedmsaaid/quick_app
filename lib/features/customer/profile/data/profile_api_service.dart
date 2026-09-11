@@ -87,7 +87,7 @@ final settingsProvider = FutureProvider<UserSettingDto?>((ref) async {
   final service = ref.read(profileApiServiceProvider);
   final result = await service.getSettings();
   return result.when(
-    success: (response) => response?.result,
+    success: (response) => response.result,
     failure: (_) => null,
   );
 });
@@ -98,7 +98,7 @@ final vendorLocationsProvider = FutureProvider.family<List<LocationDto>, int?>((
   final service = ref.read(profileApiServiceProvider);
   final result = await service.getLocations(creatorId: vendorId);
   return result.when(
-    success: (res) => res?.result ?? [],
+    success: (res) => res.result ?? [],
     failure: (_) => [],
   );
 });
@@ -260,20 +260,25 @@ class ProfileApiService {
 
   /// Add a new location for the authenticated user.
   Future<ApiResult<ApiResponse<LocationDto>>> addLocation({
+    String? name,
     required String address,
     required double latitude,
     required double longitude,
     required bool base,
   }) async {
     try {
+      final Map<String, dynamic> data = {
+        'address': address,
+        'latitude': latitude,
+        'longitude': longitude,
+        'base': base,
+      };
+      if (name != null && name.trim().isNotEmpty) {
+        data['name'] = name.trim();
+      }
       final response = await _dio.post(
         ApiConstants.locations,
-        data: {
-          'address': address,
-          'latitude': latitude,
-          'longitude': longitude,
-          'base': base,
-        },
+        data: data,
       );
       final apiResponse = ApiResponse<LocationDto>.fromJson(
         response.data,

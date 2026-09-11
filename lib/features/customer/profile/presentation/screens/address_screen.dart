@@ -128,6 +128,9 @@ class AddressScreen extends ConsumerWidget {
 
   Widget _buildAddressCard(BuildContext context, WidgetRef ref, LocationDto loc) {
     final colors = AppColors(context);
+    final String addressName = (loc.name != null && loc.name!.trim().isNotEmpty)
+        ? loc.name!.trim()
+        : (loc.base ? "العنوان الافتراضي" : "عنوان محفوظ");
 
     return Container(
       padding: EdgeInsets.all(16.r),
@@ -136,14 +139,14 @@ class AddressScreen extends ConsumerWidget {
         borderRadius: BorderRadius.circular(16.r),
         boxShadow: [
           BoxShadow(
-            color: colors.shadow,
-            blurRadius: 10,
+            color: colors.shadow.withValues(alpha: 0.05),
+            blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
         border: Border.all(
-          color: loc.base ? colors.primary : Colors.transparent,
-          width: 1,
+          color: loc.base ? colors.primary : colors.border.withValues(alpha: 0.6),
+          width: loc.base ? 1.5 : 1.0,
         ),
       ),
       child: Column(
@@ -152,26 +155,65 @@ class AddressScreen extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Icon(
-                    loc.base ? Icons.home : Icons.location_on,
-                    color: loc.base ? colors.primary : colors.textHint,
-                    size: 20.sp,
-                  ),
-                  8.horizontalSpace,
-                  Text(
-                    loc.base ? "العنوان الافتراضي" : "عنوان إضافي",
-                    style: AppTextStyles.text14w700(
-                      color: loc.base ? colors.primary : colors.textPrimary,
+              Expanded(
+                child: Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(8.r),
+                      decoration: BoxDecoration(
+                        color: loc.base
+                            ? colors.primary.withValues(alpha: 0.12)
+                            : colors.containerBackground,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        loc.base ? Icons.home_rounded : Icons.location_on_rounded,
+                        color: loc.base ? colors.primary : colors.textSecondary,
+                        size: 20.sp,
+                      ),
                     ),
-                  ),
-                ],
+                    10.horizontalSpace,
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              addressName,
+                              style: AppTextStyles.text16w700(color: colors.textPrimary),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (loc.base) ...[
+                            8.horizontalSpace,
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                              decoration: BoxDecoration(
+                                color: colors.primary.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(12.r),
+                              ),
+                              child: Text(
+                                "افتراضي",
+                                style: TextStyle(
+                                  color: colors.primary,
+                                  fontSize: 11.sp,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Cairo',
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   if (!loc.base)
-                    TextButton(
+                    TextButton.icon(
                       onPressed: () async {
                         final success = await ref.read(profileProvider.notifier).setBaseAddress(loc);
                         if (success && context.mounted) {
@@ -179,41 +221,70 @@ class AddressScreen extends ConsumerWidget {
                         }
                       },
                       style: TextButton.styleFrom(
-                        padding: EdgeInsets.symmetric(horizontal: 10.w),
+                        padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
-                      child: Text(
+                      icon: Icon(Icons.check_circle_outline_rounded, size: 14.sp, color: colors.primary),
+                      label: Text(
                         "تعيين كافتراضي",
                         style: AppTextStyles.text12w600(color: colors.primary),
                       ),
                     ),
                   IconButton(
-                    onPressed: () => _deleteAddress(context, ref, loc.id),
-                    icon: const Icon(Icons.delete_outline, color: Colors.red),
+                    onPressed: () => Navigator.pushNamed(context, AppRoutes.addAddress, arguments: loc),
+                    icon: Icon(Icons.edit_outlined, color: colors.primary, size: 20.sp),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
+                    tooltip: "تعديل العنوان",
+                  ),
+                  8.horizontalSpace,
+                  IconButton(
+                    onPressed: () => _deleteAddress(context, ref, loc.id),
+                    icon: Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20.sp),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    tooltip: "حذف العنوان",
                   ),
                 ],
               ),
             ],
           ),
-          10.verticalSpace,
-          Text(
-            loc.address ?? '',
-            style: AppTextStyles.text14w400(color: colors.textSecondary),
-          ),
           12.verticalSpace,
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.gps_fixed, color: colors.textHint, size: 14.sp),
+              Icon(Icons.place_outlined, size: 16.sp, color: colors.primary),
               6.horizontalSpace,
-              Text(
-                "خط العرض: ${loc.latitude.toStringAsFixed(4)} | خط الطول: ${loc.longitude.toStringAsFixed(4)}",
-                style: AppTextStyles.text12w400(color: colors.textHint),
+              Expanded(
+                child: Text(
+                  loc.address ?? '',
+                  style: AppTextStyles.text14w400(color: colors.textSecondary),
+                ),
               ),
             ],
           ),
+          if (loc.latitude != 0 && loc.longitude != 0) ...[
+            10.verticalSpace,
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+              decoration: BoxDecoration(
+                color: colors.containerBackground,
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.my_location_rounded, color: colors.textHint, size: 13.sp),
+                  6.horizontalSpace,
+                  Text(
+                    "${loc.latitude.toStringAsFixed(4)}, ${loc.longitude.toStringAsFixed(4)}",
+                    style: AppTextStyles.text11w400(color: colors.textHint),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

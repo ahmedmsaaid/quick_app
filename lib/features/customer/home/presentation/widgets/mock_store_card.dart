@@ -70,32 +70,44 @@ class MockStoreCard extends StatelessWidget {
                               size: 30.sp,
                               color: colors.textHint,
                             ),
-                      if (store.busy == true || !(store.active ?? true))
-                      Positioned(
-                        top: 8.r,
-                        right: 8.r,
-                        child: Container(
-                          padding: EdgeInsets.symmetric(
-                              horizontal: 6.w, vertical: 2.h),
-                          decoration: BoxDecoration(
-                            color: (store.busy == true)
-                                ? Colors.orange.withValues(alpha: 0.9)
-                                : Colors.black.withValues(alpha: 0.6),
-                            borderRadius: BorderRadius.circular(8.r),
+                      if (store.busy == true || !(store.active ?? true)) ...[
+                        Positioned.fill(
+                          child: Container(
+                            color: Colors.black.withValues(alpha: 0.45),
                           ),
-                          child: Text(
-                            (store.busy == true)
-                                ? 'مشغول'
-                                : AppStrings.closedStatus,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 9.sp,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Cairo',
+                        ),
+                        Positioned(
+                          top: 8.r,
+                          right: 8.r,
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 10.w, vertical: 4.h),
+                            decoration: BoxDecoration(
+                              color: (store.busy == true)
+                                  ? Colors.orange.withValues(alpha: 0.95)
+                                  : Colors.red.withValues(alpha: 0.95),
+                              borderRadius: BorderRadius.circular(10.r),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.25),
+                                  blurRadius: 6,
+                                ),
+                              ],
+                            ),
+                            child: Text(
+                              (store.busy == true)
+                                  ? 'مشغول'
+                                  : AppStrings.closedStatus,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Cairo',
+                              ),
                             ),
                           ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),

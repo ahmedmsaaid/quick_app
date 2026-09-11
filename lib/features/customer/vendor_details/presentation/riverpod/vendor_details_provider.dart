@@ -71,6 +71,14 @@ class VendorDetailsNotifier extends _$VendorDetailsNotifier {
 
     categoriesResult.when(
       success: (response) async {
+        final CategoryDto allCategory = CategoryDto(
+          id: -888,
+          name: 'الكل',
+          description: 'جميع المنتجات',
+          type: 1,
+          creatorId: vendorId,
+        );
+
         final CategoryDto offersCategory = CategoryDto(
           id: -999,
           name: 'عروض حصريه',
@@ -80,30 +88,28 @@ class VendorDetailsNotifier extends _$VendorDetailsNotifier {
         );
 
         final List<CategoryDto> rawCategories = response.result ?? [];
-        final List<CategoryDto> categories = [offersCategory, ...rawCategories];
-        CategoryDto? initialCategory = _preSelectedCategory;
-
-        if (initialCategory != null) {
-          initialCategory = categories.firstWhere(
-            (c) => c.id == initialCategory!.id,
-            orElse: () => initialCategory!,
-          );
-        }
+        final List<CategoryDto> categories = [allCategory, offersCategory, ...rawCategories];
+        final CategoryDto targetCategory = _preSelectedCategory ?? allCategory;
+        final CategoryDto initialCategory = categories.firstWhere(
+          (c) => c.id == targetCategory.id,
+          orElse: () => targetCategory,
+        );
 
         state = state.copyWith(
           categoriesStatus: VendorDetailsStatus.loaded,
           categories: categories,
           selectedCategory: initialCategory,
-          clearSelectedCategory: initialCategory == null,
+          clearSelectedCategory: false,
         );
 
-        if (initialCategory == null || initialCategory.id == -999) {
+        if (initialCategory.id == -999) {
           state = state.copyWith(
             productsStatus: VendorDetailsStatus.loaded,
             products: [],
           );
         } else {
-          await loadProducts(categoryId: initialCategory.id);
+          final int? categoryIdToLoad = (initialCategory.id == -888) ? null : initialCategory.id;
+          await loadProducts(categoryId: categoryIdToLoad);
         }
       },
       failure: (error) {
@@ -155,6 +161,7 @@ class VendorDetailsNotifier extends _$VendorDetailsNotifier {
       selectedCategory: category,
       clearSelectedCategory: category == null,
     );
-    loadProducts(categoryId: category?.id);
+    final int? categoryIdToLoad = (category?.id == -888 || category?.id == null) ? null : category?.id;
+    loadProducts(categoryId: categoryIdToLoad);
   }
 }

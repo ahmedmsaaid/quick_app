@@ -14,6 +14,7 @@ import 'package:base_app/features/customer/profile/presentation/riverpod/profile
 import 'package:base_app/features/shared/auth/presentation/riverpod/auth_provider.dart';
 import 'package:base_app/features/delivery/captain/presentation/riverpod/captain_orders_provider.dart';
 import 'package:base_app/features/shared/notifications/presentation/riverpod/notifications_provider.dart';
+import 'package:base_app/core/widgets/custom_toast.dart';
 
 class CaptainHomeScreen extends ConsumerStatefulWidget {
   const CaptainHomeScreen({super.key});
@@ -22,7 +23,8 @@ class CaptainHomeScreen extends ConsumerStatefulWidget {
   ConsumerState<CaptainHomeScreen> createState() => _CaptainHomeScreenState();
 }
 
-class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with WidgetsBindingObserver {
+class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen>
+    with WidgetsBindingObserver {
   bool _isOnline = true;
   Timer? _breakTimer;
   int _breakSecondsRemaining = 1800; // 30 minutes
@@ -45,7 +47,9 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
       builder: (BuildContext context) {
         return AlertDialog(
           backgroundColor: colors.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15.r)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15.r),
+          ),
           title: Text(
             'اختر مدة الاستراحة',
             style: AppTextStyles.text16w700(color: colors.textPrimary),
@@ -119,9 +123,7 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
     final success = await ref.read(profileProvider.notifier).toggleActivity();
     if (!success) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('فشل تحديث حالة النشاط، يرجى المحاولة لاحقاً')),
-        );
+        CustomToast.error(context, 'فشل تحديث حالة النشاط، يرجى المحاولة لاحقاً');
       }
     }
   }
@@ -167,7 +169,8 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
     final profileState = ref.watch(profileProvider);
     final ordersState = ref.watch(captainOrdersProvider);
 
-    if (profileState.status == ProfileStatus.loaded && profileState.user != null) {
+    if (profileState.status == ProfileStatus.loaded &&
+        profileState.user != null) {
       final nextActive = profileState.user!.active ?? false;
       if (_isOnline != nextActive && _breakTimer == null) {
         Future.microtask(() {
@@ -204,9 +207,7 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
         profileState.status == ProfileStatus.initial) {
       return Scaffold(
         backgroundColor: colors.background,
-        body: Center(
-          child: LoadingButton(color: colors.primary),
-        ),
+        body: Center(child: LoadingButton(color: colors.primary)),
       );
     }
 
@@ -224,7 +225,7 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
         backgroundColor: colors.cardBackground,
         strokeWidth: 2.5,
         onRefresh: () async {
-          await ref.read(captainOrdersProvider.notifier).loadAll();
+          await ref.read(captainOrdersProvider.notifier).loadAll(forceRefresh: true);
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -239,13 +240,19 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
                   children: [
                     _buildStatsGrid(context, ordersState),
                     24.verticalSpace,
-                    _buildSectionHeader(context, AppStrings.availableOrdersNow, ref),
+                    _buildSectionHeader(
+                      context,
+                      AppStrings.availableOrdersNow,
+                      ref,
+                    ),
                     14.verticalSpace,
                     if (_isOnline) ...[
                       if (ordersState.status == CaptainOrdersStatus.loading)
                         Padding(
                           padding: EdgeInsets.symmetric(vertical: 40.h),
-                          child: Center(child: LoadingButton(color: colors.primary)),
+                          child: Center(
+                            child: LoadingButton(color: colors.primary),
+                          ),
                         )
                       else if (ordersState.status == CaptainOrdersStatus.error)
                         Padding(
@@ -255,20 +262,34 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
                               children: [
                                 Text(
                                   ordersState.errorMessage ?? 'حدث خطأ ما',
-                                  style: AppTextStyles.text14w600(color: colors.error),
+                                  style: AppTextStyles.text14w600(
+                                    color: colors.error,
+                                  ),
                                 ),
                                 10.verticalSpace,
                                 ElevatedButton(
-                                  onPressed: () => ref.read(captainOrdersProvider.notifier).loadAll(),
-                                  style: ElevatedButton.styleFrom(backgroundColor: colors.primary),
-                                  child: Text('إعادة المحاولة', style: AppTextStyles.text12w600(color: Colors.white)),
+                                  onPressed: () => ref
+                                      .read(captainOrdersProvider.notifier)
+                                      .loadAll(forceRefresh: true),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: colors.primary,
+                                  ),
+                                  child: Text(
+                                    'إعادة المحاولة',
+                                    style: AppTextStyles.text12w600(
+                                      color: Colors.white,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
                           ),
                         )
                       else
-                        _buildAvailableOrdersList(context, ordersState.activeOrders)
+                        _buildAvailableOrdersList(
+                          context,
+                          ordersState.availableOrders,
+                        ),
                     ] else
                       _buildBreakMessage(context),
                     40.verticalSpace,
@@ -292,10 +313,7 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            colors.primary,
-            colors.primary.withValues(alpha: 0.92),
-          ],
+          colors: [colors.primary, colors.primary.withValues(alpha: 0.92)],
         ),
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(24.r)),
         border: Border(
@@ -394,12 +412,16 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
                         4.verticalSpace,
                         Container(
                           padding: EdgeInsets.symmetric(
-                              horizontal: 8.w, vertical: 3.h),
+                            horizontal: 8.w,
+                            vertical: 3.h,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(10.r),
                             border: Border.all(
-                              color: _isOnline ? colors.success : colors.warning,
+                              color: _isOnline
+                                  ? colors.success
+                                  : colors.warning,
                               width: 1,
                             ),
                           ),
@@ -411,7 +433,9 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
                                 height: 7.w,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: _isOnline ? colors.success : colors.warning,
+                                  color: _isOnline
+                                      ? colors.success
+                                      : colors.warning,
                                 ),
                               ),
                               4.horizontalSpace,
@@ -448,7 +472,9 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
                         const _NotificationBell(),
                         10.horizontalSpace,
                         GestureDetector(
-                          onTap: () => Navigator.of(context).pushNamed(AppRoutes.profileScreen),
+                          onTap: () => Navigator.of(
+                            context,
+                          ).pushNamed(AppRoutes.profileScreen),
                           child: Container(
                             width: 36.w,
                             height: 36.w,
@@ -461,15 +487,16 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
                               ),
                             ),
                             child: ClipOval(
-                              child: (user?.photo != null &&
+                              child:
+                                  (user?.photo != null &&
                                       user!.photo!.isNotEmpty)
                                   ? CachedNetworkImage(
                                       imageUrl: user.photo!.startsWith('http')
                                           ? user.photo!
                                           : '${ApiConstants.streamUrl}${user.photo}',
                                       fit: BoxFit.cover,
-                                      placeholder: (_, __) => Container(
-                                          color: colors.shimmerBase),
+                                      placeholder: (_, __) =>
+                                          Container(color: colors.shimmerBase),
                                       errorWidget: (_, __, ___) => Icon(
                                         Icons.person,
                                         color: Colors.white,
@@ -492,7 +519,10 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
 
                 // Status Card nested inside the header
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 14.w,
+                    vertical: 10.h,
+                  ),
                   decoration: BoxDecoration(
                     color: colors.surface,
                     borderRadius: BorderRadius.circular(14.r),
@@ -509,11 +539,14 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
                       Container(
                         padding: EdgeInsets.all(8.r),
                         decoration: BoxDecoration(
-                          color: (_isOnline ? colors.success : colors.warning).withValues(alpha: 0.12),
+                          color: (_isOnline ? colors.success : colors.warning)
+                              .withValues(alpha: 0.12),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
-                          _isOnline ? Icons.check_circle_rounded : Icons.timer_outlined,
+                          _isOnline
+                              ? Icons.check_circle_rounded
+                              : Icons.timer_outlined,
                           color: _isOnline ? colors.success : colors.warning,
                           size: 22.sp,
                         ),
@@ -524,16 +557,22 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              _isOnline ? AppStrings.onlineReadyToWorkMsg : AppStrings.breakLabel,
+                              _isOnline
+                                  ? AppStrings.onlineReadyToWorkMsg
+                                  : AppStrings.breakLabel,
                               style: AppTextStyles.text13w700(
-                                color: _isOnline ? colors.success : colors.warning,
+                                color: _isOnline
+                                    ? colors.success
+                                    : colors.warning,
                               ),
                             ),
                             if (!_isOnline) ...[
                               2.verticalSpace,
                               Text(
                                 '${AppStrings.timeLeftLabel}: ${_formatTime(_breakSecondsRemaining)}',
-                                style: AppTextStyles.text11w600(color: colors.warning),
+                                style: AppTextStyles.text11w600(
+                                  color: colors.warning,
+                                ),
                               ),
                             ],
                           ],
@@ -544,10 +583,20 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
                           onPressed: () => _toggleStatus(true),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: colors.primary,
-                            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 12.w,
+                              vertical: 6.h,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8.r),
+                            ),
                           ),
-                          child: Text(AppStrings.endBreakBtn, style: AppTextStyles.text11w700(color: Colors.white)),
+                          child: Text(
+                            AppStrings.endBreakBtn,
+                            style: AppTextStyles.text11w700(
+                              color: Colors.white,
+                            ),
+                          ),
                         )
                       else
                         Switch(
@@ -555,7 +604,9 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
                           onChanged: _toggleStatus,
                           activeThumbColor: colors.success,
                           inactiveThumbColor: colors.warning,
-                          inactiveTrackColor: colors.warning.withValues(alpha: 0.3),
+                          inactiveTrackColor: colors.warning.withValues(
+                            alpha: 0.3,
+                          ),
                         ),
                     ],
                   ),
@@ -587,7 +638,8 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
           child: _buildStatCard(
             context,
             title: AppStrings.todayEarnings,
-            value: '${state.todayEarnings.toStringAsFixed(0)} ${AppStrings.currency}',
+            value:
+                '${state.todayEarnings.toStringAsFixed(0)} ${AppStrings.currency}',
             icon: Icons.account_balance_wallet_rounded,
             iconColor: colors.secondary,
             bgColor: colors.secondary.withValues(alpha: 0.08),
@@ -625,10 +677,7 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
         children: [
           Container(
             padding: EdgeInsets.all(10.r),
-            decoration: BoxDecoration(
-              color: bgColor,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
             child: Icon(icon, color: iconColor, size: 22.sp),
           ),
           12.verticalSpace,
@@ -646,22 +695,32 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
     );
   }
 
-  Widget _buildSectionHeader(BuildContext context, String title, WidgetRef ref) {
+  Widget _buildSectionHeader(
+    BuildContext context,
+    String title,
+    WidgetRef ref,
+  ) {
     final colors = AppColors(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(title, style: AppTextStyles.text18w700(color: colors.textPrimary)),
         TextButton.icon(
-          onPressed: () => ref.read(captainOrdersProvider.notifier).loadAll(),
+          onPressed: () => ref.read(captainOrdersProvider.notifier).loadAll(forceRefresh: true),
           icon: Icon(Icons.refresh_rounded, size: 16.sp, color: colors.primary),
-          label: Text(AppStrings.refresh, style: AppTextStyles.text12w700(color: colors.primary)),
+          label: Text(
+            AppStrings.refresh,
+            style: AppTextStyles.text12w700(color: colors.primary),
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildAvailableOrdersList(BuildContext context, List<OrderDto> orders) {
+  Widget _buildAvailableOrdersList(
+    BuildContext context,
+    List<OrderDto> orders,
+  ) {
     if (orders.isEmpty) {
       final colors = AppColors(context);
       return Padding(
@@ -669,7 +728,11 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
         child: Center(
           child: Column(
             children: [
-              Icon(Icons.inbox_rounded, size: 48.sp, color: colors.textHint.withValues(alpha: 0.5)),
+              Icon(
+                Icons.inbox_rounded,
+                size: 48.sp,
+                color: colors.textHint.withValues(alpha: 0.5),
+              ),
               12.verticalSpace,
               Text(
                 'لا توجد طلبات متاحة حالياً',
@@ -694,8 +757,16 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
 
   Widget _buildOrderCard(BuildContext context, OrderDto order) {
     final colors = AppColors(context);
-    final storeName = order.creator?.name ?? 'متجر غير معروف';
-    final storeAddress = order.creator?.address ?? 'عنوان غير متوفر';
+    final creatorName =
+        (order.creator?.name != null && order.creator!.name!.isNotEmpty)
+        ? order.creator!.name!
+        : 'عميل غير معروف';
+    final storeName = (order.user?.name != null && order.user!.name!.isNotEmpty)
+        ? order.user!.name!
+        : (order.userLocation?.name != null &&
+                  order.userLocation!.name!.isNotEmpty
+              ? order.userLocation!.name!
+              : 'متجر غير معروف');
     final earnings = order.deliveryFee;
 
     return Container(
@@ -724,28 +795,20 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
                   borderRadius: BorderRadius.circular(14.r),
                 ),
                 child: Icon(
-                  order.type == 0 ? Icons.restaurant_rounded : Icons.shopping_bag_rounded,
+                  order.type == 0
+                      ? Icons.restaurant_rounded
+                      : Icons.shopping_bag_rounded,
                   color: colors.primary,
                   size: 24.sp,
                 ),
               ),
               14.horizontalSpace,
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      storeName,
-                      style: AppTextStyles.text15w700(color: colors.textPrimary),
-                    ),
-                    2.verticalSpace,
-                    Text(
-                      storeAddress,
-                      style: AppTextStyles.text12w500(color: colors.textSecondary),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+                child: Text(
+                  creatorName,
+                  style: AppTextStyles.text15w700(color: colors.textPrimary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               Container(
@@ -766,11 +829,11 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
           14.verticalSpace,
           Row(
             children: [
-              Icon(Icons.location_on_rounded, color: colors.secondary, size: 20.sp),
+              Icon(Icons.store_rounded, color: colors.primary, size: 20.sp),
               8.horizontalSpace,
               Expanded(
                 child: Text(
-                  '${AppStrings.deliverToLabel}: ${order.address ?? 'عنوان الزبون غير متوفر'}',
+                  '${AppStrings.pickupFromLabel}: $storeName',
                   style: AppTextStyles.text12w600(color: colors.textPrimary),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -787,8 +850,13 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
                   backgroundColor: colors.primary,
                   foregroundColor: Colors.white,
                   elevation: 0,
-                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 16.w,
+                    vertical: 8.h,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
                 ),
                 child: Text(
                   AppStrings.viewDetailsBtn,
@@ -816,18 +884,30 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
         children: [
           Icon(Icons.coffee_rounded, size: 64.sp, color: colors.warning),
           16.verticalSpace,
-          Text(AppStrings.breakLabel, style: AppTextStyles.text16w700(color: colors.textPrimary)),
+          Text(
+            AppStrings.breakLabel,
+            style: AppTextStyles.text16w700(color: colors.textPrimary),
+          ),
           6.verticalSpace,
-          Text(AppStrings.openOnlineToReceiveOrdersMsg, style: AppTextStyles.text13w600(color: colors.textSecondary), textAlign: TextAlign.center),
+          Text(
+            AppStrings.openOnlineToReceiveOrdersMsg,
+            style: AppTextStyles.text13w600(color: colors.textSecondary),
+            textAlign: TextAlign.center,
+          ),
           24.verticalSpace,
           ElevatedButton(
             onPressed: () => _toggleStatus(true),
             style: ElevatedButton.styleFrom(
               backgroundColor: colors.primary,
               padding: EdgeInsets.symmetric(horizontal: 28.w, vertical: 12.h),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12.r),
+              ),
             ),
-            child: Text(AppStrings.endBreakBtn, style: AppTextStyles.text13w700(color: Colors.white)),
+            child: Text(
+              AppStrings.endBreakBtn,
+              style: AppTextStyles.text13w700(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -904,12 +984,16 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
                           children: [
                             Text(
                               'حالة الحساب',
-                              style: AppTextStyles.text12w600(color: colors.textPrimary),
+                              style: AppTextStyles.text12w600(
+                                color: colors.textPrimary,
+                              ),
                             ),
                             4.verticalSpace,
                             Text(
                               'غير مفعّل — في انتظار موافقة الأدمن',
-                              style: AppTextStyles.text12w400(color: colors.warning),
+                              style: AppTextStyles.text12w400(
+                                color: colors.warning,
+                              ),
                             ),
                           ],
                         ),
@@ -1016,12 +1100,16 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
                           children: [
                             Text(
                               'حالة الحساب',
-                              style: AppTextStyles.text12w600(color: colors.textPrimary),
+                              style: AppTextStyles.text12w600(
+                                color: colors.textPrimary,
+                              ),
                             ),
                             4.verticalSpace,
                             Text(
                               'مرفوض / محظور — تواصل مع الدعم الفني',
-                              style: AppTextStyles.text12w400(color: colors.error),
+                              style: AppTextStyles.text12w400(
+                                color: colors.error,
+                              ),
                             ),
                           ],
                         ),
@@ -1036,7 +1124,10 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen> with Widg
                     onPressed: () {
                       Navigator.pushNamed(context, AppRoutes.contactUs);
                     },
-                    icon: const Icon(Icons.support_agent_rounded, color: Colors.white),
+                    icon: const Icon(
+                      Icons.support_agent_rounded,
+                      color: Colors.white,
+                    ),
                     label: Text(
                       'تواصل مع الدعم الفني',
                       style: AppTextStyles.text14w600(color: Colors.white),
@@ -1091,8 +1182,9 @@ class _NotificationBell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final unreadCount =
-        ref.watch(notificationsProvider.select((s) => s.unreadCount));
+    final unreadCount = ref.watch(
+      notificationsProvider.select((s) => s.unreadCount),
+    );
 
     return GestureDetector(
       onTap: () async {
@@ -1130,7 +1222,10 @@ class _NotificationBell extends ConsumerWidget {
                       ScaleTransition(scale: animation, child: child),
                   child: Container(
                     key: ValueKey(unreadCount),
-                    constraints: BoxConstraints(minWidth: 18.w, minHeight: 18.w),
+                    constraints: BoxConstraints(
+                      minWidth: 18.w,
+                      minHeight: 18.w,
+                    ),
                     padding: EdgeInsets.symmetric(horizontal: 4.w),
                     decoration: BoxDecoration(
                       color: Colors.redAccent,

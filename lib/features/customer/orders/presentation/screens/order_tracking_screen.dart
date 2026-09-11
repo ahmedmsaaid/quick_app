@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:base_app/core/routes/app_routes.dart';
 import 'package:base_app/core/utils/format_price.dart';
 import 'package:base_app/core/widgets/lading_button.dart';
@@ -18,6 +19,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' as ll;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:base_app/core/services/maps_service.dart';
+import 'package:base_app/core/widgets/custom_toast.dart';
 
 // ─── Order Status Constants ─────────────────────────────────────────────────
 // 0 = Created
@@ -958,16 +960,12 @@ Future<void> _launchCall(BuildContext context, String phone) async {
       await launchUrl(uri);
     } else {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('لا يمكن الاتصال بالرقم $phone')),
-        );
+        CustomToast.error(context, 'لا يمكن الاتصال بالرقم $phone');
       }
     }
   } catch (e) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ أثناء الاتصال: $e')),
-      );
+      CustomToast.error(context, 'خطأ أثناء الاتصال: $e');
     }
   }
 }
@@ -1066,15 +1064,11 @@ class _CancelOrderButtonState extends ConsumerState<_CancelOrderButton> {
 
     if (success) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تم إلغاء الطلب بنجاح')),
-        );
+        CustomToast.success(context, 'تم إلغاء الطلب بنجاح');
       }
     } else {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('فشل إلغاء الطلب، يرجى المحاولة لاحقاً')),
-        );
+        CustomToast.error(context, 'فشل إلغاء الطلب، يرجى المحاولة لاحقاً');
       }
     }
   }
@@ -1242,14 +1236,29 @@ class _LiveOrderTrackingMapState extends ConsumerState<_LiveOrderTrackingMap> {
 
     if (o.status == 6 && (hasCaptain || hasDest)) {
       final capPoint = hasCaptain ? ll.LatLng(captainLat, captainLng) : ll.LatLng(destLat, destLng);
+      final destPoint = hasDest ? ll.LatLng(destLat, destLng) : capPoint;
+
+      double bearingAngle = 0.0;
+      if (capPoint.latitude != destPoint.latitude || capPoint.longitude != destPoint.longitude) {
+        final dLng = (destPoint.longitude - capPoint.longitude) * (math.pi / 180.0);
+        final sLat = capPoint.latitude * (math.pi / 180.0);
+        final eLat = destPoint.latitude * (math.pi / 180.0);
+        final y = math.sin(dLng) * math.cos(eLat);
+        final x = math.cos(sLat) * math.sin(eLat) - math.sin(sLat) * math.cos(eLat) * math.cos(dLng);
+        bearingAngle = math.atan2(y, x);
+      }
+
       markers.add(
         Marker(
           point: capPoint,
           width: 54.w,
           height: 54.w,
-          child: Image.asset(
-            'assets/icons/delivarey-mab.png',
-            fit: BoxFit.contain,
+          child: Transform.rotate(
+            angle: bearingAngle,
+            child: Image.asset(
+              'assets/icons/delivarey-mab.png',
+              fit: BoxFit.contain,
+            ),
           ),
         ),
       );

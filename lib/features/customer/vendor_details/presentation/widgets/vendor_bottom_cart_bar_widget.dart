@@ -45,12 +45,19 @@ class VendorBottomCartBarWidget extends ConsumerWidget {
             child: Row(
               children: [
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                  padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(8.r),
+                    color: Colors.white.withValues(alpha: 0.25),
+                    borderRadius: BorderRadius.circular(10.r),
                   ),
-                  child: Text('${cart.totalQuantity}', style: AppTextStyles.text14w700(color: Colors.white)),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.shopping_cart_rounded, color: Colors.white, size: 18.sp),
+                      6.horizontalSpace,
+                      Text('${cart.totalQuantity}', style: AppTextStyles.text14w700(color: Colors.white)),
+                    ],
+                  ),
                 ),
                 Expanded(
                   child: Text(

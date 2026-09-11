@@ -1,6 +1,5 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:base_app/core/routes/app_router.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -13,7 +12,7 @@ import 'package:base_app/core/network/api_constants.dart';
 import 'package:base_app/core/widgets/see_all_widget.dart';
 import 'package:base_app/core/widgets/lading_button.dart';
 import 'package:base_app/features/customer/home/presentation/riverpod/home_provider.dart';
-import 'package:base_app/core/exports/exports.dart';
+import 'package:base_app/core/routes/app_router.dart';
 
 class HomeFeaturedRestaurants extends ConsumerWidget {
   const HomeFeaturedRestaurants({super.key});
@@ -150,63 +149,69 @@ class HomeFeaturedRestaurants extends ConsumerWidget {
                                     ),
                                   ),
                                 ),
-                                if (restaurant.busy == true || !(restaurant.active ?? true))
-                                  Positioned(
-                                    top: 12.r,
-                                    right: 12.r,
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(20.r),
-                                      child: BackdropFilter(
-                                        filter:
-                                            ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                                        child: Container(
-                                          padding: EdgeInsets.symmetric(
-                                              horizontal: 10.w, vertical: 4.h),
-                                          decoration: BoxDecoration(
-                                            color: Colors.black.withValues(alpha: 0.5),
-                                            borderRadius: BorderRadius.circular(20.r),
-                                            border: Border.all(
-                                              color: Colors.white
-                                                  .withValues(alpha: 0.15),
-                                              width: 0.8,
-                                            ),
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Container(
-                                                width: 6.w,
-                                                height: 6.w,
-                                                decoration: BoxDecoration(
-                                                  color: (restaurant.busy == true)
-                                                      ? Colors.amber
-                                                      : colors.error,
-                                                  shape: BoxShape.circle,
-                                                  boxShadow: [
-                                                    BoxShadow(
-                                                      color: (restaurant.busy == true)
-                                                          ? Colors.amber
-                                                          : colors.error,
-                                                      blurRadius: 6,
-                                                      spreadRadius: 2,
-                                                    )
-                                                  ],
-                                                ),
-                                              ),
-                                              6.horizontalSpace,
-                                              Text(
-                                                (restaurant.busy == true)
-                                                    ? 'مشغول'
-                                                    : AppStrings.closedStatus,
-                                                style: AppTextStyles.text10w700(
-                                                    color: Colors.white),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
+                                 if (restaurant.busy == true || !(restaurant.active ?? true)) ...[
+                                   Positioned.fill(
+                                     child: Container(
+                                       color: Colors.black.withValues(alpha: 0.45),
+                                     ),
+                                   ),
+                                   Positioned(
+                                     top: 12.r,
+                                     right: 12.r,
+                                     child: ClipRRect(
+                                       borderRadius: BorderRadius.circular(20.r),
+                                       child: BackdropFilter(
+                                         filter:
+                                             ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                                         child: Container(
+                                           padding: EdgeInsets.symmetric(
+                                               horizontal: 12.w, vertical: 5.h),
+                                           decoration: BoxDecoration(
+                                             color: Colors.black.withValues(alpha: 0.65),
+                                             borderRadius: BorderRadius.circular(20.r),
+                                             border: Border.all(
+                                               color: Colors.white
+                                                   .withValues(alpha: 0.25),
+                                               width: 0.8,
+                                             ),
+                                           ),
+                                           child: Row(
+                                             mainAxisSize: MainAxisSize.min,
+                                             children: [
+                                               Container(
+                                                 width: 7.w,
+                                                 height: 7.w,
+                                                 decoration: BoxDecoration(
+                                                   color: (restaurant.busy == true)
+                                                       ? Colors.amber
+                                                       : colors.error,
+                                                   shape: BoxShape.circle,
+                                                   boxShadow: [
+                                                     BoxShadow(
+                                                       color: (restaurant.busy == true)
+                                                           ? Colors.amber
+                                                           : colors.error,
+                                                       blurRadius: 6,
+                                                       spreadRadius: 2,
+                                                     )
+                                                   ],
+                                                 ),
+                                               ),
+                                               6.horizontalSpace,
+                                               Text(
+                                                 (restaurant.busy == true)
+                                                     ? 'مشغول'
+                                                     : AppStrings.closedStatus,
+                                                 style: AppTextStyles.text12w700(
+                                                     color: Colors.white),
+                                               ),
+                                             ],
+                                           ),
+                                         ),
+                                       ),
+                                     ),
+                                   ),
+                                 ],
                                 Positioned(
                                   bottom: 10.r,
                                   left: 12.r,

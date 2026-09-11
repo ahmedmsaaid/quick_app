@@ -63,10 +63,10 @@ class ProfileNotifier extends _$ProfileNotifier {
     
     profileResult.when(
       success: (response) {
-        if (response?.success == true && response?.result != null) {
-          user = response!.result;
+        if (response.success && response.result != null) {
+          user = response.result;
         } else {
-          errorMessage = response?.message;
+          errorMessage = response.message;
         }
       },
       failure: (error) {
@@ -78,8 +78,8 @@ class ProfileNotifier extends _$ProfileNotifier {
       final locationsResult = await ref.read(profileApiServiceProvider).getLocations(creatorId: user!.id);
       locationsResult.when(
         success: (response) {
-          if (response?.success == true && response?.result != null) {
-            locations = response!.result!;
+          if (response.success && response.result != null) {
+            locations = response.result!;
           }
         },
         failure: (error) {
@@ -125,17 +125,17 @@ class ProfileNotifier extends _$ProfileNotifier {
         );
     return result.when(
       success: (response) {
-        if (response?.success == true && response?.result != null) {
+        if (response.success && response.result != null) {
           state = ProfileState(
             status: ProfileStatus.loaded,
-            user: response!.result,
+            user: response.result,
             locations: state.locations,
           );
           return true;
         } else {
           state = state.copyWith(
             status: ProfileStatus.error,
-            errorMessage: response?.message,
+            errorMessage: response.message,
           );
           return false;
         }
@@ -183,13 +183,13 @@ class ProfileNotifier extends _$ProfileNotifier {
         );
     return result.when(
       success: (response) {
-        if (response?.success == true) {
+        if (response.success) {
           state = state.copyWith(status: ProfileStatus.loaded);
           return true;
         } else {
           state = state.copyWith(
             status: ProfileStatus.error,
-            errorMessage: response?.message,
+            errorMessage: response.message,
           );
           return false;
         }
@@ -206,11 +206,13 @@ class ProfileNotifier extends _$ProfileNotifier {
 
   /// Save the user's base address via locations endpoint.
   Future<bool> saveAddress({
+    String? name,
     required String address,
     required double latitude,
     required double longitude,
   }) async {
     return addAddress(
+      name: name,
       address: address,
       latitude: latitude,
       longitude: longitude,
@@ -220,6 +222,7 @@ class ProfileNotifier extends _$ProfileNotifier {
 
   /// Add a new address/location.
   Future<bool> addAddress({
+    String? name,
     required String address,
     required double latitude,
     required double longitude,
@@ -234,6 +237,7 @@ class ProfileNotifier extends _$ProfileNotifier {
       for (final oldLoc in oldBases) {
         await ref.read(profileApiServiceProvider).deleteLocation(oldLoc.id);
         await ref.read(profileApiServiceProvider).addLocation(
+              name: oldLoc.name,
               address: oldLoc.address ?? '',
               latitude: oldLoc.latitude,
               longitude: oldLoc.longitude,
@@ -243,6 +247,7 @@ class ProfileNotifier extends _$ProfileNotifier {
     }
 
     final result = await ref.read(profileApiServiceProvider).addLocation(
+          name: name,
           address: address,
           latitude: latitude,
           longitude: longitude,
@@ -250,7 +255,7 @@ class ProfileNotifier extends _$ProfileNotifier {
         );
     return result.when(
       success: (response) async {
-        if (response?.success == true) {
+        if (response.success) {
           // If setting as base, also update the user's main profile
           if (base) {
             await ref.read(profileApiServiceProvider).updateProfile(
@@ -263,7 +268,7 @@ class ProfileNotifier extends _$ProfileNotifier {
         } else {
           state = state.copyWith(
             status: ProfileStatus.error,
-            errorMessage: response?.message,
+            errorMessage: response.message,
           );
           return false;
         }
@@ -281,6 +286,7 @@ class ProfileNotifier extends _$ProfileNotifier {
   /// Update an existing address/location. (Workaround: DELETE + POST because PUT endpoint returns 500)
   Future<bool> updateAddress({
     required int id,
+    String? name,
     required String address,
     required double latitude,
     required double longitude,
@@ -294,6 +300,7 @@ class ProfileNotifier extends _$ProfileNotifier {
       for (final oldLoc in oldBases) {
         await ref.read(profileApiServiceProvider).deleteLocation(oldLoc.id);
         await ref.read(profileApiServiceProvider).addLocation(
+              name: oldLoc.name,
               address: oldLoc.address ?? '',
               latitude: oldLoc.latitude,
               longitude: oldLoc.longitude,
@@ -307,7 +314,7 @@ class ProfileNotifier extends _$ProfileNotifier {
     bool deleteSuccess = false;
     deleteResult.when(
       success: (response) {
-        if (response?.success == true) {
+        if (response.success) {
           deleteSuccess = true;
         }
       },
@@ -324,6 +331,7 @@ class ProfileNotifier extends _$ProfileNotifier {
 
     // Create updated location entry
     final addResult = await ref.read(profileApiServiceProvider).addLocation(
+          name: name,
           address: address,
           latitude: latitude,
           longitude: longitude,
@@ -332,7 +340,7 @@ class ProfileNotifier extends _$ProfileNotifier {
 
     return addResult.when(
       success: (response) async {
-        if (response?.success == true) {
+        if (response.success) {
           // If setting as base, also update user's main profile
           if (base) {
             await ref.read(profileApiServiceProvider).updateProfile(
@@ -345,7 +353,7 @@ class ProfileNotifier extends _$ProfileNotifier {
         } else {
           state = state.copyWith(
             status: ProfileStatus.error,
-            errorMessage: response?.message,
+            errorMessage: response.message,
           );
           return false;
         }
@@ -366,13 +374,13 @@ class ProfileNotifier extends _$ProfileNotifier {
     final result = await ref.read(profileApiServiceProvider).deleteLocation(id);
     return result.when(
       success: (response) async {
-        if (response?.success == true) {
+        if (response.success) {
           await loadProfile(); // Reload to refresh both user profile and locations
           return true;
         } else {
           state = state.copyWith(
             status: ProfileStatus.error,
-            errorMessage: response?.message,
+            errorMessage: response.message,
           );
           return false;
         }
@@ -391,6 +399,7 @@ class ProfileNotifier extends _$ProfileNotifier {
   Future<bool> setBaseAddress(LocationDto location) async {
     return updateAddress(
       id: location.id,
+      name: location.name,
       address: location.address ?? '',
       latitude: location.latitude,
       longitude: location.longitude,
@@ -408,13 +417,13 @@ class ProfileNotifier extends _$ProfileNotifier {
     
     return result.when(
       success: (response) async {
-        if (response?.success == true) {
+        if (response.success) {
           await loadProfile(); // Reload to refresh user active status
           return true;
         } else {
           state = state.copyWith(
             status: ProfileStatus.error,
-            errorMessage: response?.message,
+            errorMessage: response.message,
           );
           return false;
         }
@@ -439,13 +448,13 @@ class ProfileNotifier extends _$ProfileNotifier {
     
     return result.when(
       success: (response) async {
-        if (response?.success == true) {
+        if (response.success) {
           await loadProfile(); // Reload to refresh user busy status
           return true;
         } else {
           state = state.copyWith(
             status: ProfileStatus.error,
-            errorMessage: response?.message,
+            errorMessage: response.message,
           );
           return false;
         }

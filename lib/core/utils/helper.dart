@@ -1,22 +1,18 @@
 import 'package:flutter/material.dart';
-
-import 'package:base_app/core/styles/app_colors.dart';
+import 'package:base_app/core/widgets/custom_toast.dart';
 
 class CustomSnackBar {
   static void show(
     BuildContext context,
     String message, {
-    Color backgroundColor = AppColors.white,
-    Duration duration = const Duration(milliseconds: 1000),
+    Color? backgroundColor,
+    Duration duration = const Duration(seconds: 3),
   }) {
-    backgroundColor = AppColors(context).primary;
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: backgroundColor,
-        duration: duration,
-      ),
+    CustomToast.show(
+      context: context,
+      message: message,
+      type: ToastType.info,
+      duration: duration,
     );
   }
 }
