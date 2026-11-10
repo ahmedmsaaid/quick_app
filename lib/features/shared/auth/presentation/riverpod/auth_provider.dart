@@ -4,12 +4,16 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:base_app/core/services/cach_helper/cache_helper.dart';
 import 'package:base_app/core/services/cach_helper/cache_helper_keys.dart';
 import 'package:base_app/core/network/api_result.dart';
+import 'package:base_app/core/network/api_constants.dart';
+import 'package:base_app/core/utils/jwt_helper.dart';
 import 'package:base_app/features/shared/auth/data/auth_api_service.dart';
 import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
 import 'package:base_app/core/services/push_notification/push_notification_service.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import 'package:base_app/features/customer/profile/presentation/riverpod/profile_provider.dart';
+import 'package:base_app/core/providers/auth_state_provider.dart';
+import 'dart:developer' as dev;
 
 part 'auth_provider.g.dart';
 
@@ -58,7 +62,9 @@ class Auth extends _$Auth {
   AuthState build() {
     final token = CacheHelper.getString(CacheKeys.token);
     if (token != null && token.isNotEmpty) {
-      final role = CacheHelper.getInt('userRole') ?? 2;
+      ref.read(guestModeProvider.notifier).state = false;
+      final decodedRole = JwtHelper.getRoleFromToken(token);
+      final role = decodedRole?.value ?? (CacheHelper.getInt('userRole') ?? 2);
       return AuthState.authenticated(UserDto(id: 0, role: role, status: 0));
     }
     return AuthState.initial();
@@ -67,7 +73,11 @@ class Auth extends _$Auth {
   /// Sets the authentication state to authenticated directly (e.g. after OTP)
   void setAuthenticated() {
     ref.invalidate(profileProvider);
-    final role = CacheHelper.getInt('userRole') ?? 2;
+    ref.read(guestModeProvider.notifier).state = false;
+    final token = CacheHelper.getString(CacheKeys.token);
+    final decodedRole = token != null ? JwtHelper.getRoleFromToken(token) : null;
+    final role = decodedRole?.value ?? (CacheHelper.getInt('userRole') ?? 2);
+    CacheHelper.setInt('userRole', role);
     ref.read(pushNotificationServiceProvider).registerDeviceTokenWithBackend();
     state = AuthState.authenticated(UserDto(id: 0, role: role, status: 0));
   }
@@ -93,20 +103,46 @@ class Auth extends _$Auth {
       success: (response) async {
         if (response.success && response.result != null) {
           final tokenDto = response.result!;
-          if (tokenDto.accessToken != null) {
-            await CacheHelper.setString(CacheKeys.token, tokenDto.accessToken!);
+          final token = tokenDto.accessToken;
+          final RoleTypeEnum? decodedRole =
+              token != null ? JwtHelper.getRoleFromToken(token) : null;
+
+          // Enforce role separation: Customer (role 2) vs Captain/Driver (role 3)
+          if (isUser && decodedRole != null && decodedRole != RoleTypeEnum.customer) {
+            final String msg = decodedRole == RoleTypeEnum.captain
+                ? "هذا الحساب مسجل كمندوب توصيل. يرجى تسجيل الدخول من بوابة المندوب."
+                : "غير مصرح لهذا الحساب بالدخول كعميل.";
+            state = AuthState.error(msg);
+            return false;
+          }
+
+          if (!isUser && decodedRole != null && decodedRole != RoleTypeEnum.captain) {
+            final String msg = decodedRole == RoleTypeEnum.customer
+                ? "هذا الحساب مسجل كعميل. يرجى تسجيل الدخول من بوابة العميل."
+                : "غير مصرح لهذا الحساب بالدخول كمندوب توصيل.";
+            state = AuthState.error(msg);
+            return false;
+          }
+
+          final int resolvedRole = decodedRole?.value ?? (isUser ? 2 : 3);
+
+          if (token != null) {
+            await CacheHelper.setString(CacheKeys.token, token);
           }
           if (tokenDto.refreshToken != null) {
             await CacheHelper.setString('refreshToken', tokenDto.refreshToken!);
           }
           
+          // Reset guest mode
+          ref.read(guestModeProvider.notifier).state = false;
+
           // Cache the user role!
-          await CacheHelper.setInt('userRole', isUser ? 2 : 3);
+          await CacheHelper.setInt('userRole', resolvedRole);
           
           // Register FCM token with backend immediately upon login!
           ref.read(pushNotificationServiceProvider).registerDeviceTokenWithBackend();
           
-          state = AuthState.authenticated(UserDto(id: 0, role: isUser ? 2 : 3, status: 0));
+          state = AuthState.authenticated(UserDto(id: 0, role: resolvedRole, status: 0));
           return true;
         } else {
           state = AuthState.error(response.message ?? "Authentication failed", statusCode: response.statusCode);
@@ -127,6 +163,21 @@ class Auth extends _$Auth {
             tempToken = dataMap['accessToken'] as String? ?? dataMap['token'] as String?;
           }
           if (tempToken != null && tempToken.isNotEmpty) {
+            final decodedRole = JwtHelper.getRoleFromToken(tempToken);
+            if (isUser && decodedRole != null && decodedRole != RoleTypeEnum.customer) {
+              final String msg = decodedRole == RoleTypeEnum.captain
+                  ? "هذا الحساب مسجل كمندوب توصيل. يرجى تسجيل الدخول من بوابة المندوب."
+                  : "غير مصرح لهذا الحساب بالدخول كعميل.";
+              state = AuthState.error(msg);
+              return false;
+            }
+            if (!isUser && decodedRole != null && decodedRole != RoleTypeEnum.captain) {
+              final String msg = decodedRole == RoleTypeEnum.customer
+                  ? "هذا الحساب مسجل كعميل. يرجى تسجيل الدخول من بوابة العميل."
+                  : "غير مصرح لهذا الحساب بالدخول كمندوب توصيل.";
+              state = AuthState.error(msg);
+              return false;
+            }
             await CacheHelper.setString('tempToken', tempToken);
           }
           // Cache temporary phone for OTP verification
@@ -151,6 +202,7 @@ class Auth extends _$Auth {
     LocationModel? location,
     String? photo,
     String? description,
+    String? invitationCode,
   }) async {
     state = AuthState.loading();
 
@@ -174,6 +226,7 @@ class Auth extends _$Auth {
       photo: photo,
       location: location,
       description: description,
+      invitationCode: invitationCode,
     );
 
     return result.when(
@@ -213,6 +266,7 @@ class Auth extends _$Auth {
     await CacheHelper.remove(CacheKeys.token);
     await CacheHelper.remove('refreshToken');
     await CacheHelper.remove('userRole');
+    ref.read(guestModeProvider.notifier).state = false;
     ref.invalidate(profileProvider);
     state = AuthState.unauthenticated();
   }
@@ -222,65 +276,119 @@ class Auth extends _$Auth {
     required bool isUser,
   }) async {
     state = AuthState.loading();
+    final role = isUser ? 2 : 3;
+    dev.log("🚀 [GoogleAuth] Starting Google Sign-In (isUser: $isUser, targetRole: $role)", name: 'GoogleAuth');
+
     try {
       final googleSignIn = GoogleSignIn.instance;
 
       if (!_googleSignInInitialized) {
-        await googleSignIn.initialize();
+        dev.log("🔄 [GoogleAuth] Initializing GoogleSignIn with serverClientId: ${ApiConstants.googleServerClientId}...", name: 'GoogleAuth');
+        await googleSignIn.initialize(
+          serverClientId: ApiConstants.googleServerClientId,
+        );
         _googleSignInInitialized = true;
+        dev.log("✅ [GoogleAuth] GoogleSignIn initialized successfully.", name: 'GoogleAuth');
       }
 
+      dev.log("📱 [GoogleAuth] Calling googleSignIn.authenticate(scopeHint: ['email'])...", name: 'GoogleAuth');
       final GoogleSignInAccount googleUser = await googleSignIn.authenticate(
         scopeHint: ['email'],
       );
 
+      dev.log("👤 [GoogleAuth] User signed in with Google: email=${googleUser.email}, displayName=${googleUser.displayName}", name: 'GoogleAuth');
+
       final GoogleSignInAuthentication googleAuthDetails = googleUser.authentication;
       final idToken = googleAuthDetails.idToken;
 
+      dev.log("🔑 [GoogleAuth] idToken received: ${idToken != null ? 'Length: ${idToken.length} (Starts with: ${idToken.substring(0, idToken.length > 25 ? 25 : idToken.length)}...)' : 'NULL'}", name: 'GoogleAuth');
+
       if (idToken == null || idToken.isEmpty) {
+        dev.log("❌ [GoogleAuth] idToken is null or empty!", name: 'GoogleAuth');
         state = AuthState.error("فشل الحصول على رمز تعريف جوجل (idToken)");
         return false;
       }
 
-      final role = isUser ? 2 : 3;
+      dev.log("🌐 [GoogleAuth] Sending POST /api/v1/users/google-auth with role=$role...", name: 'GoogleAuth');
       final result = await ref.read(authApiServiceProvider).googleAuth(
         idToken: idToken,
         role: role,
       );
 
-      return result.when(
+      return await result.when(
         success: (response) async {
+          dev.log("📥 [GoogleAuth] Backend response: success=${response.success}, statusCode=${response.statusCode}, message=${response.message}", name: 'GoogleAuth');
+
           if (response.success && response.result != null) {
             final tokenDto = response.result!;
-            if (tokenDto.accessToken != null) {
-              await CacheHelper.setString(CacheKeys.token, tokenDto.accessToken!);
+            final token = tokenDto.accessToken;
+            final RoleTypeEnum? decodedRole =
+                token != null ? JwtHelper.getRoleFromToken(token) : null;
+
+            dev.log("🎟️ [GoogleAuth] Token decoded role: $decodedRole", name: 'GoogleAuth');
+
+            // Enforce role separation: Customer (role 2) vs Captain/Driver (role 3)
+            if (isUser && decodedRole != null && decodedRole != RoleTypeEnum.customer) {
+              final String msg = decodedRole == RoleTypeEnum.captain
+                  ? "هذا الحساب مسجل كمندوب توصيل. يرجى تسجيل الدخول من بوابة المندوب."
+                  : "غير مصرح لهذا الحساب بالدخول كعميل.";
+              dev.log("⚠️ [GoogleAuth] Role mismatch: $msg", name: 'GoogleAuth');
+              state = AuthState.error(msg);
+              return false;
+            }
+
+            if (!isUser && decodedRole != null && decodedRole != RoleTypeEnum.captain) {
+              final String msg = decodedRole == RoleTypeEnum.customer
+                  ? "هذا الحساب مسجل كعميل. يرجى تسجيل الدخول من بوابة العميل."
+                  : "غير مصرح لهذا الحساب بالدخول كمندوب توصيل.";
+              dev.log("⚠️ [GoogleAuth] Role mismatch: $msg", name: 'GoogleAuth');
+              state = AuthState.error(msg);
+              return false;
+            }
+
+            final int resolvedRole = decodedRole?.value ?? role;
+
+            if (token != null) {
+              await CacheHelper.setString(CacheKeys.token, token);
             }
             if (tokenDto.refreshToken != null) {
               await CacheHelper.setString('refreshToken', tokenDto.refreshToken!);
             }
 
+            // Reset guest mode
+            ref.read(guestModeProvider.notifier).state = false;
+
             // Cache the user role!
-            await CacheHelper.setInt('userRole', role);
+            await CacheHelper.setInt('userRole', resolvedRole);
 
             // Register FCM token with backend immediately upon login!
             ref.read(pushNotificationServiceProvider).registerDeviceTokenWithBackend();
 
-            state = AuthState.authenticated(UserDto(id: 0, role: role, status: 0));
+            dev.log("🎉 [GoogleAuth] Login completed successfully! User Role: $resolvedRole", name: 'GoogleAuth');
+            state = AuthState.authenticated(UserDto(id: 0, role: resolvedRole, status: 0));
             return true;
           } else {
-            state = AuthState.error(response.message ?? "فشل تسجيل الدخول بـ جوجل", statusCode: response.statusCode);
+            final errorMsg = response.message ?? "فشل تسجيل الدخول بـ جوجل";
+            dev.log("❌ [GoogleAuth] API returned unsuccess response: $errorMsg (code: ${response.statusCode})", name: 'GoogleAuth');
+            state = AuthState.error(errorMsg, statusCode: response.statusCode);
             return false;
           }
         },
         failure: (error) async {
+          dev.log("❌ [GoogleAuth] API call failure: ${error.message} (statusCode: ${error.statusCode})", name: 'GoogleAuth');
           state = AuthState.error(error.message, statusCode: error.statusCode);
           return false;
         },
       );
-    } catch (e) {
-      if (e is GoogleSignInException && e.code == GoogleSignInExceptionCode.canceled) {
-        state = AuthState.initial();
-        return false;
+    } catch (e, stackTrace) {
+      dev.log("💥 [GoogleAuth] Exception caught during Google Sign-In!", name: 'GoogleAuth', error: e, stackTrace: stackTrace);
+      if (e is GoogleSignInException) {
+        dev.log("🔍 [GoogleAuth] GoogleSignInException code: ${e.code}, description: ${e.description}", name: 'GoogleAuth');
+        if (e.code == GoogleSignInExceptionCode.canceled) {
+          dev.log("ℹ️ [GoogleAuth] User canceled Google Sign-In flow.", name: 'GoogleAuth');
+          state = AuthState.initial();
+          return false;
+        }
       }
       state = AuthState.error("حدث خطأ أثناء تسجيل الدخول بـ جوجل: $e");
       return false;

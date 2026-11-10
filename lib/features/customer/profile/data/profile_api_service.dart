@@ -8,6 +8,7 @@ import 'package:base_app/core/network/api_constants.dart';
 import 'package:base_app/core/network/api_result.dart';
 import 'package:base_app/core/error/error_handler.dart';
 import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
+import 'package:base_app/features/customer/profile/data/models/invitation_code_model.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:math' as math;
 
@@ -103,6 +104,16 @@ final vendorLocationsProvider = FutureProvider.family<List<LocationDto>, int?>((
   );
 });
 
+/// Provider to fetch the authenticated user's Promo / Invitation Code
+final myInvitationCodeProvider = FutureProvider.autoDispose<InvitationCodeDto?>((ref) async {
+  final service = ref.read(profileApiServiceProvider);
+  final result = await service.getMyInvitationCode();
+  return result.when(
+    success: (res) => res.result,
+    failure: (_) => null,
+  );
+});
+
 /// Default fallback settings if API response is null or loading
 const defaultAppSettings = UserSettingDto(
   id: 1,
@@ -186,12 +197,9 @@ class ProfileApiService {
       }
 
       final Map<String, dynamic> data = {
-        'name': name,
-        'email': email,
-        'address': address,
-        'photo': cleanPhoto,
-        'description': description,
-        'location': location?.toJson() ?? {},
+        if (name != null) 'name': name,
+        if (cleanPhoto != null) 'photo': cleanPhoto,
+        if (description != null) 'description': description,
       };
 
       final response = await _dio.put(
@@ -436,6 +444,64 @@ class ProfileApiService {
       final apiResponse = ApiResponse<bool>.fromJson(
         response.data,
         (json) => json is bool ? json : (json == true),
+      );
+      return ApiResult.success(apiResponse);
+    } catch (e) {
+      return ApiResult.failure(handleError(e));
+    }
+  }
+
+  /// Fetch the authenticated user's Promo / Invitation code (`GET /api/v1/invitation-code`).
+  Future<ApiResult<ApiResponse<InvitationCodeDto>>> getMyInvitationCode() async {
+    try {
+      final response = await _dio.get(ApiConstants.invitationCode);
+      final apiResponse = ApiResponse<InvitationCodeDto>.fromJson(
+        response.data,
+        (json) => InvitationCodeDto.fromJson(json as Map<String, dynamic>),
+      );
+      return ApiResult.success(apiResponse);
+    } catch (e) {
+      return ApiResult.failure(handleError(e));
+    }
+  }
+
+  /// Fetch Promo / Invitation code for a specific user ID (`GET /api/v1/invitation-code/get-by-user-id/{id}`).
+  Future<ApiResult<ApiResponse<InvitationCodeDto>>> getInvitationCodeByUserId(int userId) async {
+    try {
+      final response = await _dio.get('${ApiConstants.invitationCodeByUserId}/$userId');
+      final apiResponse = ApiResponse<InvitationCodeDto>.fromJson(
+        response.data,
+        (json) => InvitationCodeDto.fromJson(json as Map<String, dynamic>),
+      );
+      return ApiResult.success(apiResponse);
+    } catch (e) {
+      return ApiResult.failure(handleError(e));
+    }
+  }
+
+  /// Fetch active discounts / promo codes (`PATCH /api/v1/discounts`).
+  Future<ApiResult<ApiResponse<List<DiscountCodeDto>>>> getDiscounts({int? creatorId}) async {
+    try {
+      final Map<String, dynamic> requestData = {
+        'pageNumber': 1,
+        'pageSize': 200,
+        'enablePagination': false,
+        if (creatorId != null && creatorId > 0) 'filters': {'creatorId': creatorId},
+      };
+      final response = await _dio.patch(
+        ApiConstants.discounts,
+        data: requestData,
+      );
+      final apiResponse = ApiResponse<List<DiscountCodeDto>>.fromJson(
+        response.data,
+        (json) {
+          if (json is List) {
+            return json
+                .map((e) => DiscountCodeDto.fromJson(e as Map<String, dynamic>))
+                .toList();
+          }
+          return [];
+        },
       );
       return ApiResult.success(apiResponse);
     } catch (e) {

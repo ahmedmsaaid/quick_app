@@ -1056,6 +1056,21 @@ abstract class  AppStrings {
   static String get completedOrdersCountLabel => 'completedOrdersCountLabel'.tr();
   static String get completedOrdersCountSubtitle => 'completedOrdersCountSubtitle'.tr();
   static String get ordersUnitLabel => 'ordersUnitLabel'.tr();
+  static String get promoOrInvitationCodeOptional => 'promoOrInvitationCodeOptional'.tr();
+  static String get myPromoCodeTitle => 'myPromoCodeTitle'.tr();
+  static String get myPromoCodeSubtitle => 'myPromoCodeSubtitle'.tr();
+  static String get copyPromoCodeBtn => 'copyPromoCodeBtn'.tr();
+  static String get promoCodeCopiedMsg => 'promoCodeCopiedMsg'.tr();
+  static String get promoCodeUsedCountLabel => 'promoCodeUsedCountLabel'.tr();
+  static String get promoCodeTimesUnit => 'promoCodeTimesUnit'.tr();
+  static String get enterPromoCodeLabel => 'enterPromoCodeLabel'.tr();
+  static String get enterPromoCodeHint => 'enterPromoCodeHint'.tr();
+  static String get applyPromoCodeBtn => 'applyPromoCodeBtn'.tr();
+  static String get removePromoCodeBtn => 'removePromoCodeBtn'.tr();
+  static String get promoCodeAppliedSuccess => 'promoCodeAppliedSuccess'.tr();
+  static String get invalidOrExpiredPromoCode => 'invalidOrExpiredPromoCode'.tr();
+  static String get discountAmountLabel => 'discountAmountLabel'.tr();
+  static String get promoCodeUnavailableNow => 'promoCodeUnavailableNow'.tr();
 
 }
 

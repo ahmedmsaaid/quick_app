@@ -1049,5 +1049,20 @@
   "totalCashToRemitSubtitle": "مبالغ الكاش المحصلة الواجب تسليمها للمنصة",
   "completedOrdersCountLabel": "عدد الأوردرات المكتملة",
   "completedOrdersCountSubtitle": "إجمالي الطلبات المسلّمة بنجاح",
-  "ordersUnitLabel": "طلب"
+  "ordersUnitLabel": "طلب",
+  "promoOrInvitationCodeOptional": "كود الدعوة / البرومو كود (اختياري)",
+  "myPromoCodeTitle": "البرومو كود وكود الدعوة",
+  "myPromoCodeSubtitle": "شارك كودك الخاص مع أصدقائك وتابع عدد مرات استخدامه",
+  "copyPromoCodeBtn": "نسخ الكود",
+  "promoCodeCopiedMsg": "تم نسخ البرومو كود بنجاح!",
+  "promoCodeUsedCountLabel": "عدد مرات الاستخدام",
+  "promoCodeTimesUnit": "مرة",
+  "enterPromoCodeLabel": "هل لديك برومو كود أو كود خصم؟",
+  "enterPromoCodeHint": "أدخل البرومو كود هنا...",
+  "applyPromoCodeBtn": "تطبيق",
+  "removePromoCodeBtn": "إزالة",
+  "promoCodeAppliedSuccess": "تم تطبيق كود الخصم بنجاح!",
+  "invalidOrExpiredPromoCode": "كود الخصم غير صالح أو منتهي الصلاحية",
+  "discountAmountLabel": "قيمة الخصم",
+  "promoCodeUnavailableNow": "لا يوجد كود متاح حالياً"
 }

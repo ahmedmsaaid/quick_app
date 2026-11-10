@@ -81,12 +81,15 @@ class AuthApiService {
     String? address,
     LocationModel? location,
     String? description,
+    String? invitationCode,
   }) async {
     try {
       String? cleanPhoto = photo;
       if (cleanPhoto != null && cleanPhoto.startsWith(ApiConstants.streamUrl)) {
         cleanPhoto = cleanPhoto.substring(ApiConstants.streamUrl.length);
       }
+
+      final trimmedCode = invitationCode?.trim();
 
       final response = await _dio.post(
         ApiConstants.signup,
@@ -101,6 +104,8 @@ class AuthApiService {
           'address': address,
           if (location != null) 'location': location.toJson(),
           'description': description,
+          if (trimmedCode != null && trimmedCode.isNotEmpty)
+            'invitationCode': trimmedCode,
         },
       );
 
@@ -252,6 +257,7 @@ class AuthApiService {
     String? email,
     String? photo,
     String? description,
+    String? invitationCode,
     required int vehicleType,
     required String nationalIdNumber,
     required String nationalIdFrontImage,
@@ -264,6 +270,7 @@ class AuthApiService {
     required int availability,
   }) async {
     try {
+      final trimmedCode = invitationCode?.trim();
       final response = await _dio.post(
         ApiConstants.captainSignup,
         data: {
@@ -274,6 +281,8 @@ class AuthApiService {
           'email': email,
           'photo': photo,
           'description': description,
+          if (trimmedCode != null && trimmedCode.isNotEmpty)
+            'invitationCode': trimmedCode,
           'vehicleType': vehicleType,
           'nationalIdNumber': nationalIdNumber,
           'nationalIdFrontImage': nationalIdFrontImage,

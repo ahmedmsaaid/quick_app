@@ -1,26 +1,38 @@
-import 'package:base_app/core/network/api_result.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:base_app/core/network/api_result.dart';
 import 'package:base_app/core/localizations/app_strings.g.dart';
 import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/styles/app_text_style.dart';
 import 'package:base_app/core/widgets/custom_arrow_back.dart';
-import 'package:base_app/core/widgets/custom_button.dart';
-import 'package:base_app/core/widgets/lading_button.dart';
-import 'package:base_app/core/routes/app_routes.dart';
 import 'package:base_app/features/customer/home/data/models/offer_model.dart';
 import 'package:base_app/features/customer/cart/presentation/riverpod/cart_provider.dart';
 import 'package:base_app/features/customer/profile/presentation/riverpod/profile_provider.dart';
 import 'package:base_app/features/customer/checkout/presentation/riverpod/checkout_provider.dart';
 import 'package:base_app/features/customer/checkout/data/models/order_models.dart';
 import 'package:base_app/features/customer/checkout/presentation/screens/order_success_screen.dart';
+import 'package:base_app/features/customer/checkout/presentation/widgets/checkout_address_card_widget.dart';
+import 'package:base_app/features/customer/checkout/presentation/widgets/checkout_branch_selection_card_widget.dart';
+import 'package:base_app/features/customer/checkout/presentation/widgets/checkout_customer_notes_card_widget.dart';
+import 'package:base_app/features/customer/checkout/presentation/widgets/checkout_payment_methods_widget.dart';
+import 'package:base_app/features/customer/checkout/presentation/widgets/checkout_promo_code_card_widget.dart';
+import 'package:base_app/features/customer/checkout/presentation/widgets/checkout_bill_summary_widget.dart';
+import 'package:base_app/features/customer/checkout/presentation/widgets/checkout_confirm_button_widget.dart';
 import 'package:base_app/core/widgets/custom_toast.dart';
 import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
+import 'package:base_app/features/customer/profile/data/models/invitation_code_model.dart';
 import 'package:base_app/features/customer/profile/data/profile_api_service.dart';
 import 'package:base_app/features/customer/home/data/home_api_service.dart';
+import 'package:base_app/core/utils/auth_guard.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:base_app/features/customer/profile/presentation/riverpod/user_wallet_provider.dart';
+import 'package:base_app/features/customer/profile/presentation/riverpod/user_wallet_transactions_pagination_notifier.dart';
+import 'package:base_app/features/shared/finance/data/models/payment_method.dart';
+import 'package:base_app/features/shared/finance/data/payments_api_service.dart';
 
-import 'package:base_app/core/utils/format_price.dart';
+
+
 
 class CheckoutScreen extends ConsumerStatefulWidget {
   final OfferDto? offer;
@@ -33,6 +45,9 @@ class CheckoutScreen extends ConsumerStatefulWidget {
 class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   int _selectedPayment = 0; // 0 for Cash, 1 for Online
   final TextEditingController _notesController = TextEditingController();
+  final TextEditingController _promoCodeController = TextEditingController();
+  DiscountCodeDto? _appliedDiscount;
+  bool _isApplyingPromo = false;
 
   List<LocationDto> _vendorLocations = [];
   LocationDto? _selectedVendorLocation;
@@ -44,7 +59,59 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   @override
   void dispose() {
     _notesController.dispose();
+    _promoCodeController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleApplyPromoCode() async {
+    final code = _promoCodeController.text.trim();
+    if (code.isEmpty) return;
+
+    setState(() => _isApplyingPromo = true);
+    final vendorId = _getVendorId();
+    final service = ref.read(profileApiServiceProvider);
+
+    final result = await service.getDiscounts();
+    if (!mounted) return;
+
+    setState(() => _isApplyingPromo = false);
+
+    result.when(
+      success: (response) {
+        final list = response.result ?? [];
+        final normalizedInput = code.toLowerCase();
+        DiscountCodeDto? matched;
+
+        for (final d in list) {
+          final matchesName = d.name.trim().toLowerCase() == normalizedInput;
+          final matchesVendor = d.creatorId == null ||
+              d.creatorId == 0 ||
+              vendorId == null ||
+              d.creatorId == vendorId;
+          if (matchesName && d.isCurrentlyValid && matchesVendor) {
+            matched = d;
+            break;
+          }
+        }
+
+        if (matched != null) {
+          setState(() => _appliedDiscount = matched);
+          CustomToast.success(context, AppStrings.promoCodeAppliedSuccess);
+        } else {
+          CustomToast.error(context, AppStrings.invalidOrExpiredPromoCode);
+        }
+      },
+      failure: (_) {
+        CustomToast.error(context, AppStrings.invalidOrExpiredPromoCode);
+      },
+    );
+  }
+
+  void _handleRemovePromoCode() {
+    setState(() {
+      _appliedDiscount = null;
+      _promoCodeController.clear();
+    });
   }
 
   @override
@@ -124,6 +191,137 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     );
   }
 
+  Future<void> _handleConfirmOrder({
+    required UserDto? user,
+    required String addressName,
+    required LocationDto? selectedLocation,
+    required double productsPrice,
+    required double deliveryFee,
+    required double serviceFee,
+    required int type,
+    required int? offerId,
+    required List<CreateOrderProductRequest>? products,
+  }) async {
+    final hasAuth = await AuthGuard.requireAuth(context, ref);
+    if (!hasAuth || !mounted) return;
+
+    if (user == null) {
+      CustomToast.error(context, AppStrings.loginRequiredToContinue);
+      return;
+    }
+
+    if (_isVendorBusy) {
+      CustomToast.error(context, AppStrings.storeBusyCannotOrder);
+      return;
+    }
+
+    if (_isVendorClosed) {
+      CustomToast.error(context, AppStrings.storeClosedCannotOrder);
+      return;
+    }
+
+    if (_selectedVendorLocation == null) {
+      CustomToast.error(context, AppStrings.selectBranchFirst);
+      return;
+    }
+
+    final vendorId = _getVendorId();
+    if (vendorId == null) {
+      CustomToast.error(context, AppStrings.storeNotSelectedTryAgain);
+      return;
+    }
+
+    if (_selectedPayment == PaymentMethod.wallet.value) {
+      final totalRequired = productsPrice + deliveryFee + serviceFee;
+      final walletAsync = ref.read(userWalletProvider);
+      final balance = walletAsync.asData?.value.availableBalance;
+      if (balance != null && balance < totalRequired) {
+        CustomToast.error(
+          context,
+          '${AppStrings.insufficientWalletBalance} (${balance.toStringAsFixed(2)} ${AppStrings.currency})',
+        );
+        return;
+      }
+    }
+
+    final String rawNotes = _notesController.text.trim();
+    final String promoNote = _appliedDiscount != null
+        ? '[Promo: ${_appliedDiscount!.name} (-${_appliedDiscount!.percentage.toStringAsFixed(0)}%)]'
+        : '';
+    final String notesText = [
+      if (rawNotes.isNotEmpty) rawNotes,
+      if (promoNote.isNotEmpty) promoNote,
+    ].join(' | ');
+    final request = CreateOrderRequest(
+      address: addressName,
+      notes: notesText.isNotEmpty ? notesText : null,
+      longitude: selectedLocation?.longitude ?? user.location?.longitude ?? 44.4,
+      latitude: selectedLocation?.latitude ?? user.location?.latitude ?? 33.3,
+      paymentMethod: _selectedPayment,
+      totalPrice: productsPrice,
+      deliveryFee: deliveryFee,
+      orderFee: serviceFee,
+      type: type,
+      userId: vendorId,
+      offerId: offerId,
+      userLocationId: _selectedVendorLocation!.id,
+      products: products,
+    );
+
+    final success = await ref.read(checkoutProvider.notifier).submitOrder(request);
+
+    if (!mounted) return;
+
+    if (success) {
+      if (offerId == null) {
+        ref.read(cartProvider.notifier).clearCart();
+      }
+
+      final createdOrder = ref.read(checkoutProvider).createdOrder;
+      if (createdOrder != null) {
+        if (_selectedPayment == PaymentMethod.visa.value) {
+          final payResult = await ref
+              .read(paymentsApiServiceProvider)
+              .payOrder(createdOrder.id);
+          if (mounted) {
+            payResult.when(
+              success: (res) async {
+                final paymentUrl = res.result;
+                if (paymentUrl != null && paymentUrl.isNotEmpty) {
+                  final uri = Uri.tryParse(paymentUrl);
+                  if (uri != null) {
+                    try {
+                      await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+                    } catch (_) {
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    }
+                  }
+                }
+              },
+              failure: (_) {},
+            );
+          }
+        } else if (_selectedPayment == PaymentMethod.wallet.value) {
+          // Wallet was debited on backend, refresh local wallet state
+          ref.invalidate(userWalletProvider);
+          ref.invalidate(userWalletTransactionsPaginationProvider);
+        }
+
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => OrderSuccessScreen(order: createdOrder),
+            ),
+          );
+        }
+      }
+    } else {
+
+      final errorMsg = ref.read(checkoutProvider).errorMessage ?? AppStrings.orderSubmitError;
+      CustomToast.error(context, errorMsg);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = AppColors(context);
@@ -139,8 +337,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       );
     }
 
-    final String addressName =
-        selectedLocation?.address ?? user?.address ?? AppStrings.homeLocation;
+    final String addressName = selectedLocation?.address ?? user?.address ?? AppStrings.homeLocation;
 
     // Calculate Prices dynamically
     final double productsPrice;
@@ -151,13 +348,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     if (widget.offer != null) {
       final offer = widget.offer!;
       if (offer.offerType == 1 && offer.products != null && offer.products!.isNotEmpty) {
-        // offerType == 1: editable bundle → send products only, NO offerId
         double sum = 0.0;
         for (final p in offer.products!) {
           sum += p.price * p.quantity;
         }
         productsPrice = sum > 0 ? sum : offer.price;
-        offerId = null;                               // ← server rejects both offerId+products together
+        offerId = null;
         products = offer.products!
             .map((p) => CreateOrderProductRequest(
                   productId: p.id,
@@ -170,7 +366,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             .toList();
         type = offer.type;
       } else {
-        // offerType == 0: non-editable → send offerId only, no products list
         productsPrice = offer.price;
         offerId = offer.id;
         products = null;
@@ -195,7 +390,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       type = cart.items.isNotEmpty ? cart.items.first.product.type : 0;
     }
 
-    // Get settings from shared provider
     final settingsAsync = ref.watch(settingsProvider);
     final settings = settingsAsync.asData?.value ?? defaultAppSettings;
 
@@ -205,10 +399,15 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final double storeLng = _selectedVendorLocation?.longitude ?? 0.0;
 
     final double distanceKm = calculateDistanceKm(userLat, userLng, storeLat, storeLng);
-
+    final double discountAmount = _appliedDiscount != null
+        ? (productsPrice * (_appliedDiscount!.percentage / 100.0))
+        : 0.0;
+    final double discountedProductsPrice =
+        (productsPrice - discountAmount).clamp(0.0, double.infinity);
     final double deliveryFee = calcDeliveryFee(distanceKm, settings);
-    final double serviceFee = calcOrderFee(productsPrice, settings);
-    final double totalRequired = productsPrice + deliveryFee + serviceFee;
+    final double serviceFee = calcOrderFee(discountedProductsPrice, settings);
+    final double totalRequired =
+        discountedProductsPrice + deliveryFee + serviceFee;
 
     final checkoutState = ref.watch(checkoutProvider);
     final isLoading = checkoutState.status == CheckoutStatus.loading;
@@ -232,45 +431,78 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           children: [
             _buildSectionTitle(context, AppStrings.whereToDeliverLabel),
             10.verticalSpace,
-            _buildAddressCard(context, addressName, selectedLocation),
+            CheckoutAddressCardWidget(
+              addressName: addressName,
+              selectedLocation: selectedLocation,
+            ),
             25.verticalSpace,
-            _buildSectionTitle(context, "فرع المطعم / الماركت"),
+            _buildSectionTitle(context, AppStrings.vendorBranchLabel),
             10.verticalSpace,
-            _buildBranchSelectionCard(context),
+            CheckoutBranchSelectionCardWidget(
+              isLoadingBranches: _isLoadingBranches,
+              branchesError: _branchesError,
+              vendorLocations: _vendorLocations,
+              selectedVendorLocation: _selectedVendorLocation,
+              onLocationChanged: (newValue) {
+                setState(() {
+                  _selectedVendorLocation = newValue;
+                });
+              },
+              onRetry: () {
+                final vId = _getVendorId();
+                if (vId != null) _fetchVendorBranches(vId);
+              },
+            ),
             25.verticalSpace,
-            _buildSectionTitle(context, "ملاحظات العميل"),
+            _buildSectionTitle(context, AppStrings.customerNotesLabel),
             10.verticalSpace,
-            _buildCustomerNotesCard(context),
+            CheckoutCustomerNotesCardWidget(controller: _notesController),
             25.verticalSpace,
             _buildSectionTitle(context, AppStrings.howToPayLabel),
             10.verticalSpace,
-            _buildPaymentMethods(context),
+            CheckoutPaymentMethodsWidget(
+              selectedPayment: _selectedPayment,
+              walletBalance: ref.watch(userWalletProvider).asData?.value.availableBalance,
+              onPaymentSelected: (index) => setState(() => _selectedPayment = index),
+            ),
+
+            25.verticalSpace,
+            _buildSectionTitle(context, AppStrings.enterPromoCodeLabel),
+            10.verticalSpace,
+            CheckoutPromoCodeCardWidget(
+              controller: _promoCodeController,
+              isApplying: _isApplyingPromo,
+              appliedDiscount: _appliedDiscount,
+              onApply: _handleApplyPromoCode,
+              onRemove: _handleRemovePromoCode,
+            ),
             25.verticalSpace,
             _buildSectionTitle(context, AppStrings.billSummaryLabel),
             10.verticalSpace,
-            _buildOrderSummary(
-              context,
-              productsPrice,
-              deliveryFee,
-              serviceFee,
-              totalRequired,
+            CheckoutBillSummaryWidget(
+              productsPrice: productsPrice,
+              deliveryFee: deliveryFee,
+              serviceFee: serviceFee,
+              discountAmount: discountAmount,
+              totalRequired: totalRequired,
             ),
             30.verticalSpace,
           ],
         ),
       ),
-      bottomNavigationBar: _buildConfirmButton(
-        context,
-        isLoading,
-        addressName,
-        selectedLocation,
-        user,
-        productsPrice,
-        deliveryFee,
-        serviceFee,
-        type,
-        offerId,
-        products,
+      bottomNavigationBar: CheckoutConfirmButtonWidget(
+        isLoading: isLoading,
+        onConfirm: () => _handleConfirmOrder(
+          user: user,
+          addressName: addressName,
+          selectedLocation: selectedLocation,
+          productsPrice: discountedProductsPrice,
+          deliveryFee: deliveryFee,
+          serviceFee: serviceFee,
+          type: type,
+          offerId: offerId,
+          products: products,
+        ),
       ),
     );
   }
@@ -279,467 +511,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     return Text(
       title,
       style: AppTextStyles.text16w700(color: AppColors(context).textPrimary),
-    );
-  }
-
-  Widget _buildAddressCard(BuildContext context, String addressName, LocationDto? selectedLocation) {
-    final colors = AppColors(context);
-    final String title = (selectedLocation?.name != null && selectedLocation!.name!.trim().isNotEmpty)
-        ? selectedLocation.name!.trim()
-        : AppStrings.homeLabel;
-    final String fullAddress = selectedLocation?.address ?? addressName;
-
-    return Container(
-      padding: EdgeInsets.all(15.r),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(15.r),
-        border: Border.all(color: colors.border),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.location_on, color: colors.primary, size: 24.sp),
-          15.horizontalSpace,
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: AppTextStyles.text14w600(color: colors.textPrimary),
-                ),
-                Text(
-                  fullAddress,
-                  style: AppTextStyles.text12w400(color: colors.textSecondary),
-                ),
-              ],
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pushNamed(AppRoutes.address);
-            },
-            child: Text(
-              AppStrings.changeBtn,
-              style: AppTextStyles.text12w600(color: colors.primary),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCustomerNotesCard(BuildContext context) {
-    final colors = AppColors(context);
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 6.h),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(15.r),
-        border: Border.all(color: colors.border),
-      ),
-      child: TextField(
-        controller: _notesController,
-        maxLines: 3,
-        style: AppTextStyles.text14w500(color: colors.textPrimary),
-        decoration: InputDecoration(
-          hintText: 'اكتب أي ملاحظات أو تعليمات خاصة بالطلب هنا...',
-          hintStyle: AppTextStyles.text12w400(color: colors.textHint),
-          icon: Icon(Icons.edit_note_rounded, color: colors.primary, size: 24.sp),
-          border: InputBorder.none,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPaymentMethods(BuildContext context) {
-    return Column(
-      children: [
-        _buildPaymentItem(
-          context,
-          0,
-          Icons.money,
-          AppStrings.cashOnDeliveryLabel,
-        ),
-        10.verticalSpace,
-        _buildPaymentItem(
-          context,
-          1,
-          Icons.credit_card,
-          AppStrings.onlinePaymentLabel,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPaymentItem(
-    BuildContext context,
-    int index,
-    IconData icon,
-    String title,
-  ) {
-    final colors = AppColors(context);
-    bool isSelected = _selectedPayment == index;
-    return InkWell(
-      onTap: () => setState(() => _selectedPayment = index),
-      child: Container(
-        padding: EdgeInsets.all(15.r),
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(
-            color: isSelected ? colors.primary : colors.border,
-            width: 1.5,
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: isSelected ? colors.primary : colors.textHint),
-            15.horizontalSpace,
-            Text(
-              title,
-              style: AppTextStyles.text14w500(color: colors.textPrimary),
-            ),
-            const Spacer(),
-            if (isSelected)
-              Icon(Icons.check_circle, color: colors.primary, size: 20.sp),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOrderSummary(
-    BuildContext context,
-    double productsPrice,
-    double deliveryFee,
-    double serviceFee,
-    double totalRequired,
-  ) {
-    final colors = AppColors(context);
-    return Container(
-      padding: EdgeInsets.all(15.r),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(15.r),
-        border: Border.all(color: colors.border),
-      ),
-      child: Column(
-        children: [
-          _buildSummaryRow(
-            context,
-            AppStrings.productsPriceLabel,
-            '${formatPrice(productsPrice)} جنيه مصري',
-          ),
-          10.verticalSpace,
-          _buildSummaryRow(
-            context,
-            AppStrings.deliveryFeesLabelMsg,
-            '${formatPrice(deliveryFee)} جنيه مصري',
-          ),
-          10.verticalSpace,
-          _buildSummaryRow(
-            context,
-            AppStrings.serviceFeesLabel,
-            '${formatPrice(serviceFee)} جنيه مصري',
-          ),
-          10.verticalSpace,
-          const Divider(),
-          10.verticalSpace,
-          _buildSummaryRow(
-            context,
-            AppStrings.totalRequiredLabel,
-            '${formatPrice(totalRequired)} جنيه مصري',
-            isTotal: true,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSummaryRow(
-    BuildContext context,
-    String title,
-    String value, {
-    bool isTotal = false,
-  }) {
-    final colors = AppColors(context);
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          title,
-          style: isTotal
-              ? AppTextStyles.text16w700(color: colors.textPrimary)
-              : AppTextStyles.text14w400(color: colors.textSecondary),
-        ),
-        Text(
-          value,
-          style: isTotal
-              ? AppTextStyles.text16w700(color: colors.primary)
-              : AppTextStyles.text14w600(color: colors.textPrimary),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBranchSelectionCard(BuildContext context) {
-    final colors = AppColors(context);
-    if (_isLoadingBranches) {
-      return Container(
-        padding: EdgeInsets.all(15.r),
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(15.r),
-          border: Border.all(color: colors.border),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: 20.w,
-              height: 20.w,
-              child: LoadingButton(
-                 color: colors.primary,
-              ),
-            ),
-            15.horizontalSpace,
-            Text(
-              "جاري تحميل فروع المتجر...",
-              style: AppTextStyles.text14w500(color: colors.textSecondary),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (_branchesError != null) {
-      return Container(
-        padding: EdgeInsets.all(15.r),
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(15.r),
-          border: Border.all(color: colors.error.withValues(alpha: 0.3)),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.error_outline, color: colors.error, size: 24.sp),
-            15.horizontalSpace,
-            Expanded(
-              child: Text(
-                _branchesError!,
-                style: AppTextStyles.text12w400(color: colors.textSecondary),
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                final vId = _getVendorId();
-                if (vId != null) _fetchVendorBranches(vId);
-              },
-              child: Text(
-                "إعادة المحاولة",
-                style: AppTextStyles.text12w600(color: colors.primary),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (_vendorLocations.isEmpty) {
-      return Container(
-        width: double.infinity,
-        padding: EdgeInsets.all(15.r),
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(15.r),
-          border: Border.all(color: colors.border),
-        ),
-        child: Text(
-          "لا توجد فروع متوفرة لهذا المطعم/الماركت",
-          style: AppTextStyles.text12w400(color: colors.textSecondary),
-        ),
-      );
-    }
-
-    if (_vendorLocations.length == 1) {
-      return Container(
-        padding: EdgeInsets.all(15.r),
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(15.r),
-          border: Border.all(color: colors.border),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.storefront, color: colors.primary, size: 24.sp),
-            15.horizontalSpace,
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "الفرع الرئيسي (تلقائي)",
-                    style: AppTextStyles.text14w600(color: colors.textPrimary),
-                  ),
-                  Text(
-                    _selectedVendorLocation?.address ?? "العنوان غير متوفر",
-                    style: AppTextStyles.text12w400(
-                      color: colors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 15.w, vertical: 5.h),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(15.r),
-        border: Border.all(color: colors.border),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButtonFormField<LocationDto>(
-          initialValue: _selectedVendorLocation,
-          decoration: InputDecoration(
-            border: InputBorder.none,
-            icon: Icon(Icons.storefront, color: colors.primary, size: 24.sp),
-          ),
-          hint: Text(
-            "اختر الفرع المناسب",
-            style: AppTextStyles.text14w500(color: colors.textSecondary),
-          ),
-          isExpanded: true,
-          dropdownColor: colors.surface,
-          items: _vendorLocations.map((loc) {
-            final isBase = loc.base ? " (الفرع الرئيسي)" : "";
-            return DropdownMenuItem<LocationDto>(
-              value: loc,
-              child: Text(
-                "${loc.address ?? ''}$isBase",
-                style: AppTextStyles.text14w500(color: colors.textPrimary),
-                overflow: TextOverflow.ellipsis,
-              ),
-            );
-          }).toList(),
-          onChanged: (newValue) {
-            setState(() {
-              _selectedVendorLocation = newValue;
-            });
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildConfirmButton(
-    BuildContext context,
-    bool isLoading,
-    String addressName,
-    LocationDto? selectedLocation,
-    UserDto? user,
-    double productsPrice,
-    double deliveryFee,
-    double serviceFee,
-    int type,
-    int? offerId,
-    List<CreateOrderProductRequest>? products,
-  ) {
-    final colors = AppColors(context);
-    return Container(
-      padding: EdgeInsets.all(20.w),
-      color: colors.surface,
-      child: isLoading
-          ? const LoadingButton()
-          : CustomAppButton(
-              text: AppStrings.confirmBooking,
-              onPressed: () async {
-                if (user == null) {
-                  CustomToast.error(context, "الرجاء تسجيل الدخول أولاً");
-                  return;
-                }
-
-                if (_isVendorBusy) {
-                  CustomToast.error(context, "المتجر مشغول حالياً، لا يمكن قبول الطلبات الآن");
-                  return;
-                }
-
-                if (_isVendorClosed) {
-                  CustomToast.error(context, "المتجر مغلق مؤقتاً، لا يمكن قبول الطلبات حالياً");
-                  return;
-                }
-
-                if (_selectedVendorLocation == null) {
-                  CustomToast.error(
-                    context,
-                    "الرجاء اختيار فرع المطعم/الماركت أولاً",
-                  );
-                  return;
-                }
-
-                final vendorId = _getVendorId();
-                if (vendorId == null) {
-                  CustomToast.error(context, "لم يتم تحديد المتجر، الرجاء المحاولة مرة أخرى");
-                  return;
-                }
-
-                final String notesText = _notesController.text.trim();
-                final request = CreateOrderRequest(
-                  address: addressName,
-                  note: notesText.isNotEmpty ? notesText : null,
-                  longitude:
-                      selectedLocation?.longitude ??
-                      user.location?.longitude ??
-                      44.4,
-                  latitude:
-                      selectedLocation?.latitude ??
-                      user.location?.latitude ??
-                      33.3,
-                  paymentMethod: _selectedPayment,
-                  totalPrice: productsPrice,
-                  deliveryFee: deliveryFee,
-                  orderFee: serviceFee,
-                  type: type,
-                  userId: vendorId,        // ✅ ID المطعم/الماركت
-                  offerId: offerId,
-                  userLocationId: _selectedVendorLocation!.id,
-                  products: products,
-                );
-
-                final success = await ref
-                    .read(checkoutProvider.notifier)
-                    .submitOrder(request);
-
-                if (context.mounted) {
-                  if (success) {
-                    // Clear cart if this was a normal products order
-                    if (offerId == null) {
-                      ref.read(cartProvider.notifier).clearCart();
-                    }
-
-                    // Show order success screen
-                    final createdOrder = ref.read(checkoutProvider).createdOrder;
-                    if (createdOrder != null) {
-                      Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(
-                          builder: (_) => OrderSuccessScreen(order: createdOrder),
-                        ),
-                      );
-                    }
-                  } else {
-                    final errorMsg =
-                        ref.read(checkoutProvider).errorMessage ??
-                        "حدث خطأ أثناء تقديم الطلب";
-                    CustomToast.error(context, errorMsg);
-                  }
-                }
-              },
-            ),
     );
   }
 }

@@ -804,5 +804,20 @@
   "totalCashToRemitSubtitle": "Platforma teslim edilecek nakit tutarlar",
   "completedOrdersCountLabel": "Tamamlanan Sipariş Sayısı",
   "completedOrdersCountSubtitle": "Başarıyla teslim edilen toplam siparişler",
-  "ordersUnitLabel": "Sipariş"
+  "ordersUnitLabel": "Sipariş",
+  "promoOrInvitationCodeOptional": "Promosyon / Davet Kodu (İsteğe Bağlı)",
+  "myPromoCodeTitle": "Promosyon ve Davet Kodum",
+  "myPromoCodeSubtitle": "Kodunuzu arkadaşlarınızla paylaşın ve kullanım sayısını takip edin",
+  "copyPromoCodeBtn": "Kodu Kopyala",
+  "promoCodeCopiedMsg": "Promosyon kodu panoya kopyalandı!",
+  "promoCodeUsedCountLabel": "Kullanım Sayısı",
+  "promoCodeTimesUnit": "kez",
+  "enterPromoCodeLabel": "Promosyon veya İndirim Kodunuz Var mı?",
+  "enterPromoCodeHint": "Promosyon kodunu buraya girin...",
+  "applyPromoCodeBtn": "Uygula",
+  "removePromoCodeBtn": "Kaldır",
+  "promoCodeAppliedSuccess": "Promosyon kodu başarıyla uygulandı!",
+  "invalidOrExpiredPromoCode": "Geçersiz veya süresi dolmuş promosyon kodu",
+  "discountAmountLabel": "İndirim Tutarı",
+  "promoCodeUnavailableNow": "Şu anda kullanılabilir kod yok"
 }

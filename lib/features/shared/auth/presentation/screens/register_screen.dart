@@ -41,6 +41,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   late final TextEditingController _addressController;
   late final TextEditingController _passwordController;
   late final TextEditingController _confirmPasswordController;
+  late final TextEditingController _invitationCodeController;
   final _formKey = GlobalKey<FormState>();
   
   LocationModel? _selectedLocation;
@@ -59,6 +60,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _addressController = TextEditingController();
     _passwordController = TextEditingController();
     _confirmPasswordController = TextEditingController();
+    _invitationCodeController = TextEditingController();
   }
 
   @override
@@ -69,6 +71,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _addressController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _invitationCodeController.dispose();
     super.dispose();
   }
 
@@ -334,6 +337,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       }
     }
 
+    final invitationCode = _invitationCodeController.text.trim();
+
     final success = await ref.read(authProvider.notifier).register(
       countryCode: _countryCode,
       rawPhone: _phoneController.text.trim(),
@@ -345,6 +350,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       address: address.isNotEmpty ? address : null,
       location: _selectedLocation,
       photo: _uploadedImageUrl,
+      invitationCode: invitationCode.isNotEmpty ? invitationCode : null,
     );
 
     if (success) {
@@ -644,7 +650,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     return null;
                   },
                 ),
-                40.verticalSpace,
+                20.verticalSpace,
+                CustomTextField(
+                  controller: _invitationCodeController,
+                  hintText: AppStrings.promoOrInvitationCodeOptional,
+                  prefixIcon: Icon(
+                    Icons.confirmation_number_outlined,
+                    color: colors.primary,
+                  ),
+                ),
+                32.verticalSpace,
                 if (authState.status == AuthStatus.loading)
                   const LoadingButton()
                 else
@@ -670,7 +685,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 20.verticalSpace,
                 OutlinedButton.icon(
                   onPressed: () {},
-                  icon: Icon(FontAwesomeIcons.google, color: Colors.red, size: 20.sp),
+                  icon: FaIcon(FontAwesomeIcons.google, color: Colors.red, size: 20.sp),
                   label: Text(
                     AppStrings.registerWithGoogle,
                     style: AppTextStyles.text14w600(color: colors.textPrimary),

@@ -1048,5 +1048,20 @@
   "totalCashToRemitSubtitle": "Collected cash to be handed over to platform",
   "completedOrdersCountLabel": "Completed Orders Count",
   "completedOrdersCountSubtitle": "Total successfully delivered orders",
-  "ordersUnitLabel": "Orders"
+  "ordersUnitLabel": "Orders",
+  "promoOrInvitationCodeOptional": "Promo / Invitation Code (Optional)",
+  "myPromoCodeTitle": "My Promo & Invitation Code",
+  "myPromoCodeSubtitle": "Share your code with friends and track its usage",
+  "copyPromoCodeBtn": "Copy Code",
+  "promoCodeCopiedMsg": "Promo code copied to clipboard!",
+  "promoCodeUsedCountLabel": "Times Used",
+  "promoCodeTimesUnit": "times",
+  "enterPromoCodeLabel": "Have a Promo or Discount Code?",
+  "enterPromoCodeHint": "Enter promo code here...",
+  "applyPromoCodeBtn": "Apply",
+  "removePromoCodeBtn": "Remove",
+  "promoCodeAppliedSuccess": "Promo code applied successfully!",
+  "invalidOrExpiredPromoCode": "Invalid or expired promo code",
+  "discountAmountLabel": "Discount Amount",
+  "promoCodeUnavailableNow": "No code available right now"
 }

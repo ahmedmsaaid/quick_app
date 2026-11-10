@@ -37,4 +37,12 @@ abstract class ApiConstants {
   static const String aboutUs = 'about-us';
   static const String policies = 'policies';
   static const String contactUs = 'contact-us';
+  static const String schedules = 'schedules';
+  static const String invitationCode = 'invitation-code';
+  static const String invitationCodeByUserId = 'invitation-code/get-by-user-id';
+  static const String discounts = 'discounts';
+  
+  /// Google OAuth Web Client ID (serverClientId) from Firebase Console / Google Cloud Console
+  static const String googleServerClientId = '634389575709-h4l73auk3eticg2k4psqm667n2hvi9pl.apps.googleusercontent.com';
 }
+
