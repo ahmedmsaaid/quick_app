@@ -87,9 +87,16 @@ class DiscountCodeDto {
 
   bool get isCurrentlyValid {
     if (!isActive || percentage <= 0) return false;
-    final now = DateTime.now();
-    if (startDate != null && now.isBefore(startDate!)) return false;
-    if (endDate != null && now.isAfter(endDate!)) return false;
+    final now = DateTime.now().toUtc();
+    if (startDate != null && endDate != null) {
+      final startUtc = startDate!.toUtc();
+      final endUtc = endDate!.toUtc();
+      if (now.isAfter(startUtc) && now.isAfter(endUtc)) {
+        return false;
+      }
+    } else if (endDate != null) {
+      if (now.isAfter(endDate!.toUtc())) return false;
+    }
     return true;
   }
 }

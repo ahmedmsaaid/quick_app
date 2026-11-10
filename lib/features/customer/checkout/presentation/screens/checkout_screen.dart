@@ -84,13 +84,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
         for (final d in list) {
           final matchesName = d.name.trim().toLowerCase() == normalizedInput;
-          final matchesVendor = d.creatorId == null ||
-              d.creatorId == 0 ||
-              vendorId == null ||
-              d.creatorId == vendorId;
-          if (matchesName && d.isCurrentlyValid && matchesVendor) {
-            matched = d;
-            break;
+          if (matchesName && d.isCurrentlyValid) {
+            if (vendorId != null && d.creatorId == vendorId) {
+              matched = d;
+              break;
+            }
+            matched ??= d;
           }
         }
 
