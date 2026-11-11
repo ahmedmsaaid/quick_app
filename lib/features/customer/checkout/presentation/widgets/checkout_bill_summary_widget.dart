@@ -10,6 +10,7 @@ class CheckoutBillSummaryWidget extends StatelessWidget {
   final double deliveryFee;
   final double serviceFee;
   final double discountAmount;
+  final bool isFreeDelivery;
   final double totalRequired;
 
   const CheckoutBillSummaryWidget({
@@ -18,6 +19,7 @@ class CheckoutBillSummaryWidget extends StatelessWidget {
     required this.deliveryFee,
     required this.serviceFee,
     this.discountAmount = 0.0,
+    this.isFreeDelivery = false,
     required this.totalRequired,
   });
 
@@ -39,7 +41,7 @@ class CheckoutBillSummaryWidget extends StatelessWidget {
             AppStrings.productsPriceLabel,
             '${formatPrice(productsPrice)} ${AppStrings.currency}',
           ),
-          if (discountAmount > 0) ...[
+          if (discountAmount > 0 && !isFreeDelivery) ...[
             10.verticalSpace,
             _buildSummaryRow(
               context,
@@ -52,7 +54,10 @@ class CheckoutBillSummaryWidget extends StatelessWidget {
           _buildSummaryRow(
             context,
             AppStrings.deliveryFeesLabelMsg,
-            '${formatPrice(deliveryFee)} ${AppStrings.currency}',
+            isFreeDelivery
+                ? AppStrings.freeDeliveryTitle
+                : '${formatPrice(deliveryFee)} ${AppStrings.currency}',
+            valueColor: isFreeDelivery ? colors.success : null,
           ),
           10.verticalSpace,
           _buildSummaryRow(

@@ -49,7 +49,9 @@ class CheckoutPromoCodeCardWidget extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10.r),
                   ),
                   child: Icon(
-                    Icons.local_offer_rounded,
+                    appliedDiscount!.isFreeDelivery
+                        ? Icons.delivery_dining_rounded
+                        : Icons.local_offer_rounded,
                     color: colors.success,
                     size: 18.sp,
                   ),
@@ -60,7 +62,9 @@ class CheckoutPromoCodeCardWidget extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '${appliedDiscount!.name} (${appliedDiscount!.percentage.toStringAsFixed(0)}%)',
+                        appliedDiscount!.isFreeDelivery
+                            ? '${appliedDiscount!.name} (${AppStrings.freeDeliveryTitle})'
+                            : '${appliedDiscount!.name} (-${appliedDiscount!.percentage.toStringAsFixed(0)}%)',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: AppTextStyles.text14w700(color: colors.success),

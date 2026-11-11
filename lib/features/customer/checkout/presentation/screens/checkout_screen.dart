@@ -245,7 +245,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
     final String rawNotes = _notesController.text.trim();
     final String promoNote = _appliedDiscount != null
-        ? '[Promo: ${_appliedDiscount!.name} (-${_appliedDiscount!.percentage.toStringAsFixed(0)}%)]'
+        ? (_appliedDiscount!.isFreeDelivery
+            ? '[Promo: ${_appliedDiscount!.name} (${AppStrings.freeDeliveryTitle})]'
+            : '[Promo: ${_appliedDiscount!.name} (-${_appliedDiscount!.percentage.toStringAsFixed(0)}%)]')
         : '';
     final String notesText = [
       if (rawNotes.isNotEmpty) rawNotes,
@@ -398,12 +400,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final double storeLng = _selectedVendorLocation?.longitude ?? 0.0;
 
     final double distanceKm = calculateDistanceKm(userLat, userLng, storeLat, storeLng);
-    final double discountAmount = _appliedDiscount != null
+    final bool isFreeDeliveryPromo = _appliedDiscount?.isFreeDelivery == true;
+    final double discountAmount = (_appliedDiscount != null && !isFreeDeliveryPromo)
         ? (productsPrice * (_appliedDiscount!.percentage / 100.0))
         : 0.0;
     final double discountedProductsPrice =
         (productsPrice - discountAmount).clamp(0.0, double.infinity);
-    final double deliveryFee = calcDeliveryFee(distanceKm, settings);
+    final double baseDeliveryFee = calcDeliveryFee(distanceKm, settings);
+    final double deliveryFee = isFreeDeliveryPromo ? 0.0 : baseDeliveryFee;
     final double serviceFee = calcOrderFee(discountedProductsPrice, settings);
     final double totalRequired =
         discountedProductsPrice + deliveryFee + serviceFee;
@@ -483,6 +487,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               deliveryFee: deliveryFee,
               serviceFee: serviceFee,
               discountAmount: discountAmount,
+              isFreeDelivery: isFreeDeliveryPromo,
               totalRequired: totalRequired,
             ),
             30.verticalSpace,

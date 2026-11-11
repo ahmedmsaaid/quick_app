@@ -85,8 +85,12 @@ class DiscountCodeDto {
     );
   }
 
+  /// `type == 1` indicates Free Delivery promo code; `type == 0` indicates percentage discount.
+  bool get isFreeDelivery => type == 1;
+
   bool get isCurrentlyValid {
-    if (!isActive || percentage <= 0) return false;
+    if (!isActive) return false;
+    if (!isFreeDelivery && percentage <= 0) return false;
     final now = DateTime.now().toUtc();
     if (startDate != null && endDate != null) {
       final startUtc = startDate!.toUtc();
