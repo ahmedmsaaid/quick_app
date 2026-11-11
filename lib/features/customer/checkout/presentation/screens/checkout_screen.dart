@@ -343,7 +343,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     // Calculate Prices dynamically
     final double productsPrice;
     final int? offerId;
-    final List<CreateOrderProductRequest>? products;
     final int type;
 
     if (widget.offer != null) {
@@ -355,39 +354,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         }
         productsPrice = sum > 0 ? sum : offer.price;
         offerId = null;
-        products = offer.products!
-            .map((p) => CreateOrderProductRequest(
-                  productId: p.id,
-                  price: p.price,
-                  quantity: p.quantity,
-                  productName: p.name,
-                  photo: p.photo,
-                  totalPrice: p.price * p.quantity,
-                ))
-            .toList();
         type = offer.type;
       } else {
         productsPrice = offer.price;
         offerId = offer.id;
-        products = null;
         type = offer.type;
       }
     } else {
       final cart = ref.watch(cartProvider);
       productsPrice = cart.subtotal;
       offerId = null;
-      products = cart.items
-          .map(
-            (item) => CreateOrderProductRequest(
-              productId: item.product.id,
-              price: item.effectivePrice,
-              quantity: item.quantity,
-              productName: item.product.name,
-              photo: item.product.photo,
-              totalPrice: item.effectivePrice * item.quantity,
-            ),
-          )
-          .toList();
       type = cart.items.isNotEmpty ? cart.items.first.product.type : 0;
     }
 
@@ -401,6 +377,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
     final double distanceKm = calculateDistanceKm(userLat, userLng, storeLat, storeLng);
     final bool isFreeDeliveryPromo = _appliedDiscount?.isFreeDelivery == true;
+    final double discountFactor = (_appliedDiscount != null &&
+            !isFreeDeliveryPromo &&
+            productsPrice > 0)
+        ? (1.0 - (_appliedDiscount!.percentage / 100.0)).clamp(0.0, 1.0)
+        : 1.0;
     final double discountAmount = (_appliedDiscount != null && !isFreeDeliveryPromo)
         ? (productsPrice * (_appliedDiscount!.percentage / 100.0))
         : 0.0;
@@ -411,6 +392,47 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final double serviceFee = calcOrderFee(discountedProductsPrice, settings);
     final double totalRequired =
         discountedProductsPrice + deliveryFee + serviceFee;
+
+    final List<CreateOrderProductRequest>? products;
+    if (widget.offer != null) {
+      final offer = widget.offer!;
+      if (offer.offerType == 1 && offer.products != null && offer.products!.isNotEmpty) {
+        products = offer.products!
+            .map((p) {
+              final double effectiveItemPrice =
+                  double.parse((p.price * discountFactor).toStringAsFixed(2));
+              return CreateOrderProductRequest(
+                productId: p.id,
+                price: effectiveItemPrice,
+                quantity: p.quantity,
+                productName: p.name,
+                photo: p.photo,
+                totalPrice: effectiveItemPrice * p.quantity,
+              );
+            })
+            .toList();
+      } else {
+        products = null;
+      }
+    } else {
+      final cart = ref.watch(cartProvider);
+      products = cart.items
+          .map(
+            (item) {
+              final double effectiveItemPrice = double.parse(
+                  (item.effectivePrice * discountFactor).toStringAsFixed(2));
+              return CreateOrderProductRequest(
+                productId: item.product.id,
+                price: effectiveItemPrice,
+                quantity: item.quantity,
+                productName: item.product.name,
+                photo: item.product.photo,
+                totalPrice: effectiveItemPrice * item.quantity,
+              );
+            },
+          )
+          .toList();
+    }
 
     final checkoutState = ref.watch(checkoutProvider);
     final isLoading = checkoutState.status == CheckoutStatus.loading;
