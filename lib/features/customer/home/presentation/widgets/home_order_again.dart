@@ -1,4 +1,6 @@
 import 'package:base_app/core/widgets/lading_button.dart';
+import 'package:easy_localization/easy_localization.dart';
+import 'package:base_app/core/localizations/app_strings.g.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -34,51 +36,51 @@ class _HomeOrderAgainState extends ConsumerState<HomeOrderAgain> {
   }
 
   String _getTimeAgo(String? createdOnStr) {
-    if (createdOnStr == null || createdOnStr.isEmpty) return 'منذ فترة';
+    if (createdOnStr == null || createdOnStr.isEmpty) return AppStrings.someTimeAgo;
     try {
       final createdOn = DateTime.parse(createdOnStr);
       final difference = DateTime.now().difference(createdOn);
 
       if (difference.inMinutes < 60) {
         final m = difference.inMinutes;
-        if (m <= 1) return 'منذ دقيقة';
-        if (m == 2) return 'منذ دقيقتين';
-        return 'منذ $m دقيقة';
+        if (m <= 1) return AppStrings.minuteAgo;
+        if (m == 2) return AppStrings.twoMinutesAgo;
+        return 'minutesAgo'.tr(args: [m.toString()]);
       } else if (difference.inHours < 24) {
         final h = difference.inHours;
-        if (h <= 1) return 'منذ ساعة';
-        if (h == 2) return 'منذ ساعتين';
-        return 'منذ $h ساعة';
+        if (h <= 1) return AppStrings.hourAgo;
+        if (h == 2) return AppStrings.twoHoursAgo;
+        return 'hoursAgo'.tr(args: [h.toString()]);
       } else if (difference.inDays == 1) {
-        return 'منذ يوم';
+        return AppStrings.oneDayAgo;
       } else if (difference.inDays == 2) {
-        return 'منذ يومين';
+        return AppStrings.twoDaysAgo;
       } else if (difference.inDays < 7) {
-        return 'منذ ${difference.inDays} أيام';
+        return 'daysAgo'.tr(args: [difference.inDays.toString()]);
       } else if (difference.inDays < 14) {
-        return 'منذ أسبوع';
+        return AppStrings.oneWeekAgo;
       } else if (difference.inDays < 30) {
-        return 'منذ ${(difference.inDays / 7).round()} أسابيع';
+        return 'weeksAgo'.tr(args: [(difference.inDays / 7).round().toString()]);
       } else {
-        return 'منذ أكثر من شهر';
+        return AppStrings.moreThanAMonthAgo;
       }
     } catch (_) {
-      return 'منذ فترة';
+      return AppStrings.someTimeAgo;
     }
   }
 
   /// نفس منطق orders_screen — اسم المنتج الأول + صورته
   String _getOrderTitle(OrderDto order) {
-    if (order.offerId != null) return 'طلب عرض خاص #${order.offerId}';
+    if (order.offerId != null) return '${AppStrings.specialOfferOrder} #${order.offerId}';
     if (order.products.isNotEmpty) {
       final firstProd = order.products.first;
-      String title = firstProd.productName ?? 'طلب #${order.id}';
+      String title = firstProd.productName ?? '${AppStrings.order} #${order.id}';
       if (order.products.length > 1) {
-        title += ' و ${order.products.length - 1} منتجات أخرى';
+        title += ' +${order.products.length - 1} ${AppStrings.otherProducts}';
       }
       return title;
     }
-    return 'طلب #${order.id}';
+    return '${AppStrings.order} #${order.id}';
   }
 
   /// نفس منطق orders_screen — صورة المنتج الأول
@@ -93,14 +95,14 @@ class _HomeOrderAgainState extends ConsumerState<HomeOrderAgain> {
   void initState() {
     super.initState();
     Future.microtask(() {
-      ref.read(ordersProvider.notifier).loadOrders();
+      ref.read(homeRecentOrdersProvider.notifier).loadRecentOrders();
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors(context);
-    final ordersState = ref.watch(ordersProvider);
+    final ordersState = ref.watch(homeRecentOrdersProvider);
 
     // نراقب الـ profile — لو الـ user اتحمّل والطلبات لسه فاضية نعيد التحميل
     ref.listen(profileProvider, (prev, next) {
@@ -110,7 +112,7 @@ class _HomeOrderAgainState extends ConsumerState<HomeOrderAgain> {
           ordersState.status == OrdersStatus.initial;
 
       if (wasNull && isNowLoaded && ordersNeedRetry) {
-        ref.read(ordersProvider.notifier).loadOrders();
+        ref.read(homeRecentOrdersProvider.notifier).loadRecentOrders();
       }
     });
 
@@ -128,7 +130,7 @@ class _HomeOrderAgainState extends ConsumerState<HomeOrderAgain> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SeeAllWidget(
-              title: 'اطلب مرة أخرى',
+              title: AppStrings.orderAgain,
               onTap: () {
                 _navigateToCompletedOrders();
               },
@@ -151,15 +153,15 @@ class _HomeOrderAgainState extends ConsumerState<HomeOrderAgain> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SeeAllWidget(
-          title: 'اطلب مرة أخرى',
+          title: AppStrings.orderAgain,
           onTap: () {
             _navigateToCompletedOrders();
           },
         ),
         Padding(
-          padding:   EdgeInsets.symmetric(horizontal: 20.w),
+          padding: EdgeInsets.symmetric(horizontal: 20.w),
           child: SizedBox(
-            height: 155.h,
+            height: 180.h,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               padding: EdgeInsets.symmetric(horizontal: 20.w),
@@ -176,6 +178,7 @@ class _HomeOrderAgainState extends ConsumerState<HomeOrderAgain> {
                   title: title,
                   timeAgo: _getTimeAgo(order.createdOn),
                   imageUrl: imageUrl,
+                  price: order.effectiveFinalPrice,
                   isLoading: isLoading,
                   onTap: () async {
                     if (isLoading) return;
@@ -186,12 +189,12 @@ class _HomeOrderAgainState extends ConsumerState<HomeOrderAgain> {
                     setState(() => _loadingOrderIds.remove(order.id));
                     if (success) {
                       CustomToast.success(
-                          context, 'تم إضافة المنتجات إلى السلة! 🛒');
+                          context, AppStrings.reorderSuccessToast);
                       Navigator.of(context).pushNamed(AppRoutes.cartScreen);
                     } else {
                       final err = ref.read(ordersProvider).reorderError;
                       CustomToast.error(
-                          context, err ?? 'فشل إضافة المنتجات، حاول مرة أخرى');
+                          context, err ?? AppStrings.reorderFailedToast);
                     }
                   },
                 );
@@ -209,18 +212,19 @@ class _HomeOrderAgainState extends ConsumerState<HomeOrderAgain> {
     required String title,
     required String timeAgo,
     required String imageUrl,
+    double? price,
     required VoidCallback onTap,
     bool isLoading = false,
   }) {
     return Container(
-      width: 130.w,
+      width: 140.w,
       margin: EdgeInsets.only(left: 12.w),
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(16.r),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: colors.shadow.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -228,7 +232,7 @@ class _HomeOrderAgainState extends ConsumerState<HomeOrderAgain> {
         border: Border.all(
           color: isLoading
               ? colors.primary.withValues(alpha: 0.5)
-              : colors.border.withValues(alpha: 0.5),
+              : colors.border.withValues(alpha: 0.6),
           width: isLoading ? 1.5 : 1,
         ),
       ),
@@ -240,7 +244,7 @@ class _HomeOrderAgainState extends ConsumerState<HomeOrderAgain> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ─── صورة المنتج (مستطيل) — نفس نهج orders_screen ───
+              // ─── صورة المنتج (مستطيل) ───
               Expanded(
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(10.r),
@@ -267,9 +271,9 @@ class _HomeOrderAgainState extends ConsumerState<HomeOrderAgain> {
                       if (isLoading)
                         Container(
                           color: Colors.black.withValues(alpha: 0.4),
-                          child: Center(
+                          child: const Center(
                             child: LoadingButton(
-                               color: Colors.white,
+                              color: Colors.white,
                             ),
                           ),
                         ),
@@ -280,11 +284,12 @@ class _HomeOrderAgainState extends ConsumerState<HomeOrderAgain> {
               6.verticalSpace,
               // ─── اسم المنتج ───
               Text(
-                isLoading ? 'جاري الطلب...' : title,
+                isLoading ? AppStrings.addingToCart : title,
                 style: AppTextStyles.text11w700(
                   color: isLoading ? colors.primary : colors.textPrimary,
+                  height: 1.1,
                 ),
-                maxLines: 2,
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
               2.verticalSpace,
@@ -298,6 +303,49 @@ class _HomeOrderAgainState extends ConsumerState<HomeOrderAgain> {
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
+              ),
+              4.verticalSpace,
+              // ─── السعر وزر إعادة الطلب ───
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  if (price != null && price > 0)
+                    Flexible(
+                      child: Text(
+                        '${price.toStringAsFixed(0)} ${AppStrings.currency}',
+                        style: AppTextStyles.text11w700(
+                          color: colors.primary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    )
+                  else
+                    const SizedBox.shrink(),
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                        horizontal: 7.w, vertical: 3.h),
+                    decoration: BoxDecoration(
+                      gradient: AppColors.gradient,
+                      borderRadius: BorderRadius.circular(6.r),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.replay_rounded,
+                            color: Colors.white, size: 10.sp),
+                        2.horizontalSpace,
+                        Text(
+                          AppStrings.order,
+                          style: AppTextStyles.text10w700(
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

@@ -136,11 +136,23 @@ class OrderSummaryCard extends StatelessWidget {
             "إجمالي المنتجات",
             "${formatPrice(subtotal)} ${AppStrings.currency}",
           ),
+          if (order.hasPromoDiscount) ...[
+            8.verticalSpace,
+            _buildSummaryRow(
+              context,
+              "${AppStrings.discountAmountLabel} (${order.promoCodeName ?? '-${order.promoDiscountPercentage!.toStringAsFixed(0)}%'})",
+              "-${formatPrice(order.originalTotalPrice - order.effectiveFinalPrice)} ${AppStrings.currency}",
+              textColor: colors.success,
+            ),
+          ],
           8.verticalSpace,
           _buildSummaryRow(
             context,
             "رسوم التوصيل",
-            "${formatPrice(order.deliveryFee)} ${AppStrings.currency}",
+            order.hasFreeDeliveryPromo
+                ? AppStrings.freeDeliveryTitle
+                : "${formatPrice(order.deliveryFee)} ${AppStrings.currency}",
+            textColor: order.hasFreeDeliveryPromo ? colors.success : null,
           ),
           8.verticalSpace,
           _buildSummaryRow(
@@ -154,7 +166,7 @@ class OrderSummaryCard extends StatelessWidget {
           _buildSummaryRow(
             context,
             AppStrings.requiredFromCustomerLabel,
-            "${formatPrice(order.totalPrice)} ${AppStrings.currency}",
+            "${formatPrice(order.effectiveFinalPrice)} ${AppStrings.currency}",
             isTotal: true,
           ),
         ],
@@ -162,13 +174,31 @@ class OrderSummaryCard extends StatelessWidget {
     );
   }
 
-  Widget _buildSummaryRow(BuildContext context, String title, String value, {bool isTotal = false}) {
+  Widget _buildSummaryRow(
+    BuildContext context,
+    String title,
+    String value, {
+    bool isTotal = false,
+    Color? textColor,
+  }) {
     final colors = AppColors(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(title, style: isTotal ? AppTextStyles.text14w700(color: colors.textPrimary) : AppTextStyles.text14w400(color: colors.textSecondary)),
-        Text(value, style: isTotal ? AppTextStyles.text16w700(color: colors.primary) : AppTextStyles.text14w600(color: colors.textPrimary)),
+        Text(
+          title,
+          style: isTotal
+              ? AppTextStyles.text14w700(color: colors.textPrimary)
+              : AppTextStyles.text14w400(color: colors.textSecondary),
+        ),
+        Text(
+          value,
+          style: isTotal
+              ? AppTextStyles.text16w700(color: textColor ?? colors.primary)
+              : AppTextStyles.text14w600(
+                  color: textColor ?? colors.textPrimary,
+                ),
+        ),
       ],
     );
   }

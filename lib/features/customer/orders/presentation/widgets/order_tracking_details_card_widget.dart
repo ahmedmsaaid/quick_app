@@ -186,7 +186,7 @@ class _OrderTrackingDetailsCardWidgetState extends State<OrderTrackingDetailsCar
                   if (order.hasPromoDiscount) ...[
                     6.verticalSpace,
                     _priceRow(
-                      '${AppStrings.discountLabel} (${order.promoCodeName ?? "-${order.promoDiscountPercentage!.toStringAsFixed(0)}%"})',
+                      '${AppStrings.discountAmountLabel} (${order.promoCodeName ?? "-${order.promoDiscountPercentage!.toStringAsFixed(0)}%"})',
                       '-${formatPrice(order.originalTotalPrice - order.effectiveFinalPrice)} ${AppStrings.currency}',
                       colors,
                       valueColor: colors.success,
@@ -261,7 +261,13 @@ class _OrderTrackingDetailsCardWidgetState extends State<OrderTrackingDetailsCar
     );
   }
 
-  Widget _priceRow(String label, String value, AppColors colors, {bool isTotal = false}) {
+  Widget _priceRow(
+    String label,
+    String value,
+    AppColors colors, {
+    bool isTotal = false,
+    Color? valueColor,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -274,8 +280,10 @@ class _OrderTrackingDetailsCardWidgetState extends State<OrderTrackingDetailsCar
         Text(
           value,
           style: isTotal
-              ? AppTextStyles.text15w700(color: colors.primary)
-              : AppTextStyles.text13w600(color: colors.textPrimary),
+              ? AppTextStyles.text15w700(color: valueColor ?? colors.primary)
+              : AppTextStyles.text13w600(
+                  color: valueColor ?? colors.textPrimary,
+                ),
         ),
       ],
     );
