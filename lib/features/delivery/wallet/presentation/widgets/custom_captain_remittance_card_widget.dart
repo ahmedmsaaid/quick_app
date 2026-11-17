@@ -187,7 +187,7 @@ class CustomCaptainRemittanceCardWidget extends StatelessWidget {
                   ),
                   18.verticalSpace,
 
-                  // 1. الرصيد المطلوب توريده لكويك (Cash Balance to Remit to Quick)
+                  // 1. إجمالي ثمن التوصيل + العمولة
                   Container(
                     width: double.infinity,
                     padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
@@ -211,7 +211,7 @@ class CustomCaptainRemittanceCardWidget extends StatelessWidget {
                             8.horizontalSpace,
                             Expanded(
                               child: Text(
-                                AppStrings.totalCashToRemitTitle,
+                                'إجمالي التوصيل والعمولة',
                                 style: AppTextStyles.text13w600(
                                   color: Colors.white.withValues(alpha: 0.9),
                                 ),
@@ -223,17 +223,66 @@ class CustomCaptainRemittanceCardWidget extends StatelessWidget {
                         ),
                         8.verticalSpace,
                         Text(
-                          '${data.totalCashToRemit.toStringAsFixed(2)} ${AppStrings.currency}',
+                          '${data.deliveryAndCommissionTotal.toStringAsFixed(2)} ${AppStrings.currency}',
                           style: AppTextStyles.text28w700(
                             color: const Color(0xFFFFD54F),
                           ),
                         ),
-                        4.verticalSpace,
-                        Text(
-                          AppStrings.totalCashToRemitSubtitle,
-                          style: AppTextStyles.text11w500(
-                            color: Colors.white.withValues(alpha: 0.65),
-                          ),
+                        12.verticalSpace,
+                        Divider(
+                          color: Colors.white.withValues(alpha: 0.12),
+                          height: 1,
+                        ),
+                        12.verticalSpace,
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'ثمن التوصيل',
+                                    style: AppTextStyles.text11w500(
+                                      color: Colors.white.withValues(alpha: 0.7),
+                                    ),
+                                  ),
+                                  4.verticalSpace,
+                                  Text(
+                                    '${data.totalEarnings.toStringAsFixed(2)} ${AppStrings.currency}',
+                                    style: AppTextStyles.text15w700(
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              width: 1,
+                              height: 34.h,
+                              color: Colors.white.withValues(alpha: 0.15),
+                            ),
+                            16.horizontalSpace,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    AppStrings.quickCommissionLabel,
+                                    style: AppTextStyles.text11w500(
+                                      color: Colors.white.withValues(alpha: 0.7),
+                                    ),
+                                  ),
+                                  4.verticalSpace,
+                                  Text(
+                                    '${data.quickCommission.toStringAsFixed(2)} ${AppStrings.currency}',
+                                    style: AppTextStyles.text15w700(
+                                      color: const Color(0xFFFFD54F),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -247,3 +296,4 @@ class CustomCaptainRemittanceCardWidget extends StatelessWidget {
     );
   }
 }
+

@@ -5,7 +5,6 @@ import 'package:base_app/core/localizations/app_strings.g.dart';
 import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/styles/app_text_style.dart';
 import 'package:base_app/features/delivery/captain/presentation/riverpod/captain_dashboard_provider.dart';
-import 'package:base_app/features/delivery/wallet/presentation/widgets/custom_captain_orders_count_card_widget.dart';
 import 'package:base_app/features/delivery/wallet/presentation/widgets/custom_captain_remittance_card_widget.dart';
 import 'package:base_app/features/delivery/wallet/presentation/widgets/custom_captain_wallet_filter_bar_widget.dart';
 
@@ -111,12 +110,8 @@ class _CaptainWalletScreenState extends ConsumerState<CaptainWalletScreen> {
                     CustomCaptainWalletFilterBarWidget(data: data),
                     16.verticalSpace,
 
-                    // 2. الرصيد المطلوب توريده لكويك (Cash to Remit to Quick)
+                    // 2. ثمن التوصيل + العمولة فقط
                     CustomCaptainRemittanceCardWidget(data: data),
-                    14.verticalSpace,
-
-                    // 3. عدد الأوردرات (Orders Count)
-                    CustomCaptainOrdersCountCardWidget(data: data),
                     24.verticalSpace,
                   ],
                 ),
