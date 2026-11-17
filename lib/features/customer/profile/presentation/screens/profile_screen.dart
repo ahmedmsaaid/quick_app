@@ -6,7 +6,6 @@ import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/widgets/lading_button.dart';
 import 'package:base_app/core/network/api_constants.dart';
 import 'package:base_app/features/customer/profile/presentation/riverpod/profile_provider.dart';
-import 'package:base_app/features/customer/profile/presentation/widgets/user_dashboard_stats_widget.dart';
 import 'package:base_app/features/customer/profile/presentation/widgets/profile_header_widget.dart';
 import 'package:base_app/features/customer/profile/presentation/widgets/profile_invitation_code_card_widget.dart';
 import 'package:base_app/features/customer/profile/presentation/widgets/profile_menu_section_widget.dart';
@@ -77,10 +76,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               phone: user?.phone,
               photoUrl: resolvedPhotoUrl,
             ),
-            if (user?.role == 2) ...[
-              16.verticalSpace,
-              const UserDashboardStatsWidget(),
-            ],
             16.verticalSpace,
             const ProfileInvitationCodeCardWidget(),
             20.verticalSpace,
