@@ -55,15 +55,8 @@ class PushNotificationService {
       log("🔔 Foreground notification received: ${message.notification?.title}");
 
       final role = CacheHelper.getInt('userRole') ?? 2;
-      final bool isOrderPush = message.data['type'] == 'order' ||
-          message.data['type'] == 'new_order' ||
-          message.data['orderId'] != null ||
-          (message.notification?.title?.contains('طلب') ?? false) ||
-          (message.notification?.title?.contains('اوردر') ?? false) ||
-          (message.notification?.body?.contains('طلب') ?? false) ||
-          (message.notification?.body?.contains('اوردر') ?? false);
 
-      if (role == 3 || isOrderPush) {
+      if (role == 3) {
         LocalNotificationService.showDeliveryOrderNotification(message);
       } else {
         LocalNotificationService.showBasicNotification(message);
@@ -137,8 +130,14 @@ class PushNotificationService {
   @pragma('vm:entry-point')
   static Future<void> handleBackgroundMessage(RemoteMessage message) async {
     await Firebase.initializeApp();
+    await CacheHelper().init();
     log("🔔 Handle background message: ${message.notification?.title}");
-    await LocalNotificationService.showDeliveryOrderNotification(message);
+    final role = CacheHelper.getInt('userRole') ?? 2;
+    if (role == 3) {
+      await LocalNotificationService.showDeliveryOrderNotification(message);
+    } else if (message.notification == null) {
+      await LocalNotificationService.showBasicNotification(message);
+    }
   }
 
   Future<bool> registerDeviceTokenWithBackend() async {
