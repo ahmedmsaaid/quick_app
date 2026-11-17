@@ -40,7 +40,8 @@ class _CaptainOrderDetailsScreenState
     extends ConsumerState<CaptainOrderDetailsScreen> {
   late int _orderState;
   bool _isLoading = false;
-  bool _isFetchingDetails = false;
+  bool _isFetchingDetails = true;
+  bool _isRouteInitialized = false;
   int _fetchDetailsRequestId = 0;
   late OrderDto _order;
   LocationDto? _vendorLocation;
@@ -234,10 +235,13 @@ class _CaptainOrderDetailsScreenState
       });
     }
 
-    if (mounted && requestId == _fetchDetailsRequestId) {
-      setState(() => _isFetchingDetails = false);
-    }
-    _fetchRoadRoute();
+    await _fetchRoadRoute();
+    if (!mounted || requestId != _fetchDetailsRequestId) return;
+
+    setState(() {
+      _isFetchingDetails = false;
+      _isRouteInitialized = true;
+    });
   }
 
   Future<void> _handleActionButton() async {
@@ -538,6 +542,7 @@ class _CaptainOrderDetailsScreenState
             orderState: _orderState,
             order: _order,
             isAutoCentering: _isAutoCentering,
+            isMapReady: !_isFetchingDetails && _isRouteInitialized,
             onRecenter: () {
               setState(() => _isAutoCentering = true);
               final p = _currentCaptainPosition;

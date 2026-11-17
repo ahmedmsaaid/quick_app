@@ -7,6 +7,7 @@ import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
 import 'package:base_app/features/customer/profile/presentation/riverpod/profile_provider.dart';
 import 'package:base_app/features/customer/profile/data/profile_api_service.dart';
 import 'package:base_app/features/customer/cart/presentation/riverpod/cart_provider.dart';
+import 'package:base_app/features/customer/home/data/home_api_service.dart';
 import 'package:base_app/features/customer/home/data/models/product_detail_model.dart';
 import 'package:base_app/features/shared/tracking/data/data_source/app_order_tracking_grpc_data_source.dart';
 import 'package:base_app/features/shared/tracking/data/data_source/generated/Tracking.pb.dart' as tracking_pb;
@@ -23,6 +24,9 @@ class OrdersState {
   final String? errorMessage;
   final ReorderStatus reorderStatus;
   final String? reorderError;
+  final int pageNumber;
+  final bool hasMore;
+  final bool isLoadingMore;
 
   const OrdersState({
     this.status = OrdersStatus.initial,
@@ -30,6 +34,9 @@ class OrdersState {
     this.errorMessage,
     this.reorderStatus = ReorderStatus.idle,
     this.reorderError,
+    this.pageNumber = 1,
+    this.hasMore = true,
+    this.isLoadingMore = false,
   });
 
   OrdersState copyWith({
@@ -38,6 +45,9 @@ class OrdersState {
     String? errorMessage,
     ReorderStatus? reorderStatus,
     String? reorderError,
+    int? pageNumber,
+    bool? hasMore,
+    bool? isLoadingMore,
   }) {
     return OrdersState(
       status: status ?? this.status,
@@ -45,20 +55,54 @@ class OrdersState {
       errorMessage: errorMessage ?? this.errorMessage,
       reorderStatus: reorderStatus ?? this.reorderStatus,
       reorderError: reorderError ?? this.reorderError,
+      pageNumber: pageNumber ?? this.pageNumber,
+      hasMore: hasMore ?? this.hasMore,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
     );
   }
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
 class OrdersNotifier extends _$OrdersNotifier {
+  static const int _pageSize = 10;
+
   @override
   OrdersState build() {
-    Future.microtask(() => loadOrders());
+    ref.listen(profileProvider, (previous, next) {
+      final wasLoaded = previous?.status == ProfileStatus.loaded;
+      final isNowLoaded =
+          next.status == ProfileStatus.loaded && next.user != null;
+      if (!wasLoaded && isNowLoaded) {
+        final currentStatus = state.status;
+        final userChanged = previous?.user?.id != next.user?.id;
+        if (currentStatus == OrdersStatus.initial || userChanged) {
+          loadOrders(forceRefresh: true);
+        }
+      }
+    });
+
+    final profile = ref.read(profileProvider);
+    if (profile.status == ProfileStatus.loaded && profile.user != null) {
+      Future.microtask(() {
+        if (state.status == OrdersStatus.initial) {
+          loadOrders();
+        }
+      });
+    }
     return const OrdersState();
   }
 
-  Future<void> loadOrders() async {
-    state = state.copyWith(status: OrdersStatus.loading);
+  Future<void> loadOrders({bool forceRefresh = false}) async {
+    if (state.status == OrdersStatus.loading) return;
+    if (state.status == OrdersStatus.loaded && !forceRefresh) return;
+
+    state = state.copyWith(
+      status: OrdersStatus.loading,
+      errorMessage: null,
+      pageNumber: 1,
+      hasMore: true,
+      isLoadingMore: false,
+    );
 
     var profileState = ref.read(profileProvider);
     var user = profileState.user;
@@ -86,14 +130,24 @@ class OrdersNotifier extends _$OrdersNotifier {
     }
 
     final apiService = ref.read(ordersApiServiceProvider);
-    final result = await apiService.getOrders(userId: user!.id);
+    final result = await apiService.getOrders(
+      userId: user!.id,
+      pageNumber: 1,
+      pageSize: _pageSize,
+    );
+
+    if (!ref.mounted) return;
 
     result.when(
       success: (response) {
         if (response.success && response.result != null) {
+          final list = response.result!;
           state = state.copyWith(
             status: OrdersStatus.loaded,
-            orders: response.result!,
+            orders: list,
+            pageNumber: 1,
+            hasMore: list.length >= _pageSize,
+            isLoadingMore: false,
           );
         } else {
           state = state.copyWith(
@@ -109,6 +163,58 @@ class OrdersNotifier extends _$OrdersNotifier {
         );
       },
     );
+  }
+
+  /// تحميل المزيد من الطلبات (Pagination / Infinite Scroll)
+  Future<void> loadMoreOrders() async {
+    if (!state.hasMore ||
+        state.isLoadingMore ||
+        state.status != OrdersStatus.loaded) {
+      return;
+    }
+
+    final user = ref.read(profileProvider).user;
+    if (user == null) return;
+
+    state = state.copyWith(isLoadingMore: true);
+
+    try {
+      final nextPage = state.pageNumber + 1;
+      final apiService = ref.read(ordersApiServiceProvider);
+      final result = await apiService.getOrders(
+        userId: user.id,
+        pageNumber: nextPage,
+        pageSize: _pageSize,
+      );
+
+      if (!ref.mounted) return;
+
+      result.when(
+        success: (response) {
+          final list = response.result ?? [];
+          final existingIds = state.orders.map((o) => o.id).toSet();
+          final uniqueNew =
+              list.where((o) => !existingIds.contains(o.id)).toList();
+
+          state = state.copyWith(
+            orders: [...state.orders, ...uniqueNew],
+            pageNumber: nextPage,
+            hasMore: list.length >= _pageSize,
+            isLoadingMore: false,
+          );
+        },
+        failure: (_) {
+          state = state.copyWith(
+            isLoadingMore: false,
+            hasMore: false,
+          );
+        },
+      );
+    } catch (_) {
+      if (ref.mounted) {
+        state = state.copyWith(isLoadingMore: false);
+      }
+    }
   }
 
   /// إعادة الطلب — يجهز السلة بمنتجات الطلب القديم ويعيد true للبدء في توجيه المستخدم لصفحة السلة
@@ -128,33 +234,82 @@ class OrdersNotifier extends _$OrdersNotifier {
 
     try {
       final cartNotifier = ref.read(cartProvider.notifier);
+      final homeApi = ref.read(homeApiServiceProvider);
+      final ordersApi = ref.read(ordersApiServiceProvider);
+
+      int? fallbackVendorId = (oldOrder.userId > 0 && oldOrder.userId != oldOrder.creatorId)
+          ? oldOrder.userId
+          : (oldOrder.user?.id ?? oldOrder.userLocation?.creatorId);
+
+      // جلب بيانات المنتجات الحقيقية بالتوازي لمعرفة المطعم/المتجر الفعلي المالك للمنتج
+      final fetchedProducts = await Future.wait(
+        oldOrder.products.map((p) async {
+          if (p.productId <= 0) return null;
+          final res = await homeApi.getProductById(p.productId);
+          return res.when(
+            success: (apiRes) => apiRes.success ? apiRes.result : null,
+            failure: (_) => null,
+          );
+        }),
+      );
+
+      for (int i = 0; i < oldOrder.products.length; i++) {
+        final cId = fetchedProducts[i]?.creatorId ?? oldOrder.products[i].creatorId;
+        if (cId != null && cId > 0) {
+          fallbackVendorId = cId;
+          break;
+        }
+      }
+
+      if (fallbackVendorId == null || fallbackVendorId <= 0) {
+        final orderRes = await ordersApi.getOrderById(orderId: oldOrder.id);
+        orderRes.when(
+          success: (apiRes) {
+            final fullOrder = apiRes.result;
+            if (fullOrder != null) {
+              fallbackVendorId = (fullOrder.userId > 0 && fullOrder.userId != fullOrder.creatorId)
+                  ? fullOrder.userId
+                  : (fullOrder.user?.id ??
+                      fullOrder.userLocation?.creatorId ??
+                      (fullOrder.userId > 0 ? fullOrder.userId : null));
+            }
+          },
+          failure: (_) {},
+        );
+      }
+
+      fallbackVendorId ??= oldOrder.userId > 0 ? oldOrder.userId : null;
 
       // تفريغ السلة الحالية
       cartNotifier.clearCart();
 
-      // إضافة منتجات الطلب القديم إلى السلة
-      for (final p in oldOrder.products) {
+      // إضافة منتجات الطلب القديم إلى السلة مع ربطها بالمطعم/المتجر الصحيح
+      for (int i = 0; i < oldOrder.products.length; i++) {
+        final p = oldOrder.products[i];
+        final fetched = fetchedProducts[i];
+        final int? itemVendorId = fetched?.creatorId ?? p.creatorId ?? fallbackVendorId;
+
         final product = ProductDetailDto(
           id: p.productId,
-          name: p.productName ?? 'منتج',
-          photo: p.photo,
-          description: '',
-          price: p.price,
-          rating: 5.0,
-          isFavorite: false,
-          isAvailable: true,
-          hasDiscount: false,
-          discountPercentage: 0.0,
-          categoryId: 0,
-          createdOn: '',
-          type: oldOrder.type,
-          creatorId: oldOrder.creatorId,
+          name: fetched?.name ?? p.productName ?? 'منتج',
+          photo: fetched?.photo ?? p.photo,
+          description: fetched?.description ?? '',
+          price: fetched != null && fetched.price > 0 ? fetched.price : p.price,
+          rating: fetched?.rating ?? 5.0,
+          isFavorite: fetched?.isFavorite ?? false,
+          isAvailable: fetched?.isAvailable ?? true,
+          hasDiscount: fetched?.hasDiscount ?? false,
+          discountPercentage: fetched?.discountPercentage ?? 0.0,
+          categoryId: fetched?.categoryId ?? 0,
+          createdOn: fetched?.createdOn ?? '',
+          type: fetched?.type ?? oldOrder.type,
+          creatorId: itemVendorId,
         );
 
         cartNotifier.addItem(
           product,
           quantity: p.quantity,
-          vendorId: oldOrder.creatorId,
+          vendorId: itemVendorId,
         );
       }
 
@@ -181,7 +336,15 @@ class OrdersNotifier extends _$OrdersNotifier {
     return result.when(
       success: (response) {
         if (response.success) {
-          loadOrders(); // Refresh orders list
+          final updatedOrders = state.orders
+              .map((o) => o.id == order.id ? o.copyWith(status: 8) : o)
+              .toList();
+          state = state.copyWith(orders: updatedOrders);
+          loadOrders(forceRefresh: true);
+          ref
+              .read(homeRecentOrdersProvider.notifier)
+              .loadRecentOrders(forceRefresh: true);
+          ref.invalidate(trackOrderProvider(order.id));
           return true;
         }
         return false;
@@ -194,6 +357,96 @@ class OrdersNotifier extends _$OrdersNotifier {
     state = state.copyWith(
       reorderStatus: ReorderStatus.idle,
       reorderError: null,
+    );
+  }
+}
+
+@Riverpod(keepAlive: true)
+class HomeRecentOrdersNotifier extends _$HomeRecentOrdersNotifier {
+  @override
+  OrdersState build() {
+    ref.listen(profileProvider, (previous, next) {
+      final wasLoaded = previous?.status == ProfileStatus.loaded;
+      final isNowLoaded =
+          next.status == ProfileStatus.loaded && next.user != null;
+      if (!wasLoaded && isNowLoaded) {
+        final currentStatus = state.status;
+        final userChanged = previous?.user?.id != next.user?.id;
+        if (currentStatus == OrdersStatus.initial || userChanged) {
+          loadRecentOrders(forceRefresh: true);
+        }
+      }
+    });
+
+    final profile = ref.read(profileProvider);
+    if (profile.status == ProfileStatus.loaded && profile.user != null) {
+      Future.microtask(() => loadRecentOrders());
+    }
+    return const OrdersState();
+  }
+
+  /// جلب آخر 5 طلبات فقط لصفحة الهوم بدلاً من 50
+  Future<void> loadRecentOrders({bool forceRefresh = false}) async {
+    if (state.status == OrdersStatus.loading && !forceRefresh) return;
+
+    state = state.copyWith(
+      status: OrdersStatus.loading,
+      errorMessage: null,
+    );
+
+    var profileState = ref.read(profileProvider);
+    var user = profileState.user;
+
+    if (user == null) {
+      final profileResult = await ref.read(profileApiServiceProvider).getProfile();
+      profileResult.when(
+        success: (response) {
+          if (response.success && response.result != null) {
+            user = response.result;
+            ref.read(profileProvider.notifier).loadProfile();
+          }
+        },
+        failure: (_) {},
+      );
+    }
+
+    if (user == null) {
+      state = state.copyWith(
+        status: OrdersStatus.loaded,
+        orders: const [],
+      );
+      return;
+    }
+
+    final apiService = ref.read(ordersApiServiceProvider);
+    final result = await apiService.getOrders(
+      userId: user!.id,
+      pageNumber: 1,
+      pageSize: 5,
+    );
+
+    if (!ref.mounted) return;
+
+    result.when(
+      success: (response) {
+        if (response.success && response.result != null) {
+          state = state.copyWith(
+            status: OrdersStatus.loaded,
+            orders: response.result!,
+          );
+        } else {
+          state = state.copyWith(
+            status: OrdersStatus.error,
+            errorMessage: response.message ?? 'فشل تحميل الطلبات',
+          );
+        }
+      },
+      failure: (error) {
+        state = state.copyWith(
+          status: OrdersStatus.error,
+          errorMessage: error.message,
+        );
+      },
     );
   }
 }

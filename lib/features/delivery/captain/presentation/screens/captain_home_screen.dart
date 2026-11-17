@@ -2,7 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:base_app/core/localizations/app_strings.g.dart';
+import 'package:base_app/core/routes/app_routes.dart';
+import 'package:base_app/core/services/cms_api_service.dart';
 import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/styles/app_text_style.dart';
  import 'package:base_app/core/widgets/custom_toast.dart';
@@ -145,6 +148,61 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen>
     });
   }
 
+  String _formatTime(int seconds) {
+    final int mins = seconds ~/ 60;
+    final int secs = seconds % 60;
+    return '${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> _openWhatsAppSupport() async {
+    try {
+      final res = await ref.read(cmsApiServiceProvider).getContactUs();
+      final fields = res?.contactUsFields ?? [];
+      String? whatsappUrl;
+
+      for (final f in fields) {
+        final url = (f.url ?? '').trim();
+        if (url.isEmpty) continue;
+        final lower = url.toLowerCase();
+        if (f.type == 7 ||
+            lower.contains('wa.me') ||
+            lower.contains('whatsapp')) {
+          whatsappUrl = url.startsWith('http') ? url : 'https://$url';
+          break;
+        }
+      }
+
+      if (whatsappUrl == null) {
+        for (final f in fields) {
+          final url = (f.url ?? '').trim();
+          if (url.isEmpty) continue;
+          if (f.type == 0) {
+            final digits = url.replaceAll(RegExp(r'[^0-9+]'), '');
+            if (digits.isNotEmpty) {
+              whatsappUrl = 'https://wa.me/${digits.replaceAll('+', '')}';
+              break;
+            }
+          }
+        }
+      }
+
+      if (whatsappUrl != null) {
+        final uri = Uri.parse(whatsappUrl);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+          return;
+        }
+      }
+      if (mounted) {
+        Navigator.of(context).pushNamed(AppRoutes.contactUs);
+      }
+    } catch (_) {
+      if (mounted) {
+        Navigator.of(context).pushNamed(AppRoutes.contactUs);
+      }
+    }
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
@@ -209,6 +267,45 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen>
 
     return Scaffold(
       backgroundColor: colors.background,
+      floatingActionButton: Padding(
+        padding: EdgeInsets.only(bottom: 72.h),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            FloatingActionButton.extended(
+              heroTag: 'captain_support_whatsapp_fab',
+              onPressed: _openWhatsAppSupport,
+              backgroundColor: const Color(0xFF25D366),
+              foregroundColor: Colors.white,
+              elevation: 4,
+              icon: Icon(Icons.support_agent_rounded, size: 20.sp),
+              label: Text(
+                'تواصل مع الدعم',
+                style: AppTextStyles.text12w700(color: Colors.white),
+              ),
+            ),
+            10.verticalSpace,
+            FloatingActionButton.extended(
+              heroTag: 'captain_break_toggle_fab',
+              onPressed: () => _toggleStatus(!_isOnline),
+              backgroundColor: _isOnline ? colors.warning : colors.success,
+              foregroundColor: Colors.white,
+              elevation: 4,
+              icon: Icon(
+                _isOnline ? Icons.coffee_rounded : Icons.play_arrow_rounded,
+                size: 20.sp,
+              ),
+              label: Text(
+                _isOnline
+                    ? AppStrings.breakLabel
+                    : '${AppStrings.endBreakBtn} (${_formatTime(_breakSecondsRemaining)})',
+                style: AppTextStyles.text12w700(color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+      ),
       body: RefreshIndicator(
         color: colors.secondary,
         backgroundColor: colors.cardBackground,
@@ -226,8 +323,6 @@ class _CaptainHomeScreenState extends ConsumerState<CaptainHomeScreen>
               CaptainSpeedHeaderWidget(
                 profileState: profileState,
                 isOnline: _isOnline,
-                breakSecondsRemaining: _breakSecondsRemaining,
-                onToggleStatus: _toggleStatus,
               ),
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),

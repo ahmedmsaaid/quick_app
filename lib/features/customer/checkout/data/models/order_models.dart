@@ -316,14 +316,19 @@ class OrderDto {
       promoDiscountPercentage != null && promoDiscountPercentage! > 0;
 
   /// Returns the effective / discounted price of the order.
-  /// If `totalPrice` in the database was recorded before discount, this computes the discounted price.
+  /// If `totalPrice` in the database was recorded before discount or free delivery,
+  /// this computes the discounted price.
   double get effectiveFinalPrice {
+    double price = totalPrice;
+    if (hasFreeDeliveryPromo && deliveryFee > 0) {
+      price = (price - deliveryFee).clamp(0.0, double.infinity);
+    }
     if (hasPromoDiscount) {
       final factor =
           (1.0 - (promoDiscountPercentage! / 100.0)).clamp(0.0, 1.0);
-      return totalPrice * factor;
+      price = price * factor;
     }
-    return totalPrice;
+    return price;
   }
 
   /// The original price before discount (if discount applied).

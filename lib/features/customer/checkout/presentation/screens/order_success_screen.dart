@@ -15,47 +15,72 @@ class OrderSuccessScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppColors(context);
 
-    return Scaffold(
-      backgroundColor: colors.background,
-      body: Padding(
-        padding: EdgeInsets.all(30.w),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: EdgeInsets.all(20.r),
-              decoration: BoxDecoration(
-                color: colors.primary.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            AppRoutes.userNav,
+            (route) => false,
+          );
+        }
+      },
+      child: Scaffold(
+        backgroundColor: colors.background,
+        body: Padding(
+          padding: EdgeInsets.all(30.w),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: EdgeInsets.all(20.r),
+                decoration: BoxDecoration(
+                  color: colors.primary.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.check_circle, color: colors.primary, size: 100.sp),
               ),
-              child: Icon(Icons.check_circle, color: colors.primary, size: 100.sp),
-            ),
-            30.verticalSpace,
-            Text(
-              AppStrings.orderArrivedHeroMsg,
-              style: AppTextStyles.text20w700(color: colors.textPrimary),
-            ),
-            10.verticalSpace,
-            Text(
-              AppStrings.orderReviewMsg,
-              textAlign: TextAlign.center,
-              style: AppTextStyles.text14w400(color: colors.textSecondary),
-            ),
-            40.verticalSpace,
-            CustomAppButton(
-              text: AppStrings.trackOrderNowBtn,
-              onPressed: () => Navigator.pushReplacementNamed(
-                context,
-                AppRoutes.orderDetailsScreen,
-                arguments: order,
+              30.verticalSpace,
+              Text(
+                AppStrings.orderArrivedHeroMsg,
+                style: AppTextStyles.text20w700(color: colors.textPrimary),
               ),
-            ),
-            15.verticalSpace,
-            TextButton(
-              onPressed: () => Navigator.pushNamedAndRemoveUntil(context, AppRoutes.userNav, (route) => false),
-              child: Text(AppStrings.backToHomeBtn, style: AppTextStyles.text14w600(color: colors.textHint)),
-            ),
-          ],
+              10.verticalSpace,
+              Text(
+                AppStrings.orderReviewMsg,
+                textAlign: TextAlign.center,
+                style: AppTextStyles.text14w400(color: colors.textSecondary),
+              ),
+              40.verticalSpace,
+              CustomAppButton(
+                text: AppStrings.trackOrderNowBtn,
+                onPressed: () {
+                  final nav = Navigator.of(context);
+                  nav.pushNamedAndRemoveUntil(
+                    AppRoutes.userNav,
+                    (route) => false,
+                  );
+                  nav.pushNamed(
+                    AppRoutes.orderDetailsScreen,
+                    arguments: order,
+                  );
+                },
+              ),
+              15.verticalSpace,
+              TextButton(
+                onPressed: () => Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  AppRoutes.userNav,
+                  (route) => false,
+                ),
+                child: Text(
+                  AppStrings.backToHomeBtn,
+                  style: AppTextStyles.text14w600(color: colors.textHint),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

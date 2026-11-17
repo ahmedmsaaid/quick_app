@@ -30,6 +30,8 @@ import 'package:base_app/features/customer/profile/presentation/riverpod/user_wa
 import 'package:base_app/features/customer/profile/presentation/riverpod/user_wallet_transactions_pagination_notifier.dart';
 import 'package:base_app/features/shared/finance/data/models/payment_method.dart';
 import 'package:base_app/features/shared/finance/data/payments_api_service.dart';
+import 'package:base_app/features/customer/orders/presentation/riverpod/orders_provider.dart';
+import 'package:base_app/features/customer/main_nav/presentation/riverpod/user_nav_provider.dart';
 
 
 
@@ -308,11 +310,18 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           ref.invalidate(userWalletTransactionsPaginationProvider);
         }
 
+        ref.read(ordersProvider.notifier).loadOrders(forceRefresh: true);
+        ref
+            .read(homeRecentOrdersProvider.notifier)
+            .loadRecentOrders(forceRefresh: true);
+        ref.read(userNavIndexProvider.notifier).state = 0;
+
         if (mounted) {
-          Navigator.of(context).pushReplacement(
+          Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(
               builder: (_) => OrderSuccessScreen(order: createdOrder),
             ),
+            (route) => false,
           );
         }
       }
