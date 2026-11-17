@@ -144,7 +144,11 @@ class _CaptainOrderDetailsScreenState
   }
 
   void _initializeOrderState() {
-    if (_order.status >= 3 && _order.status <= 5) {
+    final hasDeliveryAssigned =
+        _order.deliveryId != null && _order.deliveryId != 0;
+    if (!hasDeliveryAssigned && _order.status < 6) {
+      _orderState = 0;
+    } else if (_order.status >= 3 && _order.status <= 5) {
       _orderState = 1;
     } else if (_order.status == 6) {
       _orderState = 2;

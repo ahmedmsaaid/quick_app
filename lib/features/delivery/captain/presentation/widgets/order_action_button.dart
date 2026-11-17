@@ -4,7 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/styles/app_text_style.dart';
 
-class OrderActionButton extends StatelessWidget {
+class OrderActionButton extends StatefulWidget {
   final int orderState; // 0: قبول الطلب, 1: استلام الطلب, 2: تم التوصيل
   final bool isLoading;
   final VoidCallback? onPressed;
@@ -20,15 +20,171 @@ class OrderActionButton extends StatelessWidget {
 
   static final List<String> _buttonTexts = [
     "قبول الطلب",
-    "استلام الطلب",
+    "اسحب لاستلام الطلب",
     "تم التوصيل",
   ];
 
   @override
+  State<OrderActionButton> createState() => _OrderActionButtonState();
+}
+
+class _OrderActionButtonState extends State<OrderActionButton> {
+  double _dragProgress = 0.0;
+  bool _hasTriggered = false;
+
+  @override
+  void didUpdateWidget(covariant OrderActionButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.orderState != widget.orderState ||
+        (oldWidget.isLoading && !widget.isLoading)) {
+      _dragProgress = 0.0;
+      _hasTriggered = false;
+    }
+  }
+
+  Widget _buildSlideToPickupButton(BuildContext context, AppColors colors) {
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
+
+    return SizedBox(
+      height: 56.h,
+      width: double.infinity,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final trackWidth = constraints.maxWidth;
+          final thumbSize = 46.h;
+          final padding = 5.w;
+          final maxDrag = (trackWidth - thumbSize - (padding * 2)).clamp(1.0, double.infinity);
+          final currentOffset = _dragProgress * maxDrag;
+
+          return Container(
+            decoration: BoxDecoration(
+              color: colors.primary.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(16.r),
+              border: Border.all(
+                color: colors.primary.withValues(alpha: 0.35),
+                width: 1.2,
+              ),
+            ),
+            child: widget.isLoading
+                ? Center(
+                    child: Container(
+                      width: double.infinity,
+                      height: double.infinity,
+                      decoration: BoxDecoration(
+                        color: colors.primary,
+                        borderRadius: BorderRadius.circular(15.r),
+                      ),
+                      alignment: Alignment.center,
+                      child: const LoadingButton(color: Colors.white),
+                    ),
+                  )
+                : Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // Progress fill
+                      Align(
+                        alignment: isRtl ? Alignment.centerRight : Alignment.centerLeft,
+                        child: Container(
+                          width: (thumbSize + (padding * 2) + currentOffset)
+                              .clamp(0.0, trackWidth),
+                          height: double.infinity,
+                          decoration: BoxDecoration(
+                            color: colors.primary.withValues(
+                              alpha: (0.2 + (_dragProgress * 0.8)).clamp(0.2, 1.0),
+                            ),
+                            borderRadius: BorderRadius.circular(15.r),
+                          ),
+                        ),
+                      ),
+                      // Label text
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            OrderActionButton._buttonTexts[1],
+                            style: AppTextStyles.text15w700(
+                              color: _dragProgress > 0.45
+                                  ? Colors.white
+                                  : colors.primary,
+                            ),
+                          ),
+                          6.horizontalSpace,
+                          Icon(
+                            isRtl
+                                ? Icons.keyboard_double_arrow_left_rounded
+                                : Icons.keyboard_double_arrow_right_rounded,
+                            color: _dragProgress > 0.45
+                                ? Colors.white
+                                : colors.primary,
+                            size: 20.sp,
+                          ),
+                        ],
+                      ),
+                      // Draggable thumb
+                      Positioned(
+                        right: isRtl ? padding + currentOffset : null,
+                        left: isRtl ? null : padding + currentOffset,
+                        child: GestureDetector(
+                          onHorizontalDragUpdate: (details) {
+                            if (widget.isLoading || _hasTriggered) return;
+                            final delta = isRtl ? -details.delta.dx : details.delta.dx;
+                            setState(() {
+                              _dragProgress =
+                                  (_dragProgress + (delta / maxDrag)).clamp(0.0, 1.0);
+                            });
+                            if (_dragProgress >= 0.82 && !_hasTriggered) {
+                              _hasTriggered = true;
+                              setState(() => _dragProgress = 1.0);
+                              widget.onPressed?.call();
+                            }
+                          },
+                          onHorizontalDragEnd: (_) {
+                            if (!_hasTriggered && mounted) {
+                              setState(() => _dragProgress = 0.0);
+                            }
+                          },
+                          onHorizontalDragCancel: () {
+                            if (!_hasTriggered && mounted) {
+                              setState(() => _dragProgress = 0.0);
+                            }
+                          },
+                          child: Container(
+                            width: thumbSize,
+                            height: thumbSize,
+                            decoration: BoxDecoration(
+                              color: colors.primary,
+                              borderRadius: BorderRadius.circular(13.r),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: colors.primary.withValues(alpha: 0.35),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              isRtl
+                                  ? Icons.arrow_back_ios_new_rounded
+                                  : Icons.arrow_forward_ios_rounded,
+                              color: Colors.white,
+                              size: 18.sp,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+          );
+        },
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colors = AppColors(context);
-    final isDeliveredStage = orderState == 2;
-    final dist = distanceToCustomerMeters;
+    final isDeliveredStage = widget.orderState == 2;
+    final dist = widget.distanceToCustomerMeters;
     final isTooFar = isDeliveredStage && dist != null && dist > 100;
 
     String distanceText = "";
@@ -70,22 +226,27 @@ class OrderActionButton extends StatelessWidget {
               ),
             ),
           ],
-          ElevatedButton(
-            onPressed: isLoading ? null : onPressed,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isTooFar ? Colors.grey.shade400 : colors.primary,
-              minimumSize: Size(double.infinity, 55.h),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15.r)),
+          if (widget.orderState == 1)
+            _buildSlideToPickupButton(context, colors)
+          else
+            ElevatedButton(
+              onPressed: widget.isLoading ? null : widget.onPressed,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isTooFar ? Colors.grey.shade400 : colors.primary,
+                minimumSize: Size(double.infinity, 55.h),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15.r)),
+              ),
+              child: widget.isLoading
+                  ? const LoadingButton(color: Colors.white)
+                  : Text(
+                      isTooFar
+                          ? "اقترب من العميل لتأكيد التوصيل ($distanceText)"
+                          : (widget.orderState < OrderActionButton._buttonTexts.length
+                              ? OrderActionButton._buttonTexts[widget.orderState]
+                              : "تم التوصيل"),
+                      style: AppTextStyles.text16w700(color: Colors.white),
+                    ),
             ),
-            child: isLoading
-                ? const LoadingButton(color: Colors.white)
-                : Text(
-                    isTooFar
-                        ? "اقترب من العميل لتأكيد التوصيل ($distanceText)"
-                        : (orderState < _buttonTexts.length ? _buttonTexts[orderState] : "تم التوصيل"),
-                    style: AppTextStyles.text16w700(color: Colors.white),
-                  ),
-          ),
         ],
       ),
     );

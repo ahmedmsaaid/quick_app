@@ -123,13 +123,27 @@ class OrdersApiService {
     try {
       final apiResponse = await sendPut(rowVersion);
       if (apiResponse.success) {
+        // Verify that the backend actually transitioned the order to the target status.
+        // If the first PUT only assigned the driver or advanced to an intermediate state,
+        // send a second PUT with the fresh rowVersion automatically so one user action suffices.
+        final verifyRes = await getOrderById(
+          orderId: orderId,
+          includesPath: const [],
+        );
+        if (verifyRes is Success<ApiResponse<OrderDto>>) {
+          final latestOrder = verifyRes.data.result;
+          if (latestOrder != null && latestOrder.status != status) {
+            final secondAttempt = await sendPut(latestOrder.rowVersion);
+            return ApiResult.success(secondAttempt);
+          }
+        }
         return ApiResult.success(apiResponse);
       }
     } catch (_) {
       // Fall through to retry with fresh rowVersion
     }
 
-    // Retry once after fetching latest rowVersion (handles stale rowVersion after acceptOrder or vendor status updates)
+    // Retry after fetching latest rowVersion (handles stale rowVersion after acceptOrder or vendor status updates)
     try {
       final latestOrderRes = await getOrderById(
         orderId: orderId,
@@ -141,6 +155,19 @@ class OrdersApiService {
             latestOrderRes.data.result?.rowVersion ?? freshRowVersion;
       }
       final retryResponse = await sendPut(freshRowVersion);
+      if (retryResponse.success) {
+        final verifyRes = await getOrderById(
+          orderId: orderId,
+          includesPath: const [],
+        );
+        if (verifyRes is Success<ApiResponse<OrderDto>>) {
+          final latestOrder = verifyRes.data.result;
+          if (latestOrder != null && latestOrder.status != status) {
+            final secondAttempt = await sendPut(latestOrder.rowVersion);
+            return ApiResult.success(secondAttempt);
+          }
+        }
+      }
       return ApiResult.success(retryResponse);
     } catch (e) {
       return ApiResult.failure(handleError(e));
