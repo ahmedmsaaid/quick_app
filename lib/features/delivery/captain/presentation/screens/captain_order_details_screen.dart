@@ -41,6 +41,7 @@ class _CaptainOrderDetailsScreenState
   late int _orderState;
   bool _isLoading = false;
   bool _isFetchingDetails = false;
+  int _fetchDetailsRequestId = 0;
   late OrderDto _order;
   LocationDto? _vendorLocation;
   Position? _currentCaptainPosition;
@@ -157,9 +158,11 @@ class _CaptainOrderDetailsScreenState
   UserDto? get _customerUser => _order.creator ?? _order.user;
 
   Future<void> _fetchOrderDetails() async {
-    setState(() => _isFetchingDetails = true);
+    final int requestId = ++_fetchDetailsRequestId;
+    if (mounted) setState(() => _isFetchingDetails = true);
     final updatedOrder =
         await ref.read(captainOrdersProvider.notifier).getOrderDetails(widget.order.id);
+    if (!mounted || requestId != _fetchDetailsRequestId) return;
 
     OrderDto? processedOrder = updatedOrder;
 
@@ -171,6 +174,7 @@ class _CaptainOrderDetailsScreenState
 
       if ((customer == null || customer.name == null || customer.name!.isEmpty) && customerId != 0) {
         final userResult = await ref.read(homeApiServiceProvider).getUserById(customerId);
+        if (!mounted || requestId != _fetchDetailsRequestId) return;
         switch (userResult) {
           case Success(data: final userRes):
             if (userRes.success && userRes.result != null) {
@@ -201,6 +205,7 @@ class _CaptainOrderDetailsScreenState
         final locResult = await ref
             .read(profileApiServiceProvider)
             .getLocationById(processedOrder.userLocationId!);
+        if (!mounted || requestId != _fetchDetailsRequestId) return;
         switch (locResult) {
           case Success(data: final locResponse):
             if (locResponse.success && locResponse.result != null) {
@@ -216,54 +221,58 @@ class _CaptainOrderDetailsScreenState
       CustomToast.error(context, AppStrings.fetchOrderDetailsFailed);
     }
 
-    if (processedOrder != null && mounted) {
+    if (processedOrder != null && mounted && requestId == _fetchDetailsRequestId) {
       setState(() {
-        _order = processedOrder!;
+        _order = processedOrder!.copyWith(
+          status: math.max(_order.status, processedOrder.status),
+        );
         _initializeOrderState();
       });
     }
 
-    if (mounted) setState(() => _isFetchingDetails = false);
+    if (mounted && requestId == _fetchDetailsRequestId) {
+      setState(() => _isFetchingDetails = false);
+    }
     _fetchRoadRoute();
   }
 
   Future<void> _handleActionButton() async {
     OrderSoundService.stopRingtone();
     if (_isLoading) return;
+    _fetchDetailsRequestId++;
 
     if (_orderState == 0) {
       setState(() => _isLoading = true);
       final success =
           await ref.read(captainOrdersProvider.notifier).acceptOrder(_order);
-      setState(() => _isLoading = false);
+      if (!mounted) return;
 
       if (success) {
         final profileState = ref.read(profileProvider);
         final user = profileState.user;
         setState(() {
+          _isLoading = false;
           _order = _order.copyWith(
             status: 3,
             deliveryId: user?.id ?? _order.deliveryId,
           );
           _initializeOrderState();
         });
-        if (mounted) {
-          CustomToast.success(context, AppStrings.orderAcceptedSuccess);
-        }
+        CustomToast.success(context, AppStrings.orderAcceptedSuccess);
         _fetchOrderDetails();
       } else {
-        if (mounted) {
-          CustomToast.error(context, AppStrings.orderAcceptFailed);
-        }
+        setState(() => _isLoading = false);
+        CustomToast.error(context, AppStrings.orderAcceptFailed);
       }
     } else if (_orderState == 1) {
       setState(() => _isLoading = true);
       final success =
           await ref.read(captainOrdersProvider.notifier).updateStatus(_order, 6);
-      setState(() => _isLoading = false);
+      if (!mounted) return;
 
       if (success) {
         setState(() {
+          _isLoading = false;
           _order = _order.copyWith(status: 6);
           _initializeOrderState();
         });
@@ -271,14 +280,11 @@ class _CaptainOrderDetailsScreenState
               orderId: _order.id,
               deliveryId: _order.deliveryId ?? 0,
             );
-        if (mounted) {
-          CustomToast.success(context, AppStrings.orderPickedUpSuccess);
-        }
+        CustomToast.success(context, AppStrings.orderPickedUpSuccess);
         _fetchOrderDetails();
       } else {
-        if (mounted) {
-          CustomToast.error(context, AppStrings.orderPickupFailed);
-        }
+        setState(() => _isLoading = false);
+        CustomToast.error(context, AppStrings.orderPickupFailed);
       }
     } else if (_orderState == 2) {
       final distMeters = _distanceToCustomerMeters;

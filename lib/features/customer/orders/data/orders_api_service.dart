@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:base_app/core/network/dio_factory.dart';
@@ -19,11 +20,12 @@ class OrdersApiService {
 
   OrdersApiService(this._dio);
 
-  /// Fetch orders list with creatorId filter (Lightweight list without User, Creator, OrderProducts.Product).
+  /// Fetch orders list with creatorId filter.
   Future<ApiResult<ApiResponse<List<OrderDto>>>> getOrders({
     required int userId,
     int pageNumber = 1,
-    int pageSize = 50,
+    int pageSize = 10,
+    List<String>? includesPath = const ["OrderProducts.Product", "User", "UserLocation"],
   }) async {
     try {
       final response = await _dio.patch(
@@ -33,7 +35,8 @@ class OrdersApiService {
           'pageSize': pageSize,
           'enablePagination': true,
           'orderDirection': 1,
-          "includesPath": ["OrderProducts.Product"],
+          if (includesPath != null && includesPath.isNotEmpty)
+            "includesPath": includesPath,
           "filters": {"CreatorId": userId},
         },
       );
@@ -49,8 +52,8 @@ class OrdersApiService {
       });
       return ApiResult.success(apiResponse);
     } catch (e, stack) {
-      print("ERROR IN getOrders: $e");
-      print(stack);
+      debugPrint("ERROR IN getOrders: $e");
+      debugPrint(stack.toString());
       return ApiResult.failure(handleError(e));
     }
   }
@@ -86,8 +89,8 @@ class OrdersApiService {
       });
       return ApiResult.success(apiResponse);
     } catch (e, stack) {
-      print("ERROR IN getOrdersWithFilters: $e");
-      print(stack);
+      debugPrint("ERROR IN getOrdersWithFilters: $e");
+      debugPrint(stack.toString());
       return ApiResult.failure(handleError(e));
     }
   }
@@ -99,20 +102,46 @@ class OrdersApiService {
     int? deliveryId,
     String? rowVersion,
   }) async {
-    try {
+    Future<ApiResponse<bool>> sendPut(String? currentRowVersion) async {
+      final parsedRowVersion = currentRowVersion != null
+          ? (int.tryParse(currentRowVersion) ?? currentRowVersion)
+          : null;
       final response = await _dio.put(
         'orders/status',
         data: {
           'id': orderId,
           'status': status,
           if (deliveryId != null) 'deliveryId': deliveryId,
-          if (rowVersion != null) 'rowVersion': rowVersion,
+          if (parsedRowVersion != null) 'rowVersion': parsedRowVersion,
         },
       );
-      final apiResponse = ApiResponse<bool>.fromJson(response.data, (json) {
+      return ApiResponse<bool>.fromJson(response.data, (json) {
         return json is bool ? json : (json == true);
       });
-      return ApiResult.success(apiResponse);
+    }
+
+    try {
+      final apiResponse = await sendPut(rowVersion);
+      if (apiResponse.success) {
+        return ApiResult.success(apiResponse);
+      }
+    } catch (_) {
+      // Fall through to retry with fresh rowVersion
+    }
+
+    // Retry once after fetching latest rowVersion (handles stale rowVersion after acceptOrder or vendor status updates)
+    try {
+      final latestOrderRes = await getOrderById(
+        orderId: orderId,
+        includesPath: const [],
+      );
+      String? freshRowVersion = rowVersion;
+      if (latestOrderRes is Success<ApiResponse<OrderDto>>) {
+        freshRowVersion =
+            latestOrderRes.data.result?.rowVersion ?? freshRowVersion;
+      }
+      final retryResponse = await sendPut(freshRowVersion);
+      return ApiResult.success(retryResponse);
     } catch (e) {
       return ApiResult.failure(handleError(e));
     }
@@ -136,8 +165,8 @@ class OrdersApiService {
       });
       return ApiResult.success(apiResponse);
     } catch (e, stack) {
-      print("ERROR IN getOrderById: $e");
-      print(stack);
+      debugPrint("ERROR IN getOrderById: $e");
+      debugPrint(stack.toString());
       return ApiResult.failure(handleError(e));
     }
   }
