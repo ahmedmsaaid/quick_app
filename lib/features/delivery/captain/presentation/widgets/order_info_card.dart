@@ -15,8 +15,6 @@ class OrderInfoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppColors(context);
     final payment = PaymentMethod.fromValue(order.paymentMethod);
-    final earnings = order.deliveryFee;
-
 
     return Container(
       padding: EdgeInsets.all(20.r),
@@ -77,15 +75,6 @@ class OrderInfoCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              Expanded(
-                child: _buildInfoItem(
-                  context,
-                  AppStrings.netProfitLabel,
-                  "${earnings.toStringAsFixed(0)} ${AppStrings.currency}",
-                  colors.success,
-                  Icons.account_balance_wallet_outlined,
-                ),
-              ),
               Expanded(
                 child: _buildInfoItem(
                   context,

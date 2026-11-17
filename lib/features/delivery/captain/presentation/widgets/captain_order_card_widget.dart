@@ -53,7 +53,6 @@ class CaptainOrderCardWidget extends StatelessWidget {
         (order.creator?.name != null && order.creator!.name!.isNotEmpty)
         ? order.creator!.name!
         : AppStrings.unknownCustomer;
-    final earnings = order.deliveryFee;
 
     String statusLabelText =
         isActive ? AppStrings.onWayLabel : AppStrings.arrivedDoneLabel;
@@ -170,32 +169,6 @@ class CaptainOrderCardWidget extends StatelessWidget {
                 colors.secondary,
               ),
             ],
-            16.verticalSpace,
-            Divider(color: colors.border.withValues(alpha: 0.5), height: 1),
-            14.verticalSpace,
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  AppStrings.yourEarningsInThisOrder,
-                  style: AppTextStyles.text12w600(color: colors.textSecondary),
-                ),
-                Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 12.w,
-                    vertical: 5.h,
-                  ),
-                  decoration: BoxDecoration(
-                    color: colors.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10.r),
-                  ),
-                  child: Text(
-                    '${earnings.toStringAsFixed(0)} ${AppStrings.currency}',
-                    style: AppTextStyles.text14w700(color: colors.primary),
-                  ),
-                ),
-              ],
-            ),
           ],
         ),
       ),

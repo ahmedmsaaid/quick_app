@@ -29,7 +29,6 @@ class CaptainAvailableOrderCardWidget extends StatelessWidget {
                   order.userLocation!.name!.isNotEmpty
               ? order.userLocation!.name!
               : AppStrings.unknownStore);
-    final earnings = order.deliveryFee;
 
     return Container(
       padding: EdgeInsets.all(16.r),
@@ -98,17 +97,6 @@ class CaptainAvailableOrderCardWidget extends StatelessWidget {
                       ],
                     ),
                   ],
-                ),
-              ),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                decoration: BoxDecoration(
-                  color: colors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-                child: Text(
-                  '${earnings.toStringAsFixed(0)} ${AppStrings.currency}',
-                  style: AppTextStyles.text13w700(color: colors.primary),
                 ),
               ),
             ],
