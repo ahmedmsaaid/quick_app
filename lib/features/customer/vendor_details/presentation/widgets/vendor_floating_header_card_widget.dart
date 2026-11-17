@@ -1,20 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:base_app/core/localizations/app_strings.g.dart';
 import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/styles/app_text_style.dart';
+import 'package:base_app/core/utils/format_price.dart';
 import 'package:base_app/core/widgets/custom_arrow_back.dart';
 import 'package:base_app/core/network/api_constants.dart';
+import 'package:base_app/features/customer/profile/data/profile_api_service.dart';
 import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
 import 'package:base_app/features/customer/home/data/models/category_model.dart';
+import 'package:base_app/features/customer/home/data/models/schedule_model.dart';
+import 'package:base_app/core/utils/store_schedule_helper.dart';
 
-class VendorFloatingHeaderCardWidget extends StatelessWidget {
+class VendorFloatingHeaderCardWidget extends ConsumerWidget {
   const VendorFloatingHeaderCardWidget({
     super.key,
     required this.vendor,
     required this.categories,
     required this.colors,
     required this.isMarket,
+    this.schedules,
     this.isFavorite = false,
     this.onFavoriteTap,
   });
@@ -23,6 +30,7 @@ class VendorFloatingHeaderCardWidget extends StatelessWidget {
   final List<CategoryDto> categories;
   final AppColors colors;
   final bool isMarket;
+  final List<ScheduleDto>? schedules;
   final bool isFavorite;
   final VoidCallback? onFavoriteTap;
 
@@ -55,9 +63,8 @@ class VendorFloatingHeaderCardWidget extends StatelessWidget {
     return isMarket ? 'بقالة، سوبر ماركت، منتجات طازجة' : 'ساندوتشات، مأكولات شرقية، وجبات';
   }
 
-  void _showVendorInfoSheet(BuildContext context) {
-    final bool isBusy = vendor.busy == true;
-    final bool isClosed = !(vendor.active ?? true) || vendor.status == 0;
+  void _showVendorInfoSheet(BuildContext context, double minDeliveryFee) {
+    final status = StoreScheduleHelper.evaluate(vendor: vendor, schedules: schedules);
 
     showModalBottomSheet(
       context: context,
@@ -121,12 +128,8 @@ class VendorFloatingHeaderCardWidget extends StatelessWidget {
             _infoRow(
               icon: Icons.storefront_rounded,
               title: 'الحالة',
-              value: isClosed
-                  ? 'مغلق حالياً'
-                  : (isBusy ? 'مشغول حالياً' : 'متاح للطلب'),
-              valueColor: isClosed
-                  ? Colors.red
-                  : (isBusy ? Colors.orange : Colors.green),
+              value: status.labelAr,
+              valueColor: status.color,
             ),
             if (vendor.address != null && vendor.address!.isNotEmpty) ...[
               8.verticalSpace,
@@ -140,7 +143,13 @@ class VendorFloatingHeaderCardWidget extends StatelessWidget {
             _infoRow(
               icon: Icons.access_time_rounded,
               title: 'مدة التوصيل',
-              value: '٣٠ - ٩٠ دقيقة',
+              value: isMarket ? '٣٠ - ٦٠ دقيقة' : '٣٠ - ٩٠ دقيقة',
+            ),
+            8.verticalSpace,
+            _infoRow(
+              icon: Icons.delivery_dining_rounded,
+              title: AppStrings.deliveryFeesLabel,
+              value: '${formatPrice(minDeliveryFee)} ${AppStrings.currency}',
             ),
             8.verticalSpace,
             _infoRow(
@@ -241,9 +250,13 @@ class VendorFloatingHeaderCardWidget extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final bool isBusy = vendor.busy == true;
-    final bool isClosed = !(vendor.active ?? true) || vendor.status == 0;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settingsAsync = ref.watch(settingsProvider);
+    final settings = settingsAsync.asData?.value ?? defaultAppSettings;
+    final double minDeliveryFee =
+        (settings.deliveryMinFee != null && settings.deliveryMinFee! > 0)
+            ? settings.deliveryMinFee!
+            : settings.deliveryFee;
 
     // Cover Image URL
     String? coverPath;
@@ -412,29 +425,16 @@ class VendorFloatingHeaderCardWidget extends StatelessWidget {
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-                                if (isBusy) ...[
+                                if (StoreScheduleHelper.evaluate(vendor: vendor, schedules: schedules) != StoreOperationalStatus.open) ...[
                                   6.horizontalSpace,
                                   Container(
                                     padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
                                     decoration: BoxDecoration(
-                                      color: Colors.orange,
+                                      color: StoreScheduleHelper.evaluate(vendor: vendor, schedules: schedules).color,
                                       borderRadius: BorderRadius.circular(6.r),
                                     ),
                                     child: Text(
-                                      'مشغول',
-                                      style: AppTextStyles.text10w500(color: Colors.white),
-                                    ),
-                                  ),
-                                ] else if (isClosed) ...[
-                                  6.horizontalSpace,
-                                  Container(
-                                    padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
-                                    decoration: BoxDecoration(
-                                      color: Colors.red,
-                                      borderRadius: BorderRadius.circular(6.r),
-                                    ),
-                                    child: Text(
-                                      'مغلق',
+                                      StoreScheduleHelper.evaluate(vendor: vendor, schedules: schedules).shortBadgeAr,
                                       style: AppTextStyles.text10w500(color: Colors.white),
                                     ),
                                   ),
@@ -454,7 +454,7 @@ class VendorFloatingHeaderCardWidget extends StatelessWidget {
 
                       // Left Details Chevron (points left <)
                       GestureDetector(
-                        onTap: () => _showVendorInfoSheet(context),
+                        onTap: () => _showVendorInfoSheet(context, minDeliveryFee),
                         behavior: HitTestBehavior.opaque,
                         child: Padding(
                           padding: EdgeInsets.all(4.r),
@@ -473,7 +473,7 @@ class VendorFloatingHeaderCardWidget extends StatelessWidget {
 
                   12.verticalSpace,
 
-                  // Row 2: Delivery Info Row (Time • Provider)
+                  // Row 2: Delivery Info Row (Time • Min Delivery Fee • Provider)
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
@@ -489,7 +489,29 @@ class VendorFloatingHeaderCardWidget extends StatelessWidget {
                             ),
                             4.horizontalSpace,
                             Text(
-                              '٣٠-٩٠ دقيقة',
+                              isMarket ? '٣٠-٦٠ دقيقة' : '٣٠-٩٠ دقيقة',
+                              style: AppTextStyles.text12w600(color: colors.textPrimary),
+                            ),
+                          ],
+                        ),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 6.w),
+                          child: Text(
+                            '•',
+                            style: TextStyle(color: colors.border, fontSize: 13.sp),
+                          ),
+                        ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.delivery_dining_rounded,
+                              size: 16.sp,
+                              color: colors.textSecondary,
+                            ),
+                            4.horizontalSpace,
+                            Text(
+                              '${formatPrice(minDeliveryFee)} ${AppStrings.currency}',
                               style: AppTextStyles.text12w600(color: colors.textPrimary),
                             ),
                           ],
