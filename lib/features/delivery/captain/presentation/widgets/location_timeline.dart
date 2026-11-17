@@ -55,6 +55,8 @@ class LocationTimeline extends StatelessWidget {
                 ? "الموقع: ${destLat.toStringAsFixed(5)}, ${destLng.toStringAsFixed(5)}"
                 : "عنوان العميل غير متوفر";
 
+    final bool hasPickedUp = order.status >= 6;
+
     return Container(
       padding: EdgeInsets.all(20.r),
       decoration: BoxDecoration(
@@ -78,26 +80,29 @@ class LocationTimeline extends StatelessWidget {
             storeName,
             storeAddress,
             Colors.blue,
+            isLast: !hasPickedUp,
             avatarUrl: null,
             phone: null,
             recipientId: order.userLocation?.creatorId ?? order.userId,
             roleType: order.type == 0 ? RoleTypeEnum.restaurant : RoleTypeEnum.market,
             showChat: false,
           ),
-          25.verticalSpace,
-          _buildTimelineItem(
-            context,
-            Icons.location_on,
-            AppStrings.deliveryPointLabel,
-            customerName,
-            customerAddress,
-            colors.error,
-            isLast: true,
-            avatarUrl: _getImageUrl(order.creator?.photo ?? order.creator?.avatar),
-            phone: order.creator?.phone,
-            recipientId: order.creatorId != 0 ? order.creatorId : order.userId,
-            roleType: RoleTypeEnum.customer,
-          ),
+          if (hasPickedUp) ...[
+            25.verticalSpace,
+            _buildTimelineItem(
+              context,
+              Icons.location_on,
+              AppStrings.deliveryPointLabel,
+              customerName,
+              customerAddress,
+              colors.error,
+              isLast: true,
+              avatarUrl: _getImageUrl(order.creator?.photo ?? order.creator?.avatar),
+              phone: order.creator?.phone,
+              recipientId: order.creatorId != 0 ? order.creatorId : order.userId,
+              roleType: RoleTypeEnum.customer,
+            ),
+          ],
         ],
       ),
     );

@@ -263,6 +263,10 @@ class _CaptainOrderDetailsScreenState
       setState(() => _isLoading = false);
 
       if (success) {
+        setState(() {
+          _order = _order.copyWith(status: 6);
+          _initializeOrderState();
+        });
         ref.read(captainLocationStreamProvider.notifier).startStreaming(
               orderId: _order.id,
               deliveryId: _order.deliveryId ?? 0,

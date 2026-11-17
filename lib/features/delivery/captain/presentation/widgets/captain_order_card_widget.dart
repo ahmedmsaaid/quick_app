@@ -161,13 +161,15 @@ class CaptainOrderCardWidget extends StatelessWidget {
               '${AppStrings.pickupFromLabel}: $storeName',
               colors.primary,
             ),
-            10.verticalSpace,
-            _buildLocationRow(
-              context,
-              Icons.location_on_rounded,
-              '${AppStrings.deliverToLabel}: $customerName',
-              colors.secondary,
-            ),
+            if (order.status >= 6) ...[
+              10.verticalSpace,
+              _buildLocationRow(
+                context,
+                Icons.location_on_rounded,
+                '${AppStrings.deliverToLabel}: $customerName',
+                colors.secondary,
+              ),
+            ],
             16.verticalSpace,
             Divider(color: colors.border.withValues(alpha: 0.5), height: 1),
             14.verticalSpace,
