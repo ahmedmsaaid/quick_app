@@ -211,9 +211,7 @@ class OrderDto {
               ?.toString(),
       longitude: (json['longitude'] as num?)?.toDouble() ?? 0.0,
       latitude: (json['latitude'] as num?)?.toDouble() ?? 0.0,
-      paymentMethod: json['paymentMethod'] is int
-          ? json['paymentMethod'] as int
-          : 0,
+      paymentMethod: _parsePaymentMethod(json),
       status: json['status'] is int ? json['status'] as int : 0,
       totalPrice: (json['totalPrice'] as num?)?.toDouble() ?? 0.0,
       deliveryFee: (json['deliveryFee'] as num?)?.toDouble() ?? 0.0,
@@ -259,6 +257,34 @@ class OrderDto {
                 : null),
     );
   }
+
+  static int _parsePaymentMethod(Map<String, dynamic> json) {
+    final raw = json['paymentMethod'] ??
+        json['PaymentMethod'] ??
+        json['payment_method'] ??
+        json['paymentType'] ??
+        json['PaymentType'];
+    if (raw is int) return raw;
+    if (raw is num) return raw.toInt();
+    if (raw is String) {
+      final trimmed = raw.trim().toLowerCase();
+      final asInt = int.tryParse(trimmed);
+      if (asInt != null) return asInt;
+      if (trimmed.contains('visa') ||
+          trimmed.contains('online') ||
+          trimmed.contains('card') ||
+          trimmed.contains('easykash')) {
+        return 1;
+      }
+      if (trimmed.contains('wallet') || trimmed.contains('محفظ')) {
+        return 2;
+      }
+    }
+    return 0;
+  }
+
+  /// True when the order is paid electronically (Visa/Online = 1 or Wallet = 2).
+  bool get isPaidOnline => paymentMethod == 1 || paymentMethod == 2;
 
   /// Extracts promo discount percentage if recorded in notes, e.g. `[Promo: CODE (-15%)]`.
   double? get promoDiscountPercentage {

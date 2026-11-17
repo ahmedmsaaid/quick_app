@@ -7,6 +7,7 @@ import 'package:base_app/core/styles/app_text_style.dart';
 import 'package:base_app/core/network/api_constants.dart';
 import 'package:base_app/core/utils/format_price.dart';
 import 'package:base_app/features/customer/checkout/data/models/order_models.dart';
+import 'package:base_app/features/shared/finance/data/models/payment_method.dart';
 
 class OrderTrackingDetailsCardWidget extends StatefulWidget {
   final OrderDto order;
@@ -200,6 +201,13 @@ class _OrderTrackingDetailsCardWidgetState extends State<OrderTrackingDetailsCar
                         : '${formatPrice(order.deliveryFee)} ${AppStrings.currency}',
                     colors,
                     valueColor: order.hasFreeDeliveryPromo ? colors.success : null,
+                  ),
+                  6.verticalSpace,
+                  _priceRow(
+                    AppStrings.paymentMethodLabel,
+                    PaymentMethod.fromValue(order.paymentMethod).shortLabel,
+                    colors,
+                    valueColor: order.isPaidOnline ? colors.success : null,
                   ),
                   8.verticalSpace,
                   Divider(color: colors.divider),

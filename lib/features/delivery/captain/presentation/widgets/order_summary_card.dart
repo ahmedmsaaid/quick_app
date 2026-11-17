@@ -7,6 +7,7 @@ import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/styles/app_text_style.dart';
 import 'package:base_app/features/customer/checkout/data/models/order_models.dart';
 import 'package:base_app/core/utils/format_price.dart';
+import 'package:base_app/features/shared/finance/data/models/payment_method.dart';
 
 class OrderSummaryCard extends StatelessWidget {
   final OrderDto order;
@@ -160,14 +161,24 @@ class OrderSummaryCard extends StatelessWidget {
             "رسوم الخدمة",
             "${formatPrice(order.orderFee)} ${AppStrings.currency}",
           ),
+          8.verticalSpace,
+          _buildSummaryRow(
+            context,
+            AppStrings.paymentMethodLabel,
+            PaymentMethod.fromValue(order.paymentMethod).shortLabel,
+            textColor: order.isPaidOnline ? colors.success : null,
+          ),
           10.verticalSpace,
           Divider(color: colors.divider),
           10.verticalSpace,
           _buildSummaryRow(
             context,
             AppStrings.requiredFromCustomerLabel,
-            "${formatPrice(order.effectiveFinalPrice)} ${AppStrings.currency}",
+            order.isPaidOnline
+                ? "0 ${AppStrings.currency} (${PaymentMethod.fromValue(order.paymentMethod).shortLabel})"
+                : "${formatPrice(order.effectiveFinalPrice)} ${AppStrings.currency}",
             isTotal: true,
+            textColor: order.isPaidOnline ? colors.success : null,
           ),
         ],
       ),

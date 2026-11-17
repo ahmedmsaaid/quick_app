@@ -7,6 +7,7 @@ import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/styles/app_text_style.dart';
 import 'package:base_app/core/utils/format_price.dart';
 import 'package:base_app/features/customer/checkout/data/models/order_models.dart';
+import 'package:base_app/features/shared/finance/data/models/payment_method.dart';
 
 class CaptainOrderItemsCardWidget extends StatefulWidget {
   final OrderDto order;
@@ -237,14 +238,32 @@ class _CaptainOrderItemsCardWidgetState
                     colors,
                     valueColor: order.hasFreeDeliveryPromo ? colors.success : null,
                   ),
+                  6.verticalSpace,
+                  _priceRow(
+                    AppStrings.paymentMethodLabel,
+                    PaymentMethod.fromValue(order.paymentMethod).shortLabel,
+                    colors,
+                    valueColor: order.isPaidOnline ? colors.success : null,
+                  ),
+                  if (order.isPaidOnline) ...[
+                    6.verticalSpace,
+                    _priceRow(
+                      AppStrings.finalTotalLabel,
+                      '${formatPrice(order.effectiveFinalPrice)} ${AppStrings.currency}',
+                      colors,
+                    ),
+                  ],
                   8.verticalSpace,
                   Divider(color: colors.divider),
                   8.verticalSpace,
                   _priceRow(
                     AppStrings.totalToCollect,
-                    '${formatPrice(order.effectiveFinalPrice)} ${AppStrings.currency}',
+                    order.isPaidOnline
+                        ? '0 ${AppStrings.currency} (${PaymentMethod.fromValue(order.paymentMethod).shortLabel})'
+                        : '${formatPrice(order.effectiveFinalPrice)} ${AppStrings.currency}',
                     colors,
                     isTotal: true,
+                    valueColor: order.isPaidOnline ? colors.success : null,
                   ),
                 ],
               ),

@@ -4,6 +4,7 @@ import 'package:base_app/core/localizations/app_strings.g.dart';
 import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/styles/app_text_style.dart';
 import 'package:base_app/features/customer/checkout/data/models/order_models.dart';
+import 'package:base_app/features/shared/finance/data/models/payment_method.dart';
 
 class OrderInfoCard extends StatelessWidget {
   final OrderDto order;
@@ -13,8 +14,9 @@ class OrderInfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors(context);
-    final paymentMethod = order.paymentMethod == 0 ? AppStrings.cashLabel : "إلكتروني";
+    final payment = PaymentMethod.fromValue(order.paymentMethod);
     final earnings = order.deliveryFee;
+
 
     return Container(
       padding: EdgeInsets.all(20.r),
@@ -75,30 +77,36 @@ class OrderInfoCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildInfoItem(
-                context,
-                AppStrings.netProfitLabel,
-                "${earnings.toStringAsFixed(0)} ${AppStrings.currency}",
-                colors.success,
-                Icons.account_balance_wallet_outlined,
+              Expanded(
+                child: _buildInfoItem(
+                  context,
+                  AppStrings.netProfitLabel,
+                  "${earnings.toStringAsFixed(0)} ${AppStrings.currency}",
+                  colors.success,
+                  Icons.account_balance_wallet_outlined,
+                ),
               ),
-              _buildInfoItem(
-                context,
-                AppStrings.paymentMethodLabel,
-                paymentMethod,
-                Colors.orange,
-                order.paymentMethod == 0 ? Icons.money : Icons.credit_card,
+              Expanded(
+                child: _buildInfoItem(
+                  context,
+                  AppStrings.paymentMethodLabel,
+                  payment.shortLabel,
+                  order.isPaidOnline ? colors.success : Colors.orange,
+                  payment.icon,
+                ),
               ),
-              _buildInfoItem(
-                context,
-                "نوع الطلب",
-                order.type == 0 ? "مطعم" : "متجر",
-                Colors.blue,
-                order.type == 0 ? Icons.restaurant : Icons.shopping_bag,
+              Expanded(
+                child: _buildInfoItem(
+                  context,
+                  "نوع الطلب",
+                  order.type == 0 ? "مطعم" : "متجر",
+                  Colors.blue,
+                  order.type == 0 ? Icons.restaurant : Icons.shopping_bag,
+                ),
               ),
             ],
           ),
-          if (order.note != null && order.note!.isNotEmpty) ...[
+          if (order.notes != null && order.notes!.isNotEmpty) ...[
             15.verticalSpace,
             Divider(color: colors.divider.withValues(alpha: 0.5)),
             12.verticalSpace,
@@ -125,7 +133,7 @@ class OrderInfoCard extends StatelessWidget {
                         ),
                         4.verticalSpace,
                         Text(
-                          order.note!,
+                          order.notes!,
                           style: AppTextStyles.text12w500(color: colors.textPrimary),
                         ),
                       ],
@@ -159,7 +167,10 @@ class OrderInfoCard extends StatelessWidget {
         4.verticalSpace,
         Text(
           value,
-          style: AppTextStyles.text14w700(color: color),
+          style: AppTextStyles.text13w700(color: color),
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ],
     );
