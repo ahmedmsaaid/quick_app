@@ -47,6 +47,7 @@ class _CaptainOrderDetailsScreenState
   LocationDto? _vendorLocation;
   Position? _currentCaptainPosition;
   StreamSubscription<Position>? _positionSubscription;
+  late Future<void> _locationInitFuture;
 
   final MapController _mapController = MapController();
   RouteResult? _roadRouteResult;
@@ -58,7 +59,7 @@ class _CaptainOrderDetailsScreenState
     OrderSoundService.stopRingtone();
     _order = widget.order;
     _initializeOrderState();
-    _startCaptainLocationListener();
+    _locationInitFuture = _startCaptainLocationListener();
     Future.microtask(() => _fetchOrderDetails());
   }
 
@@ -76,8 +77,14 @@ class _CaptainOrderDetailsScreenState
       }
       if (permission == LocationPermission.always ||
           permission == LocationPermission.whileInUse) {
-        final initialPos = await Geolocator.getCurrentPosition();
+        final initialPos = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            timeLimit: Duration(seconds: 5),
+          ),
+        );
         if (mounted) setState(() => _currentCaptainPosition = initialPos);
+        _fetchRoadRoute();
         _positionSubscription = Geolocator.getPositionStream(
           locationSettings: const LocationSettings(
             accuracy: LocationAccuracy.high,
@@ -235,6 +242,9 @@ class _CaptainOrderDetailsScreenState
       });
     }
 
+    try {
+      await _locationInitFuture.timeout(const Duration(seconds: 5));
+    } catch (_) {}
     await _fetchRoadRoute();
     if (!mounted || requestId != _fetchDetailsRequestId) return;
 
