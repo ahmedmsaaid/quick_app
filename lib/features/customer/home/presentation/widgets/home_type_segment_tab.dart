@@ -32,25 +32,25 @@ class HomeTypeSegmentTab extends StatelessWidget {
               );
             },
           ),
-          if (AppConfig.enableQuickMarket) ...[
-            12.horizontalSpace,
-            // Market Card
-            HomeTypeCardWidget(
-              title: AppStrings.quickMarketCategory,
-              subtitle: AppStrings.allServicesInOnePlace,
-              emoji: '🛒',
-              accentColor: const Color(0xFF00B09B),
-              onTap: () {
-                context.pushNamed(
-                  AppRoutes.StoreScreen,
-                  arguments: VendorListArgs(
-                    title: AppStrings.quickMarketCategory,
-                    userRole: 1,
-                  ),
-                );
-              },
-            ),
-          ],
+          12.horizontalSpace,
+          // Markets & Stores Card (non-navigating when Quick Market is disabled)
+          HomeTypeCardWidget(
+            title: AppStrings.quickMarketCategory,
+            subtitle: AppStrings.allServicesInOnePlace,
+            emoji: '🛒',
+            accentColor: const Color(0xFF00B09B),
+            onTap: AppConfig.enableQuickMarket
+                ? () {
+                    context.pushNamed(
+                      AppRoutes.StoreScreen,
+                      arguments: VendorListArgs(
+                        title: AppStrings.quickMarketCategory,
+                        userRole: 1,
+                      ),
+                    );
+                  }
+                : () {},
+          ),
         ],
       ),
     );
