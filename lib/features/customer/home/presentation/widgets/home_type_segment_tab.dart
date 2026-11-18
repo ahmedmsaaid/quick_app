@@ -4,7 +4,6 @@ import 'package:base_app/core/localizations/app_strings.g.dart';
 import 'package:base_app/core/routes/app_routes.dart';
 import 'package:base_app/core/routes/app_router.dart';
 import 'package:base_app/core/utils/extensions.dart';
-import 'package:base_app/core/constans/app_config.dart';
 import 'package:base_app/features/customer/home/presentation/widgets/home_type_card_widget.dart';
 
 class HomeTypeSegmentTab extends StatelessWidget {
@@ -33,23 +32,21 @@ class HomeTypeSegmentTab extends StatelessWidget {
             },
           ),
           12.horizontalSpace,
-          // Markets & Stores Card (non-navigating when Quick Market is disabled)
+          // Markets & Stores Card
           HomeTypeCardWidget(
             title: AppStrings.quickMarketCategory,
             subtitle: AppStrings.allServicesInOnePlace,
             emoji: '🛒',
             accentColor: const Color(0xFF00B09B),
-            onTap: AppConfig.enableQuickMarket
-                ? () {
-                    context.pushNamed(
-                      AppRoutes.StoreScreen,
-                      arguments: VendorListArgs(
-                        title: AppStrings.quickMarketCategory,
-                        userRole: 1,
-                      ),
-                    );
-                  }
-                : () {},
+            onTap: () {
+              context.pushNamed(
+                AppRoutes.StoreScreen,
+                arguments: VendorListArgs(
+                  title: AppStrings.quickMarketCategory,
+                  userRole: 1,
+                ),
+              );
+            },
           ),
         ],
       ),
