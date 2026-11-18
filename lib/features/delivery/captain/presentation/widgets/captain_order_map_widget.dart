@@ -57,7 +57,7 @@ class CaptainOrderMapWidget extends StatelessWidget {
                 TileLayer(
                   urlTemplate:
                       'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
-                  userAgentPackageName: 'com.quick.app',
+                  userAgentPackageName: 'com.quickDelivery.quick',
                 ),
                 if (polylines.isNotEmpty) PolylineLayer(polylines: polylines),
                 MarkerLayer(markers: markers),

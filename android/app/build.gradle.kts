@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.quick.app"
+    namespace = "com.quickDelivery.quick"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -22,7 +22,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.quick.app"
+        applicationId = "com.quickDelivery.quick"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

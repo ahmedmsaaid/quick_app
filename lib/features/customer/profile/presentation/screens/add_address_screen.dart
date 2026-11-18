@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:base_app/core/localizations/app_strings.g.dart';
+import 'package:base_app/core/widgets/lading_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -13,8 +14,8 @@ import 'package:base_app/core/widgets/custom_arrow_back.dart';
 import 'package:base_app/core/widgets/custom_button.dart';
 import 'package:base_app/core/widgets/custom_toast.dart';
 import 'package:base_app/core/widgets/custom_text_field.dart';
-import 'package:base_app/core/widgets/lading_button.dart';
 import 'package:base_app/features/customer/profile/presentation/riverpod/profile_provider.dart';
+import 'package:base_app/features/customer/profile/presentation/widgets/map_icon_button_widget.dart';
 import 'package:base_app/features/shared/auth/data/models/auth_models.dart';
 
 class AddAddressScreen extends ConsumerStatefulWidget {
@@ -307,7 +308,7 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
                     TileLayer(
                       urlTemplate:
                           'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
-                      userAgentPackageName: 'com.quick.app',
+                      userAgentPackageName: 'com.quickDelivery.quick',
                     ),
                   ],
                 ),
@@ -426,8 +427,6 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
                           margin: EdgeInsets.only(top: 6.h),
                           constraints: BoxConstraints(maxHeight: 200.h),
                           decoration: BoxDecoration(
-                            color: colors.surface,
-                            borderRadius: BorderRadius.circular(14.r),
                             boxShadow: [
                               BoxShadow(
                                 color: colors.shadow.withValues(alpha: 0.2),
@@ -436,9 +435,12 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
                               ),
                             ],
                           ),
-                          child: ClipRRect(
+                          child: Material(
+                            color: colors.surface,
                             borderRadius: BorderRadius.circular(14.r),
+                            clipBehavior: Clip.antiAlias,
                             child: ListView.separated(
+
                               shrinkWrap: true,
                               padding: EdgeInsets.zero,
                               itemCount: _searchResults.length,
@@ -479,9 +481,8 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
                   right: 12.w,
                   child: Column(
                     children: [
-                      _MapIconButton(
+                      MapIconButtonWidget(
                         icon: Icons.add_rounded,
-                        colors: colors,
                         onTap: () {
                           final z = (_mapController.camera.zoom + 1).clamp(1.0, 19.0);
                           _mapController.move(_mapController.camera.center, z);
@@ -490,9 +491,8 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
                         bottomRadius: false,
                       ),
                       Container(height: 1, width: 38.w, color: colors.divider),
-                      _MapIconButton(
+                      MapIconButtonWidget(
                         icon: Icons.remove_rounded,
-                        colors: colors,
                         onTap: () {
                           final z = (_mapController.camera.zoom - 1).clamp(1.0, 19.0);
                           _mapController.move(_mapController.camera.center, z);
@@ -500,6 +500,7 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
                         topRadius: false,
                         bottomRadius: true,
                       ),
+
                     ],
                   ),
                 ),
@@ -532,7 +533,7 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
                               Icon(Icons.my_location_rounded, color: colors.primary, size: 20.sp),
                               8.horizontalSpace,
                               Text(
-                                "تحديد موقعي تلقائياً",
+                                AppStrings.locateMeAutomatically,
                                 style: AppTextStyles.text13w700(color: colors.primary),
                               ),
                             ],
@@ -555,7 +556,7 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
                         borderRadius: BorderRadius.circular(20.r),
                       ),
                       child: Text(
-                        "اسحب الخريطة لتحديد الموقع",
+                        AppStrings.dragMapToSelectLocation,
                         style: AppTextStyles.text11w500(color: Colors.white),
                       ),
                     ),
@@ -745,60 +746,6 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
             },
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ── Reusable Map Icon Button ────────────────────────────────────────────────
-class _MapIconButton extends StatelessWidget {
-  final IconData icon;
-  final AppColors colors;
-  final VoidCallback onTap;
-  final bool topRadius;
-  final bool bottomRadius;
-
-  const _MapIconButton({
-    required this.icon,
-    required this.colors,
-    required this.onTap,
-    required this.topRadius,
-    required this.bottomRadius,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.only(
-        topLeft: topRadius ? const Radius.circular(12) : Radius.zero,
-        topRight: topRadius ? const Radius.circular(12) : Radius.zero,
-        bottomLeft: bottomRadius ? const Radius.circular(12) : Radius.zero,
-        bottomRight: bottomRadius ? const Radius.circular(12) : Radius.zero,
-      ),
-      child: Container(
-        width: 38.w,
-        height: 38.w,
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.only(
-            topLeft: topRadius ? Radius.circular(12.r) : Radius.zero,
-            topRight: topRadius ? Radius.circular(12.r) : Radius.zero,
-            bottomLeft: bottomRadius ? Radius.circular(12.r) : Radius.zero,
-            bottomRight: bottomRadius ? Radius.circular(12.r) : Radius.zero,
-          ),
-          boxShadow: topRadius
-              ? [
-                  BoxShadow(
-                    color: colors.shadow.withValues(alpha: 0.15),
-                    blurRadius: 8,
-                    spreadRadius: 1,
-                    offset: const Offset(0, 2),
-                  )
-                ]
-              : null,
-        ),
-        child: Icon(icon, color: colors.textPrimary, size: 20.sp),
       ),
     );
   }

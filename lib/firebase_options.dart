@@ -50,6 +50,6 @@ class DefaultFirebaseOptions {
     messagingSenderId: '634389575709',
     projectId: 'quick-c535b',
     storageBucket: 'quick-c535b.firebasestorage.app',
-    iosBundleId: 'com.quick.app',
+    iosBundleId: 'com.quickDelivery.quick',
   );
 }
