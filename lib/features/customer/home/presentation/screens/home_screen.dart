@@ -1,24 +1,17 @@
-import 'package:base_app/core/exports/exports.dart';
-import 'package:base_app/core/widgets/see_all_widget.dart';
-import 'package:base_app/core/localizations/app_strings.g.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:base_app/core/styles/app_colors.dart';
-import 'package:base_app/core/styles/app_text_style.dart';
-import 'package:base_app/core/routes/app_routes.dart';
-import 'package:base_app/core/utils/extensions.dart';
-import 'package:base_app/core/widgets/lading_button.dart';
-import 'package:base_app/core/network/api_constants.dart';
 import 'package:base_app/features/customer/home/presentation/riverpod/home_provider.dart';
 import 'package:base_app/features/customer/home/presentation/widgets/home_speed_header.dart';
 import 'package:base_app/features/customer/home/presentation/widgets/home_modern_banner.dart';
 import 'package:base_app/features/customer/home/presentation/widgets/home_featured_restaurants.dart';
-import 'package:base_app/features/customer/home/presentation/widgets/mock_category_card.dart';
-import 'package:base_app/features/customer/home/presentation/widgets/mock_store_card.dart';
 import 'package:base_app/features/customer/home/presentation/widgets/home_type_segment_tab.dart';
-import 'package:base_app/features/customer/home/data/models/category_model.dart';
-import 'package:base_app/core/routes/app_router.dart';
 import 'package:base_app/features/customer/home/presentation/widgets/home_todays_offers.dart';
 import 'package:base_app/features/customer/home/presentation/widgets/home_order_again.dart';
-import 'package:base_app/features/customer/home/presentation/screens/all_categories_screen.dart';
+import 'package:base_app/features/customer/home/presentation/widgets/home_store_categories_section.dart';
+import 'package:base_app/features/customer/home/presentation/widgets/home_recommended_stores_section.dart';
+import 'package:base_app/features/customer/home/presentation/widgets/home_product_categories_section.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -31,29 +24,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors(context);
-    final homeState = ref.watch(homeProvider);
-    final productCategoriesAsync = ref.watch(subCategoriesProvider);
-    final isArabic = Localizations.localeOf(context).languageCode == 'ar';
-
-    final selectedCat = homeState.selectedCategory;
-    final recommendedStores = homeState.recommendedStores;
-
-    // Prepare main store categories list for rendering: prepend "All" virtual category
-    final List<Map<String, dynamic>> renderingCategories = [
-      {
-        'id': 0,
-        'name': AppStrings.catAll,
-        'emoji': '🍽️',
-        'photo': null,
-      },
-      ...homeState.categories.map((c) => {
-        'id': c.id,
-        'name': c.name,
-        'emoji': '📁',
-        'photo': c.photo,
-        'model': c,
-      }),
-    ];
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -64,192 +34,47 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         triggerMode: RefreshIndicatorTriggerMode.anywhere,
         onRefresh: () async {
           await ref.read(homeProvider.notifier).refreshAllData();
-          ref.refresh(subCategoriesProvider);
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Colored Speed Header Container
+              // 1. Colored Speed Header Container (Search, location, cart)
               const HomeSpeedHeader(),
-
               12.verticalSpace,
+
+              // 2. Store Type Segment Tab (Restaurants shown; Quick Market hidden via AppConfig)
               const HomeTypeSegmentTab(),
               12.verticalSpace,
+
+              // 3. Modern Banner Slider
               const HomeModernBanner(),
               16.verticalSpace,
 
-              // 1. عروض النظام الموحدة
+              // 4. Today's Special Offers
               const HomeTodaysOffers(),
               12.verticalSpace,
 
-              // 2. اطلب مرة أخرى من الطلبات السابقة
+              // 5. Order Again from previous orders
               const HomeOrderAgain(),
               12.verticalSpace,
 
-              // Rest of page content
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 3. أقسام المتاجر (Store Categories - mainCategories)
-                  SeeAllWidget(
-                    title: isArabic ? 'أقسام المتاجر' : 'Store Categories',
-                    onTap: () {
-                      context.pushNamed(AppRoutes.allCategoriesScreen, arguments: true);
-                    },
-                  ),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20.w),
-                    child: SizedBox(
-                      height: 130.h,
-                      child: homeState.categoriesStatus == HomeStatus.loading
-                          ? const Center(child: LoadingButton())
-                          : ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: renderingCategories.length,
-                              itemBuilder: (context, index) {
-                                final cat = renderingCategories[index];
-                                final isSelected = (selectedCat == null && cat['id'] == 0) ||
-                                    (selectedCat != null && selectedCat.id == cat['id']);
-                                final String? photoKey = cat['photo'];
-                                final String photoUrl = (photoKey != null && photoKey.isNotEmpty)
-                                    ? (photoKey.startsWith('http') ? photoKey : '${ApiConstants.streamUrl}$photoKey')
-                                    : '';
+              // 6. Store Categories Section
+              const HomeStoreCategoriesSection(),
+              6.verticalSpace,
 
-                                return MockCategoryCard(
-                                  name: cat['name'] ?? '',
-                                  emoji: cat['emoji'],
-                                  photoUrl: photoUrl.isNotEmpty ? photoUrl : null,
-                                  isSelected: isSelected,
-                                  onTap: () {
-                                    if (cat['id'] == 0) {
-                                      ref.read(homeProvider.notifier).selectCategory(null);
-                                    } else {
-                                      ref.read(homeProvider.notifier).selectCategory(cat['model'] as MainCategoryDto);
-                                    }
-                                  },
-                                );
-                              },
-                            ),
-                    ),
-                  ),
-                  6.verticalSpace,
+              // 7. Recommended Stores Section
+              const HomeRecommendedStoresSection(),
+              16.verticalSpace,
 
-                  // 4. المحلات والخدمات الموصى بها (Recommended Stores)
-                  SeeAllWidget(
-                    title: AppStrings.recommended,
-                    onTap: () {
-                      final role = selectedCat?.userRole ?? 0;
-                      context.pushNamed(
-                        AppRoutes.StoreScreen,
-                        arguments: VendorListArgs(
-                          title: selectedCat?.name ?? AppStrings.recommended,
-                          categoryId: selectedCat?.id,
-                          userRole: role,
-                        ),
-                      );
-                    },
-                  ),
-                  if (homeState.recommendedStoresStatus == HomeStatus.loading)
-                    SizedBox(
-                      height: 180.h,
-                      child: const Center(child: LoadingButton()),
-                    )
-                  else if (recommendedStores.isEmpty)
-                    Container(
-                      padding: EdgeInsets.symmetric(vertical: 20.h),
-                      alignment: Alignment.center,
-                      child: Text(
-                        AppStrings.noItemsFound,
-                        style: AppTextStyles.text14w600(color: colors.textSecondary),
-                      ),
-                    )
-                  else
-                    GridView.builder(
-                      padding: EdgeInsets.symmetric(horizontal: 20.w),
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: recommendedStores.length > 4 ? 4 : recommendedStores.length,
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 16.w,
-                        mainAxisSpacing: 16.h,
-                        childAspectRatio: 0.78,
-                      ),
-                      itemBuilder: (context, index) {
-                        final store = recommendedStores[index];
-                        return MockStoreCard(
-                          store: store,
-                          onTap: () {
-                            context.pushNamed(
-                              AppRoutes.providerProductDetailsScreen,
-                              arguments: store,
-                            );
-                          },
-                        );
-                      },
-                    ),
-                  16.verticalSpace,
+              // 8. Product Categories Section
+              const HomeProductCategoriesSection(),
+              24.verticalSpace,
 
-                  // 5. أقسام المنتجات (Product Categories - categories)
-                  SeeAllWidget(
-                    title: isArabic ? 'أقسام المنتجات' : 'Product Categories',
-                    onTap: () {
-                      context.pushNamed(AppRoutes.allCategoriesScreen);
-                    },
-                  ),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20.w),
-                    child: SizedBox(
-                      height: 130.h,
-                      child: productCategoriesAsync.when(
-                        loading: () => const Center(child: LoadingButton()),
-                        error: (_, __) => const SizedBox.shrink(),
-                        data: (productCategories) {
-                          if (productCategories.isEmpty) {
-                            return Center(
-                              child: Text(
-                                AppStrings.noItemsFound,
-                                style: AppTextStyles.text14w600(color: colors.textSecondary),
-                              ),
-                            );
-                          }
-                          return ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: productCategories.length,
-                            itemBuilder: (context, index) {
-                              final cat = productCategories[index];
-                              final String? photoKey = cat.photo;
-                              final String photoUrl = (photoKey != null && photoKey.isNotEmpty)
-                                  ? (photoKey.startsWith('http') ? photoKey : '${ApiConstants.streamUrl}$photoKey')
-                                  : '';
-
-                              return MockCategoryCard(
-                                name: cat.name ?? '',
-                                emoji: '📦',
-                                photoUrl: photoUrl.isNotEmpty ? photoUrl : null,
-                                isSelected: false,
-                                onTap: () {
-                                  context.pushNamed(
-                                    AppRoutes.products,
-                                    arguments: cat,
-                                  );
-                                },
-                              );
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                  24.verticalSpace,
-
-                  // 6. المطاعم المميزة (Featured Restaurants)
-                  const HomeFeaturedRestaurants(),
-                  110.verticalSpace,
-                ],
-              ),
+              // 9. Featured Restaurants Section
+              const HomeFeaturedRestaurants(),
+              110.verticalSpace,
             ],
           ),
         ),
