@@ -12,6 +12,7 @@ import 'package:base_app/core/routes/app_routes.dart';
 import 'package:base_app/core/services/cach_helper/cache_helper.dart';
 import 'package:base_app/core/theme/app_theme.dart';
 import 'package:base_app/core/theme/theme_provider.dart';
+import 'package:base_app/core/services/audio/order_sound_service.dart';
 
 GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -49,11 +50,37 @@ void main() async {
   );
 }
 
-class BaseApp extends ConsumerWidget {
+class BaseApp extends ConsumerStatefulWidget {
   const BaseApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BaseApp> createState() => _BaseAppState();
+}
+
+class _BaseAppState extends ConsumerState<BaseApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    // Ensure any ringtone started in background or during launch is stopped
+    OrderSoundService.stopRingtone();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      OrderSoundService.stopRingtone();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final themeMode = ref.watch(themeNotifierProvider);
 
     return ScreenUtilInit(
@@ -61,6 +88,7 @@ class BaseApp extends ConsumerWidget {
       minTextAdapt: true,
       splitScreenMode: true,
       child: MaterialApp(
+        title: 'Quick Delivery',
         debugShowCheckedModeBanner: false,
         navigatorKey: navigatorKey,
         onGenerateRoute: AppRouter.onGenerateRoute,
