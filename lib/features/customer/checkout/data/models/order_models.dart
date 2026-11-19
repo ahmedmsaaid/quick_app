@@ -236,16 +236,10 @@ class OrderDto {
           ? UserDto.fromJson(json['delivery'] as Map<String, dynamic>)
           : (json['Delivery'] != null
                 ? UserDto.fromJson(json['Delivery'] as Map<String, dynamic>)
-                : (json['updator'] != null
-                      ? UserDto.fromJson(
-                          json['updator'] as Map<String, dynamic>,
-                        )
-                      : null)),
+                : null),
       deliveryId: json['deliveryId'] is int
           ? json['deliveryId'] as int
-          : (json['DeliveryId'] is int
-                ? json['DeliveryId'] as int
-                : (json['updatorId'] is int ? json['updatorId'] as int : null)),
+          : (json['DeliveryId'] is int ? json['DeliveryId'] as int : null),
       rowVersion: json['rowVersion']?.toString(),
       userLocationId: json['userLocationId'] as int?,
       userLocation: json['userLocation'] != null

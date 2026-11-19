@@ -499,6 +499,28 @@ Stream<OrderDto> trackOrder(Ref ref, int orderId) async* {
       }
 
       if (currentOrder != null) {
+        final incomingDeliveryId = update.deliveryId.toInt();
+        if (incomingDeliveryId != 0 &&
+            incomingDeliveryId != currentOrder.deliveryId) {
+          final refreshedRes = await apiService.getOrderById(
+            orderId: orderId,
+            includesPath: const [
+              "User",
+              "Creator",
+              "OrderProducts.Product",
+              "Delivery",
+              "UserLocation",
+            ],
+          );
+          final refreshed = refreshedRes.when(
+            success: (res) => res.success ? res.result : null,
+            failure: (_) => null,
+          );
+          if (refreshed != null) {
+            currentOrder = refreshed;
+          }
+        }
+
         final newDeliveryLocation = LocationModel(
           latitude: update.latitude != 0 ? update.latitude : (currentOrder.delivery?.location?.latitude ?? 0.0),
           longitude: update.longitude != 0 ? update.longitude : (currentOrder.delivery?.location?.longitude ?? 0.0),
@@ -506,7 +528,7 @@ Stream<OrderDto> trackOrder(Ref ref, int orderId) async* {
 
         final updatedDelivery = (currentOrder.delivery ??
                 UserDto(
-                  id: update.deliveryId.toInt() != 0 ? update.deliveryId.toInt() : (currentOrder.deliveryId ?? 0),
+                  id: incomingDeliveryId != 0 ? incomingDeliveryId : (currentOrder.deliveryId ?? 0),
                   role: 3,
                   status: 1,
                 ))
@@ -514,7 +536,7 @@ Stream<OrderDto> trackOrder(Ref ref, int orderId) async* {
 
         currentOrder = currentOrder.copyWith(
           status: newStatus,
-          deliveryId: update.deliveryId.toInt() != 0 ? update.deliveryId.toInt() : currentOrder.deliveryId,
+          deliveryId: incomingDeliveryId != 0 ? incomingDeliveryId : currentOrder.deliveryId,
           delivery: updatedDelivery,
         );
         yield currentOrder;
