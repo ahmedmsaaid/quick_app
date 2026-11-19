@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:base_app/core/config/env_config.dart';
 import 'package:base_app/core/localizations/app_strings.g.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
@@ -40,6 +41,10 @@ class RouteResult {
 class MapService {
   static const defaultCenter = LatLng(33.3152, 44.3661);
   static const double defaultZoom = 12.0;
+
+  static const String googleTileUrl =
+      'https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}';
+  static const List<String> googleTileSubdomains = ['0', '1', '2', '3'];
 
   static final Dio _dio = Dio(
     BaseOptions(
@@ -86,7 +91,22 @@ class MapService {
       return _routeCache[cacheKey];
     }
 
-    // ── 1. Try Valhalla (most reliable free routing API) ────────────────────
+    // ── 1. Try Google Directions API (primary) ──────────────────────────────
+    final googleApiKey = EnvConfig.googleMapsApiKey;
+    if (googleApiKey.isNotEmpty) {
+      try {
+        final googleResult =
+            await _fetchGoogleDirectionsRoute(start, end, googleApiKey);
+        if (googleResult != null) {
+          _routeCache[cacheKey] = googleResult;
+          return googleResult;
+        }
+      } catch (e) {
+        debugPrint('Google Directions routing error: $e');
+      }
+    }
+
+    // ── 2. Fallback to Valhalla (free routing API) ──────────────────────────
     try {
       final result = await _fetchValhallaRoute(start, end, distanceMeters);
       if (result != null) {
@@ -146,6 +166,54 @@ class MapService {
       distanceMeters: distanceMeters,
       durationSeconds: (distanceMeters / 6.94).roundToDouble(),
     );
+  }
+
+  /// Fetches route from Google Directions API
+  static Future<RouteResult?> _fetchGoogleDirectionsRoute(
+    LatLng start,
+    LatLng end,
+    String apiKey,
+  ) async {
+    const url = 'https://maps.googleapis.com/maps/api/directions/json';
+    final response = await _dio.get(
+      url,
+      queryParameters: {
+        'origin': '${start.latitude},${start.longitude}',
+        'destination': '${end.latitude},${end.longitude}',
+        'mode': 'driving',
+        'key': apiKey,
+      },
+    );
+
+    if (response.statusCode == 200 && response.data != null) {
+      final data =
+          response.data is String ? jsonDecode(response.data) : response.data;
+      if (data['status'] == 'OK' &&
+          data['routes'] != null &&
+          (data['routes'] as List).isNotEmpty) {
+        final route = data['routes'][0];
+        final encoded = route['overview_polyline']?['points'] as String?;
+        if (encoded == null || encoded.isEmpty) return null;
+
+        final points = _decodePolyline(encoded, precision: 5);
+        final legs = route['legs'] as List?;
+        final firstLeg = (legs != null && legs.isNotEmpty) ? legs[0] : null;
+        final double dist =
+            (firstLeg?['distance']?['value'] as num?)?.toDouble() ?? 0.0;
+        final double dur =
+            (firstLeg?['duration']?['value'] as num?)?.toDouble() ?? 0.0;
+
+        debugPrint(
+          '✅ Google Directions route: ${points.length} pts, ${(dist / 1000).toStringAsFixed(1)} km',
+        );
+        return RouteResult(
+          points: points,
+          distanceMeters: dist,
+          durationSeconds: dur,
+        );
+      }
+    }
+    return null;
   }
 
   /// Fetches route from Valhalla routing engine (free, OpenStreetMap-based)

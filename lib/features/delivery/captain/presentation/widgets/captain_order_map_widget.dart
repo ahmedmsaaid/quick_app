@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' as ll;
+import 'package:lottie/lottie.dart' hide Marker;
 import 'package:base_app/core/localizations/app_strings.g.dart';
 import 'package:base_app/core/services/maps_service.dart';
 import 'package:base_app/core/styles/app_colors.dart';
 import 'package:base_app/core/styles/app_text_style.dart';
+import 'package:base_app/core/utils/assets/app_assets.dart';
 import 'package:base_app/core/widgets/custom_arrow_back.dart';
 import 'package:base_app/features/customer/checkout/data/models/order_models.dart';
 
@@ -55,8 +57,8 @@ class CaptainOrderMapWidget extends StatelessWidget {
               ),
               children: [
                 TileLayer(
-                  urlTemplate:
-                      'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+                  urlTemplate: MapService.googleTileUrl,
+                  subdomains: MapService.googleTileSubdomains,
                   userAgentPackageName: 'com.quickDelivery.quick',
                 ),
                 if (polylines.isNotEmpty) PolylineLayer(polylines: polylines),
@@ -72,8 +74,13 @@ class CaptainOrderMapWidget extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  CircularProgressIndicator(color: colors.primary),
-                  14.verticalSpace,
+                  Lottie.asset(
+                    AppAssets.chef,
+                    width: 170.w,
+                    height: 170.w,
+                    fit: BoxFit.contain,
+                  ),
+                  10.verticalSpace,
                   Text(
                     AppStrings.loading,
                     style: AppTextStyles.text14w600(

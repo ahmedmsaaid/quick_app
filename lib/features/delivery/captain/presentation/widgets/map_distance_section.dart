@@ -426,7 +426,8 @@ class _MapDistanceSectionState extends State<MapDistanceSection> {
                     ),
                     children: [
                       TileLayer(
-                        urlTemplate: 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+                        urlTemplate: MapService.googleTileUrl,
+                        subdomains: MapService.googleTileSubdomains,
                         userAgentPackageName: 'com.quickDelivery.quick',
                       ),
                       if (polylines.isNotEmpty) PolylineLayer(polylines: polylines),
