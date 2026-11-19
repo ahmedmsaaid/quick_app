@@ -41,7 +41,7 @@ dependencies:
   json_annotation: ^4.9.0
   flutter_launcher_icons: ^0.14.4
   firebase_messaging: ^15.2.10
-  font_awesome_flutter: ^10.7.0
+  font_awesome_flutter: ^11.0.0
   flutter_local_notifications: ^19.4.1
   retrofit: 4.9.0
   hive_ce: ^2.15.1
@@ -93,6 +93,7 @@ flutter:
   uses-material-design: true
 
   assets:
+    - .env
     - assets/translations/
     - assets/image/
     - assets/fonts/

@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
+import 'package:base_app/core/config/env_config.dart';
 
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
@@ -37,15 +38,15 @@ class DefaultFirebaseOptions {
     }
   }
 
-  static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDsoWyVFxvAohGY8Ljrn8OxXfalcgV8zMA',
+  static FirebaseOptions get android => FirebaseOptions(
+    apiKey: EnvConfig.firebaseAndroidApiKey,
     appId: '1:634389575709:android:c15cac0d3778dc43edaef4',
     messagingSenderId: '634389575709',
     projectId: 'quick-c535b',
     storageBucket: 'quick-c535b.firebasestorage.app',
   );
-  static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyBAuncSk9n6RATqDwieHwxl3rmYm4Z86wo',
+  static FirebaseOptions get ios => FirebaseOptions(
+    apiKey: EnvConfig.firebaseIosApiKey,
     appId: '1:634389575709:ios:c53fefbb70635b5dedaef4',
     messagingSenderId: '634389575709',
     projectId: 'quick-c535b',

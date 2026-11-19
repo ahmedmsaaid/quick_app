@@ -2,10 +2,12 @@ import 'dart:io';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:base_app/firebase_options.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hive_ce_flutter/adapters.dart';
+import 'package:base_app/core/config/env_config.dart';
 import 'package:base_app/core/constans/app_localizations_constants.dart';
 import 'package:base_app/core/routes/app_router.dart';
 import 'package:base_app/core/routes/app_routes.dart';
@@ -26,7 +28,10 @@ class _DevHttpOverrides extends HttpOverrides {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  HttpOverrides.global = _DevHttpOverrides();
+  await EnvConfig.load();
+  if (kDebugMode) {
+    HttpOverrides.global = _DevHttpOverrides();
+  }
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,

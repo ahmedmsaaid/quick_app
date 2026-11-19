@@ -286,23 +286,21 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           final payResult = await ref
               .read(paymentsApiServiceProvider)
               .payOrder(createdOrder.id);
-          if (mounted) {
-            payResult.when(
-              success: (res) async {
-                final paymentUrl = res.result;
-                if (paymentUrl != null && paymentUrl.isNotEmpty) {
-                  final uri = Uri.tryParse(paymentUrl);
-                  if (uri != null) {
-                    try {
-                      await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
-                    } catch (_) {
-                      await launchUrl(uri, mode: LaunchMode.externalApplication);
-                    }
-                  }
-                }
-              },
-              failure: (_) {},
-            );
+          final String? paymentUrl = payResult.when(
+            success: (res) => res.result,
+            failure: (_) => null,
+          );
+          if (paymentUrl != null && paymentUrl.isNotEmpty) {
+            final uri = Uri.tryParse(paymentUrl);
+            if (uri != null) {
+              try {
+                await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+              } catch (_) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              }
+              // Allow the external/in-app browser transition to settle before pushing OrderSuccessScreen
+              await Future.delayed(const Duration(milliseconds: 500));
+            }
           }
         } else if (_selectedPayment == PaymentMethod.wallet.value) {
           // Wallet was debited on backend, refresh local wallet state

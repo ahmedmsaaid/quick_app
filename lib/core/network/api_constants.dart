@@ -1,6 +1,8 @@
+import 'package:base_app/core/config/env_config.dart';
+
 abstract class ApiConstants {
-  static const String baseUrl = 'https://quick-service.runasp.net/api/v1/';
-  static const String streamUrl = 'https://uzpvlmgqwpxcuvngsayb.supabase.co/storage/v1/object/public/quick-service-photos/';
+  static String get baseUrl => EnvConfig.apiBaseUrl;
+  static String get streamUrl => EnvConfig.streamBaseUrl;
   static const String signup = 'users/signup';
   static const String captainSignup = 'deliveries/signup';
   static const String login = 'users/login';
@@ -43,6 +45,6 @@ abstract class ApiConstants {
   static const String discounts = 'discounts';
   
   /// Google OAuth Web Client ID (serverClientId) from Firebase Console / Google Cloud Console
-  static const String googleServerClientId = '634389575709-h4l73auk3eticg2k4psqm667n2hvi9pl.apps.googleusercontent.com';
+  static String get googleServerClientId => EnvConfig.googleServerClientId;
 }
 
