@@ -588,7 +588,7 @@
   "orderCancelled": "Bu sipariş iptal edildi",
   "orderStatusCreated": "Sipariş oluşturuldu, mağaza onayı bekleniyor",
   "orderStatusPendingPayment": "Ödeme tamamlanması bekleniyor",
-  "orderStatusPendingDelivery": "Mağaza siparişi onayladı, kurye atanması bekleniyor",
+  "orderStatusPendingDelivery": "Merak etmeyin, siparişiniz üzerinde çalışılıyor",
   "orderStatusConfirmed": "Sipariş kurye tarafından onaylandı, mağaza hazırlıyor",
   "orderStatusPreparing": "Sipariş şu anda hazırlanıyor 👨‍🍳",
   "orderStatusReadyForPickup": "Sipariş hazır ve kurye teslimi bekleniyor",

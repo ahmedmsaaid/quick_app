@@ -836,7 +836,7 @@
   "orderCancelled": "This order was cancelled",
   "orderStatusCreated": "Order created, waiting for store acceptance",
   "orderStatusPendingPayment": "Waiting for payment completion",
-  "orderStatusPendingDelivery": "Store accepted your order, waiting for delivery driver",
+  "orderStatusPendingDelivery": "Don't worry, we are working on your order",
   "orderStatusConfirmed": "Order confirmed by delivery, store preparing now",
   "orderStatusPreparing": "Preparing order now 👨‍🍳",
   "orderStatusReadyForPickup": "Order is ready and waiting for driver pickup",
