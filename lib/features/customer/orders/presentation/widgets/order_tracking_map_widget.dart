@@ -211,8 +211,10 @@ class _OrderTrackingMapWidgetState extends ConsumerState<OrderTrackingMapWidget>
       );
     }
 
-    final bool canShowMap =
-        _isMapReady && (!liveOrderAsync.isLoading || liveOrderAsync.hasValue);
+    final bool isPickedUp = o.status >= 6;
+    final bool canShowMap = isPickedUp &&
+        _isMapReady &&
+        (!liveOrderAsync.isLoading || liveOrderAsync.hasValue);
 
     return Stack(
       children: [
@@ -256,7 +258,9 @@ class _OrderTrackingMapWidgetState extends ConsumerState<OrderTrackingMapWidget>
                   ),
                   10.verticalSpace,
                   Text(
-                    AppStrings.loading,
+                    !isPickedUp
+                        ? AppStrings.orderStatusPreparing
+                        : AppStrings.loading,
                     style: AppTextStyles.text14w600(
                       color: colors.textSecondary,
                     ),
@@ -267,7 +271,9 @@ class _OrderTrackingMapWidgetState extends ConsumerState<OrderTrackingMapWidget>
           ),
 
         // Live Route ETA & Distance Banner
-        if (_roadRouteResult != null && _roadRouteResult!.distanceMeters > 0)
+        if (canShowMap &&
+            _roadRouteResult != null &&
+            _roadRouteResult!.distanceMeters > 0)
           Positioned(
             top: 105.h,
             left: 20.w,
@@ -324,10 +330,11 @@ class _OrderTrackingMapWidgetState extends ConsumerState<OrderTrackingMapWidget>
           ),
 
         // Map controls (zoom in/out & recenter FAB)
-        Positioned(
-          top: 175.h,
-          left: 20.w,
-          child: Column(
+        if (canShowMap)
+          Positioned(
+            top: 175.h,
+            left: 20.w,
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
