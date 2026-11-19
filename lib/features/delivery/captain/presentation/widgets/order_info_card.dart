@@ -27,7 +27,7 @@ class OrderInfoCard extends StatelessWidget {
             color: colors.shadow.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
-          )
+          ),
         ],
       ),
       child: Column(
@@ -47,17 +47,25 @@ class OrderInfoCard extends StatelessWidget {
                     order.createdOn != null
                         ? _formatOrderDate(order.createdOn!)
                         : "تاريخ غير متوفر",
-                    style: AppTextStyles.text12w400(color: colors.textSecondary),
+                    style: AppTextStyles.text12w400(
+                      color: colors.textSecondary,
+                    ),
                   ),
                 ],
               ),
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
                 decoration: BoxDecoration(
-                  color: _getStatusColor(context, order.status).withValues(alpha: 0.1),
+                  color: _getStatusColor(
+                    context,
+                    order.status,
+                  ).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10.r),
                   border: Border.all(
-                    color: _getStatusColor(context, order.status).withValues(alpha: 0.3),
+                    color: _getStatusColor(
+                      context,
+                      order.status,
+                    ).withValues(alpha: 0.3),
                   ),
                 ),
                 child: Text(
@@ -95,7 +103,7 @@ class OrderInfoCard extends StatelessWidget {
               ),
             ],
           ),
-          if (order.notes != null && order.notes!.isNotEmpty) ...[
+          if (order.cleanNotes.isNotEmpty) ...[
             15.verticalSpace,
             Divider(color: colors.divider.withValues(alpha: 0.5)),
             12.verticalSpace,
@@ -105,7 +113,9 @@ class OrderInfoCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: colors.primary.withValues(alpha: 0.06),
                 borderRadius: BorderRadius.circular(10.r),
-                border: Border.all(color: colors.primary.withValues(alpha: 0.2)),
+                border: Border.all(
+                  color: colors.primary.withValues(alpha: 0.2),
+                ),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -118,12 +128,16 @@ class OrderInfoCard extends StatelessWidget {
                       children: [
                         Text(
                           "ملاحظات العمـيل:",
-                          style: AppTextStyles.text11w700(color: colors.primary),
+                          style: AppTextStyles.text11w700(
+                            color: colors.primary,
+                          ),
                         ),
                         4.verticalSpace,
                         Text(
-                          order.notes!,
-                          style: AppTextStyles.text12w500(color: colors.textPrimary),
+                          order.cleanNotes,
+                          style: AppTextStyles.text12w500(
+                            color: colors.textPrimary,
+                          ),
                         ),
                       ],
                     ),

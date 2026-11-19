@@ -325,6 +325,17 @@ class OrderDto {
     return price;
   }
 
+  /// Customer notes with internal `[Promo: ...]` metadata stripped out.
+  String get cleanNotes {
+    if (notes == null || notes!.isEmpty) return '';
+    return notes!
+        .replaceAll(
+          RegExp(r'\s*\|\s*\[Promo:[^\]]*\]|\[Promo:[^\]]*\]\s*\|\s*|\[Promo:[^\]]*\]'),
+          '',
+        )
+        .trim();
+  }
+
   /// The original price before discount (if discount applied).
   double get originalTotalPrice => totalPrice;
 

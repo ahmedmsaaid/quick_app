@@ -213,7 +213,7 @@ class _OrderTrackingDetailsCardWidgetState extends State<OrderTrackingDetailsCar
                   Divider(color: colors.divider),
                   8.verticalSpace,
                   _priceRow(AppStrings.finalTotalLabel, '${formatPrice(order.effectiveFinalPrice)} ${AppStrings.currency}', colors, isTotal: true),
-                  if (order.notes != null && order.notes!.trim().isNotEmpty) ...[
+                  if (order.cleanNotes.isNotEmpty) ...[
                     10.verticalSpace,
                     Divider(color: colors.divider),
                     8.verticalSpace,
@@ -248,7 +248,7 @@ class _OrderTrackingDetailsCardWidgetState extends State<OrderTrackingDetailsCar
                                 ),
                                 4.verticalSpace,
                                 Text(
-                                  order.notes!.trim(),
+                                  order.cleanNotes,
                                   style: AppTextStyles.text12w500(
                                     color: colors.textPrimary,
                                   ),
